@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./apps/ai-server"
+    },
+    {
+      "path": "./apps/vscode-extension"
+    }
+  ]
+}

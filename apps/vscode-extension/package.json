@@ -1,0 +1,45 @@
+{
+  "name": "arc-vscode-extension",
+  "displayName": "Arc",
+  "description": "Self-hosted AI software engineer for VSCode.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:arc.openChat"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "arc.openChat",
+        "title": "Arc: Open Chat",
+        "category": "Arc"
+      }
+    ],
+    "configuration": {
+      "title": "Arc",
+      "properties": {
+        "arc.backendUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:7331",
+          "description": "URL of the local Arc AI backend server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@arc/contracts": "workspace:*"
+  }
+}
