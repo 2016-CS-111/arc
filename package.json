@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@11.13.1",
   "scripts": {
-    "backend:build": "pnpm --filter @arc/ai-server build",
+    "backend:build": "pnpm --filter @arc/ai-server... build",
     "backend:dev": "pnpm --filter @arc/ai-server dev",
     "backend:start": "pnpm --filter @arc/ai-server start",
     "build": "tsc -b",
@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint \"apps/**/*.ts\" \"packages/**/*.ts\" --max-warnings=0",
+    "ollama:smoke": "pnpm --filter @arc/ai-server ollama:smoke",
     "test": "vitest run"
   },
   "devDependencies": {

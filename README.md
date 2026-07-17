@@ -27,11 +27,37 @@ pnpm build
 pnpm test
 pnpm lint
 pnpm backend:dev
+pnpm ollama:smoke
 pnpm extension:watch
 pnpm extension:run
 ```
 
 The AI server listens on `http://127.0.0.1:7331` by default.
+
+## Ollama
+
+Milestone 2.1 adds a local Ollama readiness endpoint at:
+
+```txt
+GET http://127.0.0.1:7331/providers/ollama/status
+```
+
+Use the root `.env.example` as the local configuration reference. `qwen2.5-coder:7b` is the quality default; set
+`ARC_OLLAMA_MODEL=qwen2.5-coder:3b` when you prefer faster responses on this MacBook.
+
+Set the selected model before starting the backend, either in your local `.env` file or for one
+command:
+
+```sh
+ARC_OLLAMA_MODEL=qwen2.5-coder:7b pnpm backend:dev
+```
+
+With Ollama running and the selected model installed, verify streaming independently from VSCode:
+
+```sh
+pnpm ollama:smoke
+pnpm ollama:smoke "Explain a TypeScript discriminated union in two sentences."
+```
 
 For manual development, run these from separate terminals:
 

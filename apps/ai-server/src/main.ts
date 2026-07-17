@@ -5,9 +5,9 @@ import { createConsoleLogger } from "@arc/shared";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module.js";
-import { loadConfig } from "./config/env.js";
+import { APP_CONFIG } from "./config/config.constants.js";
+import type { AppConfig } from "./config/env.js";
 
-const config = loadConfig();
 const logger = createConsoleLogger("ai-server");
 
 function toLogContext(error: unknown): LogContext {
@@ -27,6 +27,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: false,
   });
+  const config = app.get<AppConfig>(APP_CONFIG);
 
   app.enableCors({
     origin: config.corsOrigin,
