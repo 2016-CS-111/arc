@@ -2,16 +2,16 @@
 
 ## Milestone 1: Foundation
 
-Goal: create a compiling monorepo with strict TypeScript, a runnable backend, and a minimal VSCode
-extension activation path.
+Goal: create a compiling monorepo with strict TypeScript, a runnable NestJS backend, and a minimal
+VSCode extension activation path.
 
 Included:
 
 - Root workspace configuration.
 - Shared API contracts package.
 - Shared utilities package.
-- AI server with `/health`.
-- Socket.IO gateway registration.
+- NestJS AI server with `/health`.
+- NestJS Socket.IO gateway registration.
 - VSCode extension command and backend URL setting.
 - Unit test for the health response contract.
 

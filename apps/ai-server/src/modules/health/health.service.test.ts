@@ -1,11 +1,12 @@
 import { HealthResponseSchema } from "@arc/contracts";
 import { describe, expect, it } from "vitest";
 
-import { createHealthResponse } from "./createHealthResponse.js";
+import { HealthService } from "./health.service.js";
 
-describe("createHealthResponse", () => {
+describe("HealthService", () => {
   it("returns a valid health response contract", () => {
-    const response = createHealthResponse();
+    const service = new HealthService();
+    const response = service.getHealth();
 
     expect(HealthResponseSchema.parse(response)).toEqual(response);
     expect(response.status).toBe("ok");

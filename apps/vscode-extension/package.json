@@ -37,7 +37,10 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "dev": "tsc -watch -p tsconfig.json",
+    "host": "pnpm --dir ../.. extension:host",
+    "test": "vitest run",
+    "watch": "tsc -watch -p tsconfig.json"
   },
   "devDependencies": {
     "@arc/contracts": "workspace:*"

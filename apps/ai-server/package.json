@@ -13,14 +13,15 @@
   "dependencies": {
     "@arc/contracts": "workspace:*",
     "@arc/shared": "workspace:*",
-    "cors": "^2.8.5",
+    "@nestjs/common": "^11.1.28",
+    "@nestjs/core": "^11.1.28",
+    "@nestjs/platform-express": "^11.1.28",
+    "@nestjs/platform-socket.io": "^11.1.28",
+    "@nestjs/websockets": "^11.1.28",
     "dotenv": "^17.2.0",
-    "express": "^5.1.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "socket.io": "^4.8.1",
     "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3"
   }
 }

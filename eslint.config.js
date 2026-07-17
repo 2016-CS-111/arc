@@ -24,6 +24,12 @@ export default tseslint.config(
           prefer: "type-imports",
         },
       ],
+      "@typescript-eslint/no-extraneous-class": [
+        "error",
+        {
+          allowWithDecorator: true,
+        },
+      ],
       "@typescript-eslint/no-floating-promises": "error",
     },
   },

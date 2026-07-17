@@ -25,7 +25,7 @@ The extension must not own LLM orchestration, memory, embedding, or tool executi
 
 ## AI Backend Server
 
-The backend is the durable product core. It owns:
+The NestJS backend is the durable product core. It owns:
 
 - LLM provider orchestration.
 - Prompt and context assembly.
