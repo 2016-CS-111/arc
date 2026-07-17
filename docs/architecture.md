@@ -52,6 +52,18 @@ changing the caller. The backend liveness endpoint remains separate from Ollama 
 `/providers/ollama/status`, so clients can distinguish a stopped Arc server from an unavailable or
 misconfigured model.
 
+## Streaming Chat Protocol
+
+Milestone 2.2 adds a dedicated Socket.IO `/chat` namespace. Clients submit `chat:send` and
+`chat:cancel` commands, while the backend emits `chat:accepted`, `chat:delta`,
+`chat:completed`, `chat:cancelled`, and `chat:error` events. Every event is correlated by request
+and session identifier and validated with shared Zod contracts.
+
+The `ChatGateway` owns transport concerns only. `SendChatMessageService` invokes the provider port,
+and `ActiveGenerationRegistry` holds cancellable in-memory work for one connected client and
+session. The registry is deliberately not a conversation store: completed messages disappear on
+restart until durable sessions are added in Milestone 2.5.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

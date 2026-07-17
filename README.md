@@ -27,6 +27,7 @@ pnpm build
 pnpm test
 pnpm lint
 pnpm backend:dev
+pnpm chat:socket-smoke
 pnpm ollama:smoke
 pnpm extension:watch
 pnpm extension:run
@@ -57,6 +58,14 @@ With Ollama running and the selected model installed, verify streaming independe
 ```sh
 pnpm ollama:smoke
 pnpm ollama:smoke "Explain a TypeScript discriminated union in two sentences."
+```
+
+Milestone 2.2 adds the backend-only Socket.IO chat gateway at the `/chat` namespace. With the
+backend already running, verify the complete local streaming protocol:
+
+```sh
+pnpm chat:socket-smoke
+pnpm chat:socket-smoke "Explain a TypeScript discriminated union in two sentences."
 ```
 
 For manual development, run these from separate terminals:

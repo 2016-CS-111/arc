@@ -59,6 +59,8 @@ Not included yet:
 
 ### Milestone 2.2: Backend Streaming Protocol
 
+Status: Complete.
+
 Goal: expose the Ollama adapter through a stable, validated Socket.IO chat protocol that can be
 tested without VSCode.
 

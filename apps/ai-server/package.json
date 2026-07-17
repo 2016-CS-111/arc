@@ -6,6 +6,7 @@
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "chat:socket-smoke": "tsx src/cli/chat-socket-smoke.ts",
     "dev": "tsx watch src/main.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
     "start": "node dist/main.js",
@@ -24,5 +25,8 @@
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.1",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }
