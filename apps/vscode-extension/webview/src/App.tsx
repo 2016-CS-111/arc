@@ -1,7 +1,9 @@
 import { Bot, RefreshCw } from "lucide-react";
-import { type ReactElement, useEffect, useReducer } from "react";
+import { type ReactElement, useEffect, useReducer, useState } from "react";
 
 import { parseExtensionToWebviewMessage } from "../../src/features/chat/chatWebview.contract.js";
+import { ChatComposer } from "./components/chat/ChatComposer.js";
+import { ConversationView } from "./components/chat/ConversationView.js";
 import { IconButton } from "./components/ui/IconButton.js";
 import { StatusIndicator, type StatusTone } from "./components/ui/StatusIndicator.js";
 import { chatViewReducer, initialChatViewState } from "./chatView.reducer.js";
@@ -9,6 +11,7 @@ import { postToExtension } from "./vscode.js";
 
 export function App() {
   const [state, dispatch] = useReducer(chatViewReducer, initialChatViewState);
+  const [draft, setDraft] = useState("");
   console.log("🚀 ~ App ~ state1:", state);
 
   useEffect(() => {
@@ -69,25 +72,46 @@ export function App() {
   const backendTone: StatusTone = backend === undefined ? "idle" : backend === null ? "error" : "ready";
   const ollamaStatus = getOllamaLabel(ollama?.status);
   const ollamaTone = getOllamaTone(ollama?.status);
+  const connectionStatus = state.chat?.connectionStatus ?? "idle";
+  const isGenerating = state.chat?.activeGeneration !== null && state.chat !== undefined;
+  const isConnectionReady = connectionStatus === "connected";
+  const connectionLabel = getConnectionLabel(connectionStatus);
 
   function refreshStatus(): void {
     dispatch({ type: "status:refresh" });
     postToExtension({ type: "status:refresh" });
   }
 
+  function submitChat(): void {
+    const content = draft.trim();
+    if (!isConnectionReady || isGenerating || content.length === 0) {
+      return;
+    }
+
+    setDraft("");
+    postToExtension({ content, type: "chat:submit" });
+  }
+
+  function cancelChat(): void {
+    postToExtension({ type: "chat:cancel" });
+  }
+
   return (
-    <main className="min-h-screen bg-arc-background text-arc-foreground">
+    <main className="flex min-h-screen flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
         <div className="flex min-w-0 items-center gap-2">
           <Bot aria-hidden="true" className="shrink-0 text-arc-accent" size={16} strokeWidth={1.8} />
           <h1 className="truncate text-sm font-semibold">Arc</h1>
         </div>
-        <IconButton label="Refresh connection status" onClick={refreshStatus}>
-          <RefreshCw aria-hidden="true" size={15} strokeWidth={1.8} />
-        </IconButton>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="truncate text-xs text-arc-muted">{connectionLabel}</span>
+          <IconButton label="Refresh connection status" onClick={refreshStatus}>
+            <RefreshCw aria-hidden="true" size={15} strokeWidth={1.8} />
+          </IconButton>
+        </div>
       </header>
 
-      <section aria-label="Connection status" className="px-3 py-3">
+      <section aria-label="Connection status" className="grid grid-cols-2 border-b border-arc-border px-3">
         <StatusRow detail={snapshot?.backendUrl} label="Backend" status={backendStatus} tone={backendTone} />
         <StatusRow
           detail={ollama?.model ?? ollama?.message ?? snapshot?.error}
@@ -96,6 +120,15 @@ export function App() {
           tone={ollamaTone}
         />
       </section>
+      <ConversationView messages={state.chat?.messages ?? []} />
+      <ChatComposer
+        connectionReady={isConnectionReady}
+        isGenerating={isGenerating}
+        onCancel={cancelChat}
+        onChange={setDraft}
+        onSubmit={submitChat}
+        value={draft}
+      />
     </main>
   );
 }
@@ -112,15 +145,15 @@ function StatusRow({
   readonly tone: StatusTone;
 }): ReactElement {
   return (
-    <div className="flex min-h-14 items-center gap-3 border-b border-arc-border py-2 last:border-b-0">
+    <div className="flex min-w-0 items-center gap-2 border-r border-arc-border py-2 pr-2 last:border-r-0 last:pl-2 last:pr-0">
       <StatusIndicator tone={tone} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs font-medium">{label}</p>
         <p className="truncate text-xs text-arc-muted" title={detail}>
           {detail ?? "Waiting for Arc"}
         </p>
       </div>
-      <span className="shrink-0 text-xs text-arc-muted">{status}</span>
+      <span className="shrink-0 text-[11px] text-arc-muted">{status}</span>
     </div>
   );
 }
@@ -154,5 +187,18 @@ function getOllamaTone(status: string | undefined): StatusTone {
       return "error";
     default:
       return "idle";
+  }
+}
+
+function getConnectionLabel(status: string): string {
+  switch (status) {
+    case "connected":
+      return "Connected";
+    case "connecting":
+      return "Connecting";
+    case "disconnected":
+      return "Disconnected";
+    default:
+      return "Starting";
   }
 }

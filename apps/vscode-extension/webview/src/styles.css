@@ -8,8 +8,14 @@
   --color-arc-focus: var(--vscode-focusBorder);
   --color-arc-foreground: var(--vscode-sideBar-foreground);
   --color-arc-hover: var(--vscode-toolbar-hoverBackground);
+  --color-arc-input: var(--vscode-input-background);
+  --color-arc-input-border: var(--vscode-input-border);
+  --color-arc-input-foreground: var(--vscode-input-foreground);
   --color-arc-muted: var(--vscode-descriptionForeground);
+  --color-arc-surface: var(--vscode-editorWidget-background);
   --color-arc-success: var(--vscode-testing-iconPassed);
+  --color-arc-user: var(--vscode-button-background);
+  --color-arc-user-foreground: var(--vscode-button-foreground);
   --color-arc-warning: var(--vscode-editorWarning-foreground);
   --font-sans: var(--vscode-font-family);
 }

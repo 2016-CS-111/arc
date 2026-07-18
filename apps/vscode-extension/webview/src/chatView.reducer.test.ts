@@ -83,4 +83,50 @@ describe("chatViewReducer", () => {
       }),
     ).toBe(hydrated);
   });
+
+  it("preserves partial output and its error after a failed generation", () => {
+    const hydrated = chatViewReducer(initialChatViewState, {
+      session: chatSession,
+      type: "chat:hydrated",
+    });
+    const started = chatViewReducer(hydrated, {
+      requestId: "request-1",
+      type: "chat:generation-started",
+    });
+    const streamed = chatViewReducer(started, {
+      content: "Partial output",
+      requestId: "request-1",
+      type: "chat:generation-delta",
+    });
+    const failed = chatViewReducer(streamed, {
+      error: {
+        code: "connection_unavailable",
+        message: "Connection to the Arc backend was lost.",
+        retryable: true,
+      },
+      requestId: "request-1",
+      type: "chat:generation-failed",
+    });
+
+    expect(failed.chat).toMatchObject({ activeGeneration: null });
+    expect(failed.chat?.messages[1]).toMatchObject({
+      content: "Partial output",
+      error: { code: "connection_unavailable", retryable: true },
+      status: "failed",
+    });
+  });
+
+  it("updates the hydrated connection state", () => {
+    const hydrated = chatViewReducer(initialChatViewState, {
+      session: chatSession,
+      type: "chat:hydrated",
+    });
+
+    expect(
+      chatViewReducer(hydrated, {
+        status: "disconnected",
+        type: "chat:connection-updated",
+      }).chat,
+    ).toMatchObject({ connectionStatus: "disconnected" });
+  });
 });

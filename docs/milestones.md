@@ -186,7 +186,7 @@ Not included yet:
 
 #### Milestone 2.4.3: Streaming Chat UI
 
-Status: Not started.
+Status: Complete.
 
 Goal: expose the proven chat controller through a focused plain-text React experience in the Arc
 activity-bar view.

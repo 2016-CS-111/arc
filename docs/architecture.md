@@ -93,8 +93,18 @@ normalized lifecycle updates to the webview.
 
 The Socket.IO client connects lazily when the Arc view becomes ready and uses bounded automatic
 reconnection. A disconnect fails the active local generation with a retryable error; it never
-silently repeats a user prompt. The future composer and conversation presentation remain separate
-work in Milestone 2.4.3.
+silently repeats a user prompt.
+
+## Streaming Chat Presentation
+
+Milestone 2.4.3 presents the normalized session snapshot in the Arc webview. The React view renders
+plain-text user and assistant messages, including pending, streaming, completed, cancelled, and
+failed states. Its composer emits only validated bridge commands and is disabled while disconnected
+or while a generation is active; Stop forwards a cancellation request to the extension host.
+
+The conversation follows new streaming output until the user scrolls away, keeping a narrow sidebar
+usable without fighting deliberate review of earlier messages. The webview remains a projection of
+extension-host state, so its reload hydration behavior and transport ownership are unchanged.
 
 ## Local Infrastructure
 
