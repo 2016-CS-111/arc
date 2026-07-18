@@ -118,29 +118,129 @@ Not included yet:
 
 ### Milestone 2.4: End-to-End Streaming Chat
 
+Status: Planned.
+
 Goal: connect the webview, extension host, backend gateway, and Ollama adapter into one working chat
-flow.
+flow. Milestone 2.4 is divided into four independently testable gates so transport, state, UI, and
+resilience failures can be isolated.
+
+#### Milestone 2.4.1: Chat State and Bridge Contracts
+
+Status: Complete.
+
+Goal: define the temporary chat state model and the validated message boundary between the webview
+and extension host without opening a Socket.IO connection.
+
+Included:
+
+- Webview commands for submitting and cancelling a prompt.
+- Extension-host events for hydration, generation start, deltas, completion, cancellation, errors,
+  and connection state.
+- Host-generated session, request, and message identifiers.
+- In-memory conversation and active-generation state owned by the extension host.
+- Reducer transitions for idle, submitting, streaming, completed, cancelled, and failed states.
+- Contract, state-machine, stale-event, and reducer tests.
+
+Acceptance gate:
+
+- Invalid bridge messages are rejected without changing chat state.
+- A deterministic event sequence produces the expected user and assistant messages.
+- Stale request identifiers cannot mutate the active generation.
+- A reloaded webview can hydrate from the extension host's in-memory snapshot.
+- Build, tests, lint, and format checks pass.
+
+Not included yet:
+
+- Socket.IO client.
+- Visible composer or conversation UI.
+- Ollama requests.
+
+#### Milestone 2.4.2: Extension Chat Transport
+
+Status: Not started.
+
+Goal: connect the extension-host chat controller to the existing NestJS `/chat` namespace through a
+provider-neutral transport boundary.
 
 Included:
 
 - Socket.IO client owned by the extension host.
-- Chat composer and plain-text conversation view.
-- Prompt submission, streaming deltas, completion, and stop-generation actions.
-- Correlated transport between webview requests and backend stream events.
-- Basic reconnect and actionable error states.
-- End-to-end tests with a deterministic fake model plus a manual Ollama test.
+- `ChatTransportPort` and `SocketIoChatTransport` implementations.
+- Correlated send, accepted, delta, completed, cancelled, and error events.
+- Stop-generation forwarding.
+- Lazy connection, bounded reconnection, and disconnect cleanup.
+- Fake-transport controller tests and backend protocol integration tests.
 
 Acceptance gate:
 
-- A prompt entered in the Arc view streams a response from the configured local model.
-- Stop generation cancels the corresponding backend request.
-- Backend restarts and connection failures do not freeze the webview.
+- The extension host can stream a deterministic response without the React UI.
+- Cancellation reaches the backend and terminates the matching request.
+- Malformed, duplicate, and stale backend events do not corrupt session state.
+- A disconnect marks an active generation as interrupted and never silently resends it.
 - Build, test, lint, and format checks pass.
 
 Not included yet:
 
-- Durable sessions.
+- Chat composer and conversation rendering.
+- Manual Ollama acceptance test.
+
+#### Milestone 2.4.3: Streaming Chat UI
+
+Status: Not started.
+
+Goal: expose the proven chat controller through a focused plain-text React experience in the Arc
+activity-bar view.
+
+Included:
+
+- Plain-text user and assistant message list.
+- Multiline composer with Send and Stop actions.
+- Streaming assistant message updates.
+- Compact connection, generation, empty, cancelled, and error states.
+- Auto-scroll behavior that respects manual user scrolling.
+- Tailwind components, Lucide controls, accessibility labels, and reducer tests.
+
+Acceptance gate:
+
+- Submitting a prompt renders the user message and a streaming assistant response.
+- The composer cannot create a second request while one is active.
+- Stop, cancellation, failure, and reconnect states remain usable in a narrow sidebar.
+- Webview reload hydrates the current in-memory conversation.
+- Build, tests, lint, and format checks pass.
+
+Not included yet:
+
+- Markdown, syntax highlighting, and code-copy actions.
+- Durable conversation history.
+
+#### Milestone 2.4.4: Integration and Resilience
+
+Status: Not started.
+
+Goal: prove the complete prompt-to-token path under normal operation, cancellation, and local
+infrastructure failures.
+
+Included:
+
+- End-to-end test with a deterministic fake model.
+- Backend restart, disconnect, cancellation-race, timeout, and malformed-event coverage.
+- Manual streaming and cancellation test with the configured Ollama model.
+- Final operating instructions and Milestone 2.4 test matrix.
+
+Acceptance gate:
+
+- A prompt entered in the Arc view streams a response from `qwen2.5-coder:7b`.
+- Stop generation cancels the corresponding backend request.
+- Backend restarts and connection failures do not freeze the webview or lose control of the
+  composer.
+- No automatic retry can accidentally produce a duplicate generation.
+- Full workspace build, test, lint, and format checks pass.
+
+Not included:
+
+- PostgreSQL-backed sessions.
 - Rich Markdown and syntax highlighting.
+- Repository context, tools, or file editing.
 
 ### Milestone 2.5: Durable Chat Sessions
 

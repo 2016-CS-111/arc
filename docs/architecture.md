@@ -72,6 +72,17 @@ the extension host, which owns HTTP calls to the local backend. The initial brid
 and Ollama readiness only. It uses a nonce-based content security policy and allows scripts and
 styles exclusively from the extension's generated webview assets.
 
+## Ephemeral Chat State
+
+Milestone 2.4.1 extends the webview bridge with validated chat lifecycle messages. The extension
+host owns a single in-memory session, including request IDs, pending assistant placeholders, and
+terminal generation states. A webview receives a hydration snapshot whenever it becomes ready, so
+closing or reloading the view does not discard the Extension Host's temporary conversation.
+
+This state is deliberately local and non-durable. The webview cannot open a transport connection or
+choose correlation IDs; Socket.IO transport is added in Milestone 2.4.2, and persistent sessions
+are deferred to Milestone 2.5.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

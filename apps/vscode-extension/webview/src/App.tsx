@@ -14,8 +14,44 @@ export function App() {
   useEffect(() => {
     const onMessage = (event: MessageEvent<unknown>): void => {
       const message = parseExtensionToWebviewMessage(event.data);
-      if (message?.type === "status:update") {
-        dispatch({ snapshot: message.snapshot, type: "status:received" });
+      switch (message?.type) {
+        case "status:update":
+          dispatch({ snapshot: message.snapshot, type: "status:received" });
+          return;
+        case "chat:hydrated":
+          dispatch({ session: message.session, type: "chat:hydrated" });
+          return;
+        case "chat:submitted":
+          dispatch({ session: message.session, type: "chat:submitted" });
+          return;
+        case "chat:generation-started":
+          dispatch({ requestId: message.requestId, type: "chat:generation-started" });
+          return;
+        case "chat:generation-delta":
+          dispatch({
+            content: message.content,
+            requestId: message.requestId,
+            type: "chat:generation-delta",
+          });
+          return;
+        case "chat:generation-completed":
+          dispatch({ requestId: message.requestId, type: "chat:generation-completed" });
+          return;
+        case "chat:generation-cancelled":
+          dispatch({ requestId: message.requestId, type: "chat:generation-cancelled" });
+          return;
+        case "chat:generation-failed":
+          dispatch({
+            error: message.error,
+            requestId: message.requestId,
+            type: "chat:generation-failed",
+          });
+          return;
+        case "chat:connection-updated":
+          dispatch({ status: message.status, type: "chat:connection-updated" });
+          return;
+        default:
+          return;
       }
     };
 

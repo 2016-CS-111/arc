@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  parseExtensionToWebviewMessage,
-  parseWebviewToExtensionMessage,
-} from "./chatWebview.contract.js";
+import { parseExtensionToWebviewMessage, parseWebviewToExtensionMessage } from "./chatWebview.contract.js";
 
 describe("webview chat contract", () => {
-  it("accepts the two webview commands", () => {
+  it("accepts webview readiness, status, and chat commands", () => {
     expect(parseWebviewToExtensionMessage({ type: "webview:ready" })).toEqual({
       type: "webview:ready",
     });
     expect(parseWebviewToExtensionMessage({ type: "status:refresh" })).toEqual({
       type: "status:refresh",
+    });
+    expect(parseWebviewToExtensionMessage({ content: "Explain this function", type: "chat:submit" })).toEqual({
+      content: "Explain this function",
+      type: "chat:submit",
+    });
+    expect(parseWebviewToExtensionMessage({ type: "chat:cancel" })).toEqual({
+      type: "chat:cancel",
     });
   });
 
@@ -42,5 +46,39 @@ describe("webview chat contract", () => {
         type: "status:update",
       }),
     ).toMatchObject({ type: "status:update" });
+  });
+
+  it("accepts a hydrated in-memory chat session", () => {
+    const timestamp = "2026-07-18T12:00:00.000Z";
+
+    expect(
+      parseExtensionToWebviewMessage({
+        session: {
+          activeGeneration: {
+            assistantMessageId: "assistant-1",
+            requestId: "request-1",
+          },
+          connectionStatus: "idle",
+          messages: [
+            {
+              content: "Explain this function",
+              createdAt: timestamp,
+              id: "user-1",
+              role: "user",
+              status: "completed",
+            },
+            {
+              content: "",
+              createdAt: timestamp,
+              id: "assistant-1",
+              role: "assistant",
+              status: "pending",
+            },
+          ],
+          sessionId: "session-1",
+        },
+        type: "chat:hydrated",
+      }),
+    ).toMatchObject({ type: "chat:hydrated" });
   });
 });

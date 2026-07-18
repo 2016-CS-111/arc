@@ -5,9 +5,11 @@ import { z } from "zod";
 
 import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
+import type { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import { createWebviewHtml, type WebviewAsset } from "./createWebviewHtml.js";
 import {
   type BackendStatusSnapshot,
+  type ExtensionToWebviewMessage,
   parseWebviewToExtensionMessage,
 } from "./chatWebview.contract.js";
 
@@ -29,6 +31,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly backendConfig: BackendConfig,
+    private readonly chatSession: InMemoryChatSessionController,
   ) {}
 
   public resolveWebviewView(view: vscode.WebviewView): void {
@@ -44,8 +47,22 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     });
     view.webview.onDidReceiveMessage((message: unknown) => {
       const parsedMessage = parseWebviewToExtensionMessage(message);
-      if (parsedMessage?.type === "webview:ready" || parsedMessage?.type === "status:refresh") {
-        void this.refreshStatus();
+      switch (parsedMessage?.type) {
+        case "webview:ready":
+          void this.refreshStatus();
+          void this.hydrateChat();
+          return;
+        case "status:refresh":
+          void this.refreshStatus();
+          return;
+        case "chat:submit":
+          void this.submitChat(parsedMessage.content);
+          return;
+        case "chat:cancel":
+          void this.cancelChat();
+          return;
+        default:
+          return;
       }
     });
   }
@@ -67,13 +84,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
   }
 
   private async getAssets(webview: vscode.Webview): Promise<WebviewAsset> {
-    const manifestUri = vscode.Uri.joinPath(
-      this.extensionUri,
-      "dist",
-      "webview",
-      ".vite",
-      "manifest.json",
-    );
+    const manifestUri = vscode.Uri.joinPath(this.extensionUri, "dist", "webview", ".vite", "manifest.json");
     const content = await vscode.workspace.fs.readFile(manifestUri);
     const manifestJson: unknown = JSON.parse(Buffer.from(content).toString("utf8"));
     const manifest = ViteManifestSchema.parse(manifestJson);
@@ -99,9 +110,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     const abortController = new AbortController();
     this.currentAbortController = abortController;
 
-    const status = await new BackendStatusClient(this.backendConfig.url).getStatus(
-      abortController.signal,
-    );
+    const status = await new BackendStatusClient(this.backendConfig.url).getStatus(abortController.signal);
     if (abortController.signal.aborted || this.view === undefined) {
       return;
     }
@@ -114,6 +123,47 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
       ...(status.error === undefined ? {} : { error: status.error }),
     };
     await this.view.webview.postMessage({ snapshot, type: "status:update" });
+  }
+
+  private async hydrateChat(): Promise<void> {
+    await this.postChatMessage({
+      session: this.chatSession.getSnapshot(),
+      type: "chat:hydrated",
+    });
+  }
+
+  private async submitChat(content: string): Promise<void> {
+    const submission = this.chatSession.submit(content);
+    if (submission === undefined) {
+      return;
+    }
+
+    await this.postChatMessage({
+      session: submission.session,
+      type: "chat:submitted",
+    });
+  }
+
+  private async cancelChat(): Promise<void> {
+    const activeGeneration = this.chatSession.getSnapshot().activeGeneration;
+    if (activeGeneration === null) {
+      return;
+    }
+
+    if (this.chatSession.cancel(activeGeneration.requestId) !== undefined) {
+      await this.postChatMessage({
+        requestId: activeGeneration.requestId,
+        type: "chat:generation-cancelled",
+      });
+    }
+  }
+
+  private async postChatMessage(message: ExtensionToWebviewMessage): Promise<void> {
+    if (this.view === undefined) {
+      return;
+    }
+
+    await this.view.webview.postMessage(message);
   }
 
   private disposeView(): void {
