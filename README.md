@@ -40,8 +40,8 @@ The AI server listens on `http://127.0.0.1:7331` by default.
 
 ## PostgreSQL
 
-Milestone 2.5 introduces PostgreSQL-backed durable sessions. Start the local database and apply its
-explicit SQL migrations before enabling the durable repository in the following sub-milestone:
+Milestone 2.5 uses Sequelize with PostgreSQL-backed durable sessions. Start the local database and
+apply its explicit SQL migrations before enabling the durable gateway in Milestone 2.5.3:
 
 ```sh
 pnpm db:up

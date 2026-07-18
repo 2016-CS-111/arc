@@ -1,23 +1,23 @@
 import { Global, Module, type Provider } from "@nestjs/common";
-import type { Pool } from "pg";
 
 import { ConfigModule } from "../config/config.module.js";
 import { APP_CONFIG } from "../config/config.constants.js";
 import type { AppConfig } from "../config/env.js";
-import { DATABASE_POOL } from "./database.constants.js";
-import { createDatabasePool } from "./database.pool.js";
-import { DatabasePoolLifecycle } from "./database.pool-lifecycle.js";
+import { DATABASE } from "./database.constants.js";
+import { DatabaseLifecycle } from "./database.lifecycle.js";
+import { createDatabase } from "./database.sequelize.js";
+import type { ArcDatabase } from "./database.types.js";
 
-const databasePoolProvider: Provider<Pool> = {
-  provide: DATABASE_POOL,
+const databaseProvider: Provider<ArcDatabase> = {
+  provide: DATABASE,
   inject: [APP_CONFIG],
-  useFactory: (config: AppConfig): Pool => createDatabasePool(config),
+  useFactory: (config: AppConfig): ArcDatabase => createDatabase(config),
 };
 
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [databasePoolProvider, DatabasePoolLifecycle],
-  exports: [DATABASE_POOL],
+  providers: [databaseProvider, DatabaseLifecycle],
+  exports: [DATABASE],
 })
 export class DatabaseModule {}

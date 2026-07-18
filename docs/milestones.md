@@ -274,7 +274,7 @@ Status: Complete.
 
 Included:
 
-- Conversation repository port and PostgreSQL adapter.
+- Conversation repository port and Sequelize adapter.
 - Create, list, load, rename, delete, and interrupted-generation recovery services.
 
 Not included yet:

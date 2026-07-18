@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { Pool } from "pg";
+import { QueryTypes, type Sequelize } from "sequelize";
 
 export interface SqlMigration {
   readonly name: string;
@@ -30,37 +30,30 @@ export async function loadMigrations(directory = getDefaultMigrationDirectory())
   );
 }
 
-export async function runMigrations(pool: Pool, migrations: readonly SqlMigration[]): Promise<string[]> {
-  const client = await pool.connect();
+export async function runMigrations(sequelize: Sequelize, migrations: readonly SqlMigration[]): Promise<string[]> {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS arc_schema_migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  const appliedRows = await sequelize.query<MigrationRow>("SELECT name FROM arc_schema_migrations", {
+    type: QueryTypes.SELECT,
+  });
+  const appliedNames = new Set(appliedRows.map((row) => row.name));
+  const pendingMigrations = migrations.filter((migration) => !appliedNames.has(migration.name));
 
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS arc_schema_migrations (
-        name TEXT PRIMARY KEY,
-        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    const appliedResult = await client.query<MigrationRow>("SELECT name FROM arc_schema_migrations");
-    const appliedNames = new Set(appliedResult.rows.map((row) => row.name));
-    const pendingMigrations = migrations.filter((migration) => !appliedNames.has(migration.name));
-
-    for (const migration of pendingMigrations) {
-      await client.query("BEGIN");
-
-      try {
-        await client.query(migration.sql);
-        await client.query("INSERT INTO arc_schema_migrations (name) VALUES ($1)", [migration.name]);
-        await client.query("COMMIT");
-      } catch (error) {
-        await client.query("ROLLBACK");
-        throw error;
-      }
-    }
-
-    return pendingMigrations.map((migration) => migration.name);
-  } finally {
-    client.release();
+  for (const migration of pendingMigrations) {
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query(migration.sql, { transaction });
+      await sequelize.query("INSERT INTO arc_schema_migrations (name) VALUES ($1)", {
+        bind: [migration.name],
+        transaction,
+      });
+    });
   }
+
+  return pendingMigrations.map((migration) => migration.name);
 }
 
 function getDefaultMigrationDirectory(): string {

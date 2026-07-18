@@ -133,14 +133,21 @@ Milestone 2.5.3.
 ## Conversation Repository
 
 Milestone 2.5.2 adds a repository port behind Nest services for session lifecycle and assistant
-generation state. The PostgreSQL adapter is the only layer that knows SQL; future REST controllers
-and the realtime gateway consume the services rather than querying tables directly.
+generation state. The backend uses a small Sequelize database registry with factory-defined
+`chatSessions` and `chatMessages` models, followed by their association in one central model index.
+This deliberately mirrors the application's established Sequelize style without introducing a
+second Nest-specific model abstraction. Future REST controllers and the realtime gateway consume the
+services rather than querying tables directly.
 
 Creating a turn locks its session row, first checks the `(session_id, request_id)` pair, then
 allocates adjacent durable message ordinals in the same transaction. A repeated request ID returns
 the original user and assistant records instead of creating a second turn. Assistant output moves
 from `pending` to `streaming` and one terminal state through a single update path. On recovery, any
 pending or streaming assistant messages become retryable `generation_failed` records.
+
+Schema changes stay in the explicit migration runner; the backend never uses `sequelize.sync()`. On
+startup it checks the PostgreSQL connection and logs a non-fatal availability warning, while the
+migration command fails clearly if the database cannot be updated.
 
 This layer is intentionally not wired into the current chat gateway. Milestone 2.5.3 will create
 the durable turn before inference, persist stream state, and use the stored snapshot to build model
