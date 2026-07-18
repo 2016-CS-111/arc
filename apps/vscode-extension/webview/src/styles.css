@@ -41,3 +41,118 @@
     font: inherit;
   }
 }
+
+@layer components {
+  .arc-markdown {
+    line-height: 1.25rem;
+    overflow-wrap: anywhere;
+  }
+
+  .arc-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .arc-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .arc-markdown p,
+  .arc-markdown ul,
+  .arc-markdown ol,
+  .arc-markdown blockquote,
+  .arc-markdown pre,
+  .arc-markdown table {
+    margin: 0.5rem 0;
+  }
+
+  .arc-markdown h1,
+  .arc-markdown h2,
+  .arc-markdown h3,
+  .arc-markdown h4,
+  .arc-markdown h5,
+  .arc-markdown h6 {
+    margin: 0.75rem 0 0.375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .arc-markdown h1 {
+    font-size: 1.125rem;
+  }
+
+  .arc-markdown h2 {
+    font-size: 1rem;
+  }
+
+  .arc-markdown h3,
+  .arc-markdown h4,
+  .arc-markdown h5,
+  .arc-markdown h6 {
+    font-size: 0.875rem;
+  }
+
+  .arc-markdown ul,
+  .arc-markdown ol {
+    padding-left: 1.25rem;
+  }
+
+  .arc-markdown li + li {
+    margin-top: 0.125rem;
+  }
+
+  .arc-markdown a {
+    color: var(--vscode-textLink-foreground);
+    text-decoration: underline;
+  }
+
+  .arc-markdown blockquote {
+    border-left: 2px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    margin-left: 0;
+    padding-left: 0.75rem;
+  }
+
+  .arc-markdown code {
+    background: var(--vscode-textCodeBlock-background);
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.8125rem;
+    padding: 0.0625rem 0.25rem;
+  }
+
+  .arc-markdown pre {
+    background: var(--vscode-textCodeBlock-background);
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.625rem;
+  }
+
+  .arc-markdown pre code {
+    background: transparent;
+    padding: 0;
+  }
+
+  .arc-markdown table {
+    border-collapse: collapse;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .arc-markdown th,
+  .arc-markdown td {
+    border: 1px solid var(--vscode-widget-border);
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+  }
+
+  .arc-markdown th {
+    background: var(--vscode-editorWidget-background);
+    font-weight: 600;
+  }
+
+  .arc-markdown input[type="checkbox"] {
+    accent-color: var(--vscode-checkbox-selectBorder);
+    margin: 0 0.375rem 0 0;
+    vertical-align: middle;
+  }
+}

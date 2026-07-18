@@ -386,6 +386,46 @@ Included:
 - Logging that excludes prompt and response contents by default.
 - Updated architecture, operating instructions, and manual test matrix.
 
+#### Milestone 2.6.1: Safe Markdown Foundation
+
+Status: Complete.
+
+- Render assistant output as Markdown with GitHub-flavored Markdown support.
+- Treat model output as untrusted: ignore raw HTML, block images, and allow only `http` and `https` links.
+- Apply an explicit sanitization schema after Markdown processing.
+- Add focused tests for GFM output, malicious HTML, unsafe URI schemes, and malformed Markdown.
+
+Acceptance gate:
+
+- Model-provided scripts, event attributes, Markdown images, and unsafe URI schemes cannot become active webview content.
+- Supported GFM tables, task lists, and strikethrough render correctly.
+
+#### Milestone 2.6.2: Code Blocks and Trusted Actions
+
+- Add fenced-code language labels and syntax highlighting.
+- Add a code-copy action through the validated extension-host bridge.
+- Open external links only after extension-host URL validation.
+
+#### Milestone 2.6.3: Streaming Performance and Scroll
+
+- Batch streamed UI updates and memoize completed messages.
+- Preserve follow mode while the user is near the latest message.
+- Pause automatic scrolling during manual review and provide a jump-to-latest action.
+- Keep long responses, tables, and code blocks usable in narrow layouts.
+
+#### Milestone 2.6.4: Transport Resilience and Error UX
+
+- Add bounded reconnect attempts with explicit connection states.
+- Keep backend model timeout ownership and add a client-side safety watchdog.
+- Normalize backend, provider, cancellation, and connection errors for the chat UI.
+- Never automatically resend a user prompt after a disconnect.
+
+#### Milestone 2.6.5: Privacy Logging and Acceptance
+
+- Add content-free lifecycle logging with request identifiers, timing, and status.
+- Document the security, resilience, and manual Ollama test matrix.
+- Complete workspace build, test, lint, format, and end-to-end verification.
+
 Acceptance gate:
 
 - Untrusted model output cannot inject scripts into the webview.

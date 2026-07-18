@@ -3,6 +3,7 @@ import { type ReactElement, useEffect, useRef } from "react";
 
 import type { ChatSessionMessage } from "../../../../src/features/chat/chatWebview.contract.js";
 import { cn } from "../../lib/cn.js";
+import { MarkdownMessage } from "./MarkdownMessage.js";
 
 export interface ConversationViewProps {
   readonly messages: readonly ChatSessionMessage[];
@@ -80,9 +81,11 @@ function MessageItem({ message }: { readonly message: ChatSessionMessage }): Rea
             : "border-arc-border bg-arc-surface text-arc-foreground",
         )}
       >
-        <p className="m-0 whitespace-pre-wrap break-words leading-5">
-          {message.content.length > 0 ? message.content : fallbackContent}
-        </p>
+        {isUser ? (
+          <p className="m-0 whitespace-pre-wrap break-words leading-5">{message.content}</p>
+        ) : (
+          <MarkdownMessage content={message.content.length > 0 ? message.content : fallbackContent} />
+        )}
         {isWorking ? (
           <LoaderCircle aria-label="Generating response" className="mt-2 animate-spin text-arc-muted" size={14} />
         ) : null}
