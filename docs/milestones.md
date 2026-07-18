@@ -215,7 +215,7 @@ Not included yet:
 
 #### Milestone 2.4.4: Integration and Resilience
 
-Status: Not started.
+Status: Complete.
 
 Goal: prove the complete prompt-to-token path under normal operation, cancellation, and local
 infrastructure failures.

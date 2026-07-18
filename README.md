@@ -27,8 +27,9 @@ pnpm build
 pnpm test
 pnpm lint
 pnpm backend:dev
-pnpm chat:socket-smoke
 pnpm ollama:smoke
+pnpm chat:socket-smoke
+pnpm chat:cancel-smoke
 pnpm extension:watch
 pnpm extension:run
 ```
@@ -66,7 +67,11 @@ backend already running, verify the complete local streaming protocol:
 ```sh
 pnpm chat:socket-smoke
 pnpm chat:socket-smoke "Explain a TypeScript discriminated union in two sentences."
+pnpm chat:cancel-smoke
 ```
+
+`chat:cancel-smoke` cancels as soon as the gateway accepts the request and exits successfully only
+when it receives the correlated cancellation event.
 
 For manual development, run these from separate terminals:
 
@@ -84,5 +89,6 @@ pnpm extension:run
 
 The extension window title should include `Extension Development Host`. In that window, run
 `Arc: Open Chat` from the Command Palette. The Arc activity-bar view opens and reports the backend
-and Ollama readiness through the extension host. It is a connection-status foundation in Milestone
-2.3; prompt entry and streaming arrive in Milestone 2.4.
+and Ollama readiness through the extension host. Enter a prompt to stream from the configured local
+model, or use Stop to cancel the active generation. See [the Milestone 2.4 operating guide](docs/milestone-2.4-test-matrix.md)
+for the full manual acceptance sequence and resilience checks.

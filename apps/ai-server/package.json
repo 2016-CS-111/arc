@@ -6,6 +6,7 @@
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "chat:cancel-smoke": "tsx src/cli/chat-socket-smoke.ts --cancel",
     "chat:socket-smoke": "tsx src/cli/chat-socket-smoke.ts",
     "dev": "tsx watch src/main.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",

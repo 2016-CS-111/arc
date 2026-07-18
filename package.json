@@ -10,6 +10,7 @@
     "backend:start": "pnpm --filter @arc/ai-server start",
     "build": "tsc -b",
     "clean": "pnpm -r exec rm -rf dist",
+    "chat:cancel-smoke": "pnpm --filter @arc/ai-server chat:cancel-smoke",
     "chat:socket-smoke": "pnpm --filter @arc/ai-server chat:socket-smoke",
     "dev:server": "pnpm backend:dev",
     "extension:build": "pnpm --filter arc-vscode-extension... build",

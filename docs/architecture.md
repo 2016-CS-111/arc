@@ -106,6 +106,18 @@ The conversation follows new streaming output until the user scrolls away, keepi
 usable without fighting deliberate review of earlier messages. The webview remains a projection of
 extension-host state, so its reload hydration behavior and transport ownership are unchanged.
 
+## Integration and Resilience
+
+Milestone 2.4.4 proves the prompt-to-token flow with a deterministic in-process model test spanning
+the NestJS gateway and extension-host session controller. It covers ordered deltas, correlated
+cancellation, and timeout normalization without requiring a local model during automated tests.
+
+On backend loss, the extension marks the active assistant message as a retryable failure and leaves
+the session available for an explicit future prompt. Socket.IO may reconnect, but the controller
+never re-emits an earlier `chat:send` command, so a backend restart cannot create a duplicate
+generation. The terminal smoke commands and manual test matrix document the matching Ollama and
+Arc-view checks for a local machine.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
