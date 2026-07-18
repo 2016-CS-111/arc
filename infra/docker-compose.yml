@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: arc-postgres
+    environment:
+      POSTGRES_DB: arc
+      POSTGRES_PASSWORD: arc
+      POSTGRES_USER: arc
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arc -d arc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "${ARC_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - arc-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  arc-postgres-data:

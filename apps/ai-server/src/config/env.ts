@@ -8,11 +8,21 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..
 
 loadDotenv({ path: resolve(workspaceRoot, ".env"), quiet: true });
 
+const databaseUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "postgres:" || protocol === "postgresql:";
+  }, "ARC_DATABASE_URL must use the postgres or postgresql protocol.");
+
 const rawEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   ARC_SERVER_HOST: z.string().min(1).default("127.0.0.1"),
   ARC_SERVER_PORT: z.coerce.number().int().positive().max(65535).default(7331),
   ARC_CORS_ORIGIN: z.string().min(1).default("*"),
+  ARC_DATABASE_URL: databaseUrlSchema.default("postgresql://arc:arc@127.0.0.1:5433/arc"),
+  ARC_DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
   ARC_OLLAMA_BASE_URL: z
     .string()
     .url()
@@ -28,6 +38,10 @@ export interface AppConfig {
   readonly host: string;
   readonly port: number;
   readonly corsOrigin: string;
+  readonly database: {
+    readonly url: string;
+    readonly connectTimeoutMs: number;
+  };
   readonly ollama: {
     readonly baseUrl: string;
     readonly model?: string;
@@ -46,11 +60,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     ...(parsed.ARC_OLLAMA_MODEL === undefined ? {} : { model: parsed.ARC_OLLAMA_MODEL }),
   };
 
+  const database = {
+    url: parsed.ARC_DATABASE_URL,
+    connectTimeoutMs: parsed.ARC_DATABASE_CONNECT_TIMEOUT_MS,
+  };
+
   return {
     nodeEnv: parsed.NODE_ENV,
     host: parsed.ARC_SERVER_HOST,
     port: parsed.ARC_SERVER_PORT,
     corsOrigin: parsed.ARC_CORS_ORIGIN,
+    database,
     ollama,
   };
 }

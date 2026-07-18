@@ -11,6 +11,10 @@ describe("loadConfig", () => {
       requestTimeoutMs: 300_000,
       readinessTimeoutMs: 5_000,
     });
+    expect(config.database).toEqual({
+      connectTimeoutMs: 5_000,
+      url: "postgresql://arc:arc@127.0.0.1:5433/arc",
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -19,6 +23,8 @@ describe("loadConfig", () => {
       ARC_OLLAMA_MODEL: "qwen2.5-coder:3b",
       ARC_OLLAMA_READINESS_TIMEOUT_MS: "2500",
       ARC_OLLAMA_REQUEST_TIMEOUT_MS: "120000",
+      ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
+      ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
     });
 
     expect(config.ollama).toEqual({
@@ -27,9 +33,17 @@ describe("loadConfig", () => {
       requestTimeoutMs: 120_000,
       readinessTimeoutMs: 2_500,
     });
+    expect(config.database).toEqual({
+      connectTimeoutMs: 8_000,
+      url: "postgres://arc:arc@localhost:5433/arc_test",
+    });
   });
 
   it("rejects an empty model value", () => {
     expect(() => loadConfig({ ARC_OLLAMA_MODEL: "   " })).toThrow();
+  });
+
+  it("rejects a non-PostgreSQL database URL", () => {
+    expect(() => loadConfig({ ARC_DATABASE_URL: "mysql://localhost/arc" })).toThrow();
   });
 });

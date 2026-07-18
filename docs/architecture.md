@@ -118,6 +118,18 @@ never re-emits an earlier `chat:send` command, so a backend restart cannot creat
 generation. The terminal smoke commands and manual test matrix document the matching Ollama and
 Arc-view checks for a local machine.
 
+## Durable Conversation Foundation
+
+Milestone 2.5.1 introduces PostgreSQL as the planned authority for conversation history without
+changing the current ephemeral chat flow. The `chat_sessions` table owns the durable session title,
+timestamps, and monotonically allocated message order. `chat_messages` stores the user and assistant
+records for a request, including cancelled and failed terminal states with structured errors.
+
+Migrations are ordered SQL files applied by an explicit CLI command. The backend does not mutate the
+schema during startup. The shared conversation contracts describe the future REST snapshots and
+retain the message identifiers and request correlation needed when the gateway becomes durable in
+Milestone 2.5.3.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

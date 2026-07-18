@@ -247,15 +247,63 @@ Not included:
 Goal: make the backend the source of truth for conversations and preserve chat history across
 VSCode and backend restarts.
 
+Milestone 2.5 is divided into independently testable persistence, backend, transport, UI, and
+acceptance gates.
+
+#### Milestone 2.5.1: PostgreSQL Foundation
+
+Status: Complete.
+
 Included:
 
-- PostgreSQL development infrastructure and migrations.
+- PostgreSQL 16 Docker Compose development infrastructure.
+- Typed database environment configuration.
+- Explicit, ordered SQL migration runner.
+- Initial session and message schema with durable terminal states.
+- Shared conversation API contracts.
+
+Not included yet:
+
+- PostgreSQL repository behavior.
+- Session REST endpoints or Socket.IO protocol changes.
+- Extension synchronization or history UI.
+
+#### Milestone 2.5.2: Conversation Repository and Services
+
+Status: Not started.
+
+Included:
+
 - Conversation repository port and PostgreSQL adapter.
-- Chat session and message tables.
-- Create, list, reopen, rename, and delete session operations.
-- Persisted user, completed assistant, cancelled, and failed message states.
-- Session history UI.
+- Create, list, load, rename, delete, and interrupted-generation recovery services.
+
+#### Milestone 2.5.3: Durable Chat Transport
+
+Status: Not started.
+
+Included:
+
+- Session REST API and durable streaming gateway integration.
+- Backend-owned context loading, persisted generation state, and recovery after restart.
+
+#### Milestone 2.5.4: Session History UI
+
+Status: Not started.
+
+Included:
+
+- Extension synchronization with backend session snapshots.
+- Create, reopen, rename, and delete session workflows.
+- Compact session-history UI in the Arc view.
+
+#### Milestone 2.5.5: Persistence Acceptance
+
+Status: Not started.
+
+Included:
+
 - Repository integration tests against PostgreSQL.
+- Restart-recovery and manual durable-session acceptance coverage.
 
 Acceptance gate:
 

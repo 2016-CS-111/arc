@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "chat:cancel-smoke": "tsx src/cli/chat-socket-smoke.ts --cancel",
     "chat:socket-smoke": "tsx src/cli/chat-socket-smoke.ts",
+    "db:migrate": "tsx src/cli/db-migrate.ts",
     "dev": "tsx watch src/main.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
     "start": "node dist/main.js",
@@ -22,12 +23,14 @@
     "@nestjs/platform-socket.io": "^11.1.28",
     "@nestjs/websockets": "^11.1.28",
     "dotenv": "^17.2.0",
+    "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "socket.io": "^4.8.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/pg": "^8.20.0",
     "socket.io-client": "^4.8.3"
   }
 }
