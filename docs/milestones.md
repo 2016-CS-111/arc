@@ -270,12 +270,18 @@ Not included yet:
 
 #### Milestone 2.5.2: Conversation Repository and Services
 
-Status: Not started.
+Status: Complete.
 
 Included:
 
 - Conversation repository port and PostgreSQL adapter.
 - Create, list, load, rename, delete, and interrupted-generation recovery services.
+
+Not included yet:
+
+- Session REST endpoints or Socket.IO protocol changes.
+- Persisting active gateway streams or loading persisted context for new requests.
+- Extension synchronization or history UI.
 
 #### Milestone 2.5.3: Durable Chat Transport
 
