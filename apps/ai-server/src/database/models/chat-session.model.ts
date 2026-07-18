@@ -15,6 +15,7 @@ export class ChatSessionModel extends Model<ChatSessionAttributes, ChatSessionCr
         id: {
           type: DataTypes.UUID,
           primaryKey: true,
+          defaultValue: DataTypes.UUIDV4,
         },
         title: {
           type: DataTypes.STRING(120),
@@ -43,6 +44,7 @@ export class ChatSessionModel extends Model<ChatSessionAttributes, ChatSessionCr
         tableName: "chat_sessions",
         timestamps: true,
         underscored: true,
+        indexes: [{ fields: ["updated_at", "id"], name: "chat_sessions_updated_at_idx" }],
       },
     );
   }

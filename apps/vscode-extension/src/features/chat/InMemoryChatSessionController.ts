@@ -43,7 +43,7 @@ export class InMemoryChatSessionController {
     if (
       normalizedContent.length === 0 ||
       normalizedContent.length > 20_000 ||
-      this.session.messages.length > 78 ||
+      this.session.messages.length > 198 ||
       this.session.activeGeneration !== null
     ) {
       return undefined;
@@ -124,6 +124,15 @@ export class InMemoryChatSessionController {
     this.session = {
       ...this.session,
       connectionStatus: status,
+    };
+    return this.getSnapshot();
+  }
+
+  public hydrate(session: Omit<ChatSessionSnapshot, "connectionStatus">): ChatSessionSnapshot {
+    this.session = {
+      ...structuredClone(session),
+      connectionStatus: this.session.connectionStatus,
+      messages: structuredClone(session.messages.slice(-198)),
     };
     return this.getSnapshot();
   }

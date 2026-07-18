@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { parseExtensionToWebviewMessage, parseWebviewToExtensionMessage } from "./chatWebview.contract.js";
 
+const sessionId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
+
 describe("webview chat contract", () => {
   it("accepts webview readiness, status, and chat commands", () => {
     expect(parseWebviewToExtensionMessage({ type: "webview:ready" })).toEqual({
@@ -17,6 +19,16 @@ describe("webview chat contract", () => {
     expect(parseWebviewToExtensionMessage({ type: "chat:cancel" })).toEqual({
       type: "chat:cancel",
     });
+    expect(parseWebviewToExtensionMessage({ type: "conversation:create" })).toEqual({
+      type: "conversation:create",
+    });
+    expect(
+      parseWebviewToExtensionMessage({
+        sessionId,
+        title: "Architecture notes",
+        type: "conversation:rename",
+      }),
+    ).toMatchObject({ type: "conversation:rename" });
   });
 
   it("rejects unrecognized webview messages", () => {
@@ -80,5 +92,27 @@ describe("webview chat contract", () => {
         type: "chat:hydrated",
       }),
     ).toMatchObject({ type: "chat:hydrated" });
+  });
+
+  it("accepts a durable conversation list update", () => {
+    const timestamp = "2026-07-18T12:00:00.000Z";
+
+    expect(
+      parseExtensionToWebviewMessage({
+        snapshot: {
+          activeSessionId: sessionId,
+          sessions: [
+            {
+              createdAt: timestamp,
+              id: sessionId,
+              messageCount: 2,
+              title: "Architecture notes",
+              updatedAt: timestamp,
+            },
+          ],
+        },
+        type: "conversations:updated",
+      }),
+    ).toMatchObject({ type: "conversations:updated" });
   });
 });

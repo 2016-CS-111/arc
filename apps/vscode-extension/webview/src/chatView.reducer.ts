@@ -3,10 +3,13 @@ import type {
   ChatClientError,
   ChatConnectionStatus,
   ChatSessionSnapshot,
+  ConversationListSnapshot,
 } from "../../src/features/chat/chatWebview.contract.js";
 
 export interface ChatViewState {
   readonly chat: ChatSessionSnapshot | undefined;
+  readonly conversationError: string | undefined;
+  readonly conversations: ConversationListSnapshot | undefined;
   readonly snapshot: ArcStatusSnapshot | undefined;
 }
 
@@ -14,6 +17,8 @@ export type ChatViewAction =
   | { readonly type: "status:received"; readonly snapshot: ArcStatusSnapshot }
   | { readonly type: "status:refresh" }
   | { readonly type: "chat:hydrated"; readonly session: ChatSessionSnapshot }
+  | { readonly type: "conversations:updated"; readonly snapshot: ConversationListSnapshot }
+  | { readonly type: "conversations:error"; readonly message: string }
   | { readonly type: "chat:submitted"; readonly session: ChatSessionSnapshot }
   | { readonly type: "chat:generation-started"; readonly requestId: string }
   | { readonly type: "chat:generation-delta"; readonly requestId: string; readonly content: string }
@@ -28,6 +33,8 @@ export type ChatViewAction =
 
 export const initialChatViewState: ChatViewState = {
   chat: undefined,
+  conversationError: undefined,
+  conversations: undefined,
   snapshot: undefined,
 };
 
@@ -40,6 +47,10 @@ export function chatViewReducer(state: ChatViewState, action: ChatViewAction): C
     case "chat:hydrated":
     case "chat:submitted":
       return { ...state, chat: action.session };
+    case "conversations:updated":
+      return { ...state, conversationError: undefined, conversations: action.snapshot };
+    case "conversations:error":
+      return { ...state, conversationError: action.message };
     case "chat:generation-started":
       return updateActiveAssistant(state, action.requestId, ["pending"], (message) => ({
         ...message,

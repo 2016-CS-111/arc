@@ -98,4 +98,29 @@ describe("InMemoryChatSessionController", () => {
       status: "failed",
     });
   });
+
+  it("replaces local messages with a durable session while keeping its connection state", () => {
+    const controller = createController();
+    controller.updateConnectionStatus("connected");
+
+    const hydrated = controller.hydrate({
+      activeGeneration: null,
+      messages: [
+        {
+          content: "Previously saved message",
+          createdAt: timestamp,
+          id: "message-1",
+          role: "user",
+          status: "completed",
+        },
+      ],
+      sessionId: "durable-session-1",
+    });
+
+    expect(hydrated).toMatchObject({
+      connectionStatus: "connected",
+      sessionId: "durable-session-1",
+    });
+    expect(hydrated.messages).toMatchObject([{ content: "Previously saved message" }]);
+  });
 });

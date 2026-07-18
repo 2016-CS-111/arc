@@ -4,6 +4,7 @@ import { type ReactElement, useEffect, useReducer, useState } from "react";
 import { parseExtensionToWebviewMessage } from "../../src/features/chat/chatWebview.contract.js";
 import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
+import { SessionHistory } from "./components/chat/SessionHistory.js";
 import { IconButton } from "./components/ui/IconButton.js";
 import { StatusIndicator, type StatusTone } from "./components/ui/StatusIndicator.js";
 import { chatViewReducer, initialChatViewState } from "./chatView.reducer.js";
@@ -12,7 +13,6 @@ import { postToExtension } from "./vscode.js";
 export function App() {
   const [state, dispatch] = useReducer(chatViewReducer, initialChatViewState);
   const [draft, setDraft] = useState("");
-  console.log("🚀 ~ App ~ state1:", state);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<unknown>): void => {
@@ -23,6 +23,12 @@ export function App() {
           return;
         case "chat:hydrated":
           dispatch({ session: message.session, type: "chat:hydrated" });
+          return;
+        case "conversations:updated":
+          dispatch({ snapshot: message.snapshot, type: "conversations:updated" });
+          return;
+        case "conversations:error":
+          dispatch({ message: message.message, type: "conversations:error" });
           return;
         case "chat:submitted":
           dispatch({ session: message.session, type: "chat:submitted" });
@@ -96,6 +102,22 @@ export function App() {
     postToExtension({ type: "chat:cancel" });
   }
 
+  function createConversation(): void {
+    postToExtension({ type: "conversation:create" });
+  }
+
+  function selectConversation(sessionId: string): void {
+    postToExtension({ sessionId, type: "conversation:select" });
+  }
+
+  function renameConversation(sessionId: string, title: string): void {
+    postToExtension({ sessionId, title, type: "conversation:rename" });
+  }
+
+  function deleteConversation(sessionId: string): void {
+    postToExtension({ sessionId, type: "conversation:delete" });
+  }
+
   return (
     <main className="flex min-h-screen flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
@@ -120,6 +142,19 @@ export function App() {
           tone={ollamaTone}
         />
       </section>
+      <SessionHistory
+        disabled={isGenerating}
+        onCreate={createConversation}
+        onDelete={deleteConversation}
+        onRename={renameConversation}
+        onSelect={selectConversation}
+        snapshot={state.conversations}
+      />
+      {state.conversationError === undefined ? null : (
+        <p className="m-0 border-b border-arc-border px-3 py-2 text-xs text-arc-danger" role="alert">
+          {state.conversationError}
+        </p>
+      )}
       <ConversationView messages={state.chat?.messages ?? []} />
       <ChatComposer
         connectionReady={isConnectionReady}

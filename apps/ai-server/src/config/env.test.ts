@@ -13,6 +13,7 @@ describe("loadConfig", () => {
     });
     expect(config.database).toEqual({
       connectTimeoutMs: 5_000,
+      sync: false,
       url: "postgresql://arc:arc@127.0.0.1:5433/arc",
     });
   });
@@ -24,6 +25,7 @@ describe("loadConfig", () => {
       ARC_OLLAMA_READINESS_TIMEOUT_MS: "2500",
       ARC_OLLAMA_REQUEST_TIMEOUT_MS: "120000",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
+      ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
     });
 
@@ -35,6 +37,7 @@ describe("loadConfig", () => {
     });
     expect(config.database).toEqual({
       connectTimeoutMs: 8_000,
+      sync: true,
       url: "postgres://arc:arc@localhost:5433/arc_test",
     });
   });
@@ -45,5 +48,9 @@ describe("loadConfig", () => {
 
   it("rejects a non-PostgreSQL database URL", () => {
     expect(() => loadConfig({ ARC_DATABASE_URL: "mysql://localhost/arc" })).toThrow();
+  });
+
+  it("rejects an invalid database sync value", () => {
+    expect(() => loadConfig({ ARC_DATABASE_SYNC: "sometimes" })).toThrow();
   });
 });

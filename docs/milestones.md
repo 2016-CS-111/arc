@@ -309,13 +309,31 @@ Not included yet:
 
 #### Milestone 2.5.4: Session History UI
 
-Status: Not started.
+Status: Complete.
 
 Included:
 
-- Extension synchronization with backend session snapshots.
+- Typed extension-host REST client for backend conversation snapshots.
+- Session-list hydration when the Arc view opens, with a durable first-session fallback.
 - Create, reopen, rename, and delete session workflows.
-- Compact session-history UI in the Arc view.
+- Compact session-history UI in the Arc view, disabled while a generation is active.
+- Existing streaming state reused for hydrated durable messages and newly created turns.
+- Opt-in, non-destructive `sequelize.sync()` after connection through `ARC_DATABASE_SYNC=true`.
+
+Details:
+
+- The webview never calls the REST API directly; its validated bridge sends session commands to the
+  extension host.
+- A view reload lists persisted sessions, restores the previously selected session when available,
+  or opens the newest one. An empty database receives one explicitly created `New chat` session.
+- REST operations and hydration are serialized, preventing duplicate session creation from repeated
+  webview-ready messages.
+- `sequelize.sync()` is deliberately opt-in and has no `alter` or `force` option. Ordered SQL
+  migrations remain the versioned schema authority.
+
+Not included yet:
+
+- Live PostgreSQL integration coverage and manual restart acceptance.
 
 #### Milestone 2.5.5: Persistence Acceptance
 

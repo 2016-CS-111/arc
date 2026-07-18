@@ -129,4 +129,31 @@ describe("chatViewReducer", () => {
       }).chat,
     ).toMatchObject({ connectionStatus: "disconnected" });
   });
+
+  it("keeps durable conversation state and a history error", () => {
+    const conversationSnapshot = {
+      activeSessionId: "0d2e5770-f08e-48d5-871b-36bf734f535c",
+      sessions: [
+        {
+          createdAt: timestamp,
+          id: "0d2e5770-f08e-48d5-871b-36bf734f535c",
+          messageCount: 2,
+          title: "Architecture notes",
+          updatedAt: timestamp,
+        },
+      ],
+    };
+    const updated = chatViewReducer(initialChatViewState, {
+      snapshot: conversationSnapshot,
+      type: "conversations:updated",
+    });
+
+    expect(updated.conversations).toEqual(conversationSnapshot);
+    expect(
+      chatViewReducer(updated, {
+        message: "Arc backend is unavailable.",
+        type: "conversations:error",
+      }).conversationError,
+    ).toBe("Arc backend is unavailable.");
+  });
 });

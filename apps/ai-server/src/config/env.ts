@@ -23,6 +23,10 @@ const rawEnvSchema = z.object({
   ARC_CORS_ORIGIN: z.string().min(1).default("*"),
   ARC_DATABASE_URL: databaseUrlSchema.default("postgresql://arc:arc@127.0.0.1:5433/arc"),
   ARC_DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
+  ARC_DATABASE_SYNC: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   ARC_OLLAMA_BASE_URL: z
     .string()
     .url()
@@ -41,6 +45,7 @@ export interface AppConfig {
   readonly database: {
     readonly url: string;
     readonly connectTimeoutMs: number;
+    readonly sync: boolean;
   };
   readonly ollama: {
     readonly baseUrl: string;
@@ -63,6 +68,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const database = {
     url: parsed.ARC_DATABASE_URL,
     connectTimeoutMs: parsed.ARC_DATABASE_CONNECT_TIMEOUT_MS,
+    sync: parsed.ARC_DATABASE_SYNC,
   };
 
   return {

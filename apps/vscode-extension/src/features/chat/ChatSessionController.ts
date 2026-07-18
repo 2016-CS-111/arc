@@ -1,9 +1,14 @@
+import type { ConversationSession, ConversationSessionSnapshot, ConversationSessionSummary } from "@arc/contracts";
+
+import type { ConversationClientPort } from "../../infrastructure/backend/ConversationClient.js";
 import { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import type { ChatTransportEvent, ChatTransportPort, ChatTransportSubscription } from "./ChatTransportPort.js";
 import type {
   ChatClientError,
   ChatConnectionStatus,
+  ChatSessionMessage,
   ChatSessionSnapshot,
+  ConversationListSnapshot,
   ExtensionToWebviewMessage,
 } from "./chatWebview.contract.js";
 
@@ -12,6 +17,7 @@ export interface ChatSessionEventSubscription {
 }
 
 export interface ChatSessionControllerOptions {
+  readonly conversationClient?: ConversationClientPort;
   readonly session?: InMemoryChatSessionController;
   readonly transport: ChatTransportPort;
 }
@@ -20,6 +26,8 @@ export class ChatSessionController {
   private readonly listeners = new Set<(event: ExtensionToWebviewMessage) => void>();
   private readonly session: InMemoryChatSessionController;
   private readonly transportSubscription: ChatTransportSubscription;
+  private conversationOperation: Promise<void> | undefined;
+  private sessions: ConversationSessionSummary[] = [];
 
   public constructor(private readonly options: ChatSessionControllerOptions) {
     this.session = options.session ?? new InMemoryChatSessionController();
@@ -32,12 +40,108 @@ export class ChatSessionController {
     return this.session.getSnapshot();
   }
 
+  public getConversationSnapshot(): ConversationListSnapshot {
+    return {
+      activeSessionId: this.options.conversationClient === undefined ? null : this.session.getSnapshot().sessionId,
+      sessions: structuredClone(this.sessions),
+    };
+  }
+
   public connect(): void {
     try {
       this.options.transport.connect();
     } catch (error) {
       this.handleConnectionFailure(toConnectionError(error));
     }
+  }
+
+  public async hydrate(): Promise<void> {
+    if (this.options.conversationClient === undefined) {
+      this.publish({ session: this.session.getSnapshot(), type: "chat:hydrated" });
+      return;
+    }
+
+    return this.runConversationOperation(async () => {
+      const client = this.requireConversationClient();
+      const sessions = await client.listSessions();
+      const currentSessionId = this.session.getSnapshot().sessionId;
+      const selectedSession = sessions.find((session) => session.id === currentSessionId) ?? sessions[0];
+
+      if (selectedSession !== undefined) {
+        this.replaceConversation(await client.getSession(selectedSession.id), sessions);
+        return;
+      }
+
+      const createdSession = await client.createSession();
+      this.replaceConversation(toEmptySessionSnapshot(createdSession), [toSessionSummary(createdSession)]);
+    });
+  }
+
+  public async createConversation(): Promise<void> {
+    if (!this.canChangeConversation()) {
+      return;
+    }
+
+    return this.runConversationOperation(async () => {
+      const client = this.requireConversationClient();
+      const createdSession = await client.createSession();
+      this.replaceConversation(toEmptySessionSnapshot(createdSession), [
+        toSessionSummary(createdSession),
+        ...this.sessions,
+      ]);
+    });
+  }
+
+  public async selectConversation(sessionId: string): Promise<void> {
+    if (!this.canChangeConversation() || sessionId === this.session.getSnapshot().sessionId) {
+      return;
+    }
+
+    return this.runConversationOperation(async () => {
+      const session = await this.requireConversationClient().getSession(sessionId);
+      this.replaceConversation(session, this.sessions);
+    });
+  }
+
+  public async renameConversation(sessionId: string, title: string): Promise<void> {
+    if (!this.canChangeConversation() || title.trim().length === 0) {
+      return;
+    }
+
+    return this.runConversationOperation(async () => {
+      const renamedSession = await this.requireConversationClient().renameSession(sessionId, title.trim());
+      this.sessions = this.sessions.map((session) =>
+        session.id === renamedSession.id ? { ...session, ...renamedSession } : session,
+      );
+      this.publishConversationSnapshot();
+    });
+  }
+
+  public async deleteConversation(sessionId: string): Promise<void> {
+    if (!this.canChangeConversation()) {
+      return;
+    }
+
+    return this.runConversationOperation(async () => {
+      const client = this.requireConversationClient();
+      await client.deleteSession(sessionId);
+      const remainingSessions = this.sessions.filter((session) => session.id !== sessionId);
+
+      if (sessionId !== this.session.getSnapshot().sessionId) {
+        this.sessions = remainingSessions;
+        this.publishConversationSnapshot();
+        return;
+      }
+
+      const nextSession = remainingSessions[0];
+      if (nextSession !== undefined) {
+        this.replaceConversation(await client.getSession(nextSession.id), remainingSessions);
+        return;
+      }
+
+      const createdSession = await client.createSession();
+      this.replaceConversation(toEmptySessionSnapshot(createdSession), [toSessionSummary(createdSession)]);
+    });
   }
 
   public submit(content: string): void {
@@ -103,6 +207,71 @@ export class ChatSessionController {
     this.transportSubscription.dispose();
     this.options.transport.dispose();
     this.listeners.clear();
+  }
+
+  private canChangeConversation(): boolean {
+    return this.session.getSnapshot().activeGeneration === null;
+  }
+
+  private requireConversationClient(): ConversationClientPort {
+    if (this.options.conversationClient === undefined) {
+      throw new Error("Arc durable conversation storage is unavailable.");
+    }
+
+    return this.options.conversationClient;
+  }
+
+  private runConversationOperation(operation: () => Promise<void>): Promise<void> {
+    if (this.conversationOperation !== undefined) {
+      return this.conversationOperation;
+    }
+
+    const pendingOperation = this.runConversationOperationSafely(operation);
+    this.conversationOperation = pendingOperation;
+    void pendingOperation.finally(() => {
+      if (this.conversationOperation === pendingOperation) {
+        this.conversationOperation = undefined;
+      }
+    });
+    return pendingOperation;
+  }
+
+  private async runConversationOperationSafely(operation: () => Promise<void>): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      this.publish({
+        message: error instanceof Error ? error.message : "Arc conversations could not be updated.",
+        type: "conversations:error",
+      });
+      this.publish({ session: this.session.getSnapshot(), type: "chat:hydrated" });
+    }
+  }
+
+  private replaceConversation(snapshot: ConversationSessionSnapshot, sessions: ConversationSessionSummary[]): void {
+    const messages = snapshot.messages.slice(-198).map(toChatSessionMessage);
+    const activeMessage = [...snapshot.messages]
+      .reverse()
+      .find((message) => message.role === "assistant" && isGenerating(message.status));
+    const session = this.session.hydrate({
+      activeGeneration:
+        activeMessage === undefined
+          ? null
+          : {
+              assistantMessageId: activeMessage.id,
+              requestId: activeMessage.requestId,
+            },
+      messages,
+      sessionId: snapshot.id,
+    });
+
+    this.sessions = sessions;
+    this.publishConversationSnapshot();
+    this.publish({ session, type: "chat:hydrated" });
+  }
+
+  private publishConversationSnapshot(): void {
+    this.publish({ snapshot: this.getConversationSnapshot(), type: "conversations:updated" });
   }
 
   private handleTransportEvent(event: ChatTransportEvent): void {
@@ -176,6 +345,29 @@ export class ChatSessionController {
       listener(event);
     }
   }
+}
+
+function toEmptySessionSnapshot(session: ConversationSession): ConversationSessionSnapshot {
+  return { ...session, messages: [] };
+}
+
+function toSessionSummary(session: ConversationSession): ConversationSessionSummary {
+  return { ...session, messageCount: 0 };
+}
+
+function toChatSessionMessage(message: ConversationSessionSnapshot["messages"][number]): ChatSessionMessage {
+  return {
+    content: message.content,
+    createdAt: message.createdAt,
+    ...(message.error === undefined ? {} : { error: message.error }),
+    id: message.id,
+    role: message.role,
+    status: message.status,
+  };
+}
+
+function isGenerating(status: ChatSessionMessage["status"]): boolean {
+  return status === "pending" || status === "streaming";
 }
 
 function toConnectionError(error: unknown): ChatClientError {

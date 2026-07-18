@@ -49,7 +49,9 @@ pnpm db:migrate
 ```
 
 The default connection is `postgresql://arc:arc@127.0.0.1:5433/arc`; see `.env.example` for the
-configuration values. `pnpm db:down` stops PostgreSQL without deleting the named data volume.
+configuration values. `ARC_DATABASE_SYNC=true` invokes non-destructive `sequelize.sync()` after a
+successful connection, but it is opt-in and does not replace `pnpm db:migrate`. `pnpm db:down`
+stops PostgreSQL without deleting the named data volume.
 
 ## Ollama
 

@@ -20,6 +20,7 @@ export class ChatMessageModel extends Model<ChatMessageAttributes, ChatMessageCr
         id: {
           type: DataTypes.UUID,
           primaryKey: true,
+          defaultValue: DataTypes.UUIDV4,
         },
         sessionId: {
           type: DataTypes.UUID,
@@ -29,6 +30,7 @@ export class ChatMessageModel extends Model<ChatMessageAttributes, ChatMessageCr
             model: "chat_sessions",
             key: "id",
           },
+          onDelete: "CASCADE",
         },
         requestId: {
           type: DataTypes.STRING(160),
@@ -73,6 +75,19 @@ export class ChatMessageModel extends Model<ChatMessageAttributes, ChatMessageCr
         tableName: "chat_messages",
         timestamps: true,
         underscored: true,
+        indexes: [
+          {
+            fields: ["session_id", "ordinal"],
+            name: "chat_messages_session_ordinal_unique",
+            unique: true,
+          },
+          {
+            fields: ["session_id", "request_id", "role"],
+            name: "chat_messages_request_role_unique",
+            unique: true,
+          },
+          { fields: ["session_id", "ordinal"], name: "chat_messages_session_ordinal_idx" },
+        ],
       },
     );
   }

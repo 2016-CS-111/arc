@@ -56,7 +56,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
         case "webview:ready":
           void this.refreshStatus();
           this.chatSession.connect();
-          void this.hydrateChat();
+          void this.chatSession.hydrate();
           return;
         case "status:refresh":
           void this.refreshStatus();
@@ -66,6 +66,18 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         case "chat:cancel":
           this.cancelChat();
+          return;
+        case "conversation:create":
+          void this.chatSession.createConversation();
+          return;
+        case "conversation:select":
+          void this.chatSession.selectConversation(parsedMessage.sessionId);
+          return;
+        case "conversation:rename":
+          void this.chatSession.renameConversation(parsedMessage.sessionId, parsedMessage.title);
+          return;
+        case "conversation:delete":
+          void this.chatSession.deleteConversation(parsedMessage.sessionId);
           return;
         default:
           return;
@@ -130,13 +142,6 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
       ...(status.error === undefined ? {} : { error: status.error }),
     };
     await this.view.webview.postMessage({ snapshot, type: "status:update" });
-  }
-
-  private async hydrateChat(): Promise<void> {
-    await this.postChatMessage({
-      session: this.chatSession.getSnapshot(),
-      type: "chat:hydrated",
-    });
   }
 
   private submitChat(content: string): void {

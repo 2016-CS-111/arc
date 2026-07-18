@@ -145,9 +145,11 @@ the original user and assistant records instead of creating a second turn. Assis
 from `pending` to `streaming` and one terminal state through a single update path. On recovery, any
 pending or streaming assistant messages become retryable `generation_failed` records.
 
-Schema changes stay in the explicit migration runner; the backend never uses `sequelize.sync()`. On
-startup it checks the PostgreSQL connection and logs a non-fatal availability warning, while the
-migration command fails clearly if the database cannot be updated.
+Schema changes stay in the explicit migration runner. The backend can additionally call the
+non-destructive `sequelize.sync()` at startup only when `ARC_DATABASE_SYNC=true`; it never enables
+`alter` or `force`. This is a local model-table bootstrap aid, not a substitute for applying the
+versioned SQL migrations. On startup the connection and optional sync failures are non-fatal, while
+the migration command fails clearly if the database cannot be updated.
 
 Milestone 2.5.2 kept this layer independent from the gateway so its database behavior could be
 tested in isolation. Milestone 2.5.3 now composes it into the durable transport below.
@@ -166,10 +168,12 @@ model context. Each emitted delta is stored as `streaming` first, then the assis
 `completed`, `cancelled`, or `failed` before the corresponding terminal event is emitted. Duplicate
 request IDs replay the stored outcome instead of calling the model again.
 
-At backend startup, unfinished assistant records are marked as retryable failures. The existing
-extension's UUID session is temporarily registered lazily so the streaming experience remains
-usable; Milestone 2.5.4 will replace that bridge with explicit REST-backed session creation and
-history hydration.
+At backend startup, unfinished assistant records are marked as retryable failures. The extension
+host owns the REST client for the session API: when the Arc webview becomes ready, it lists durable
+sessions, hydrates the current or newest snapshot, and explicitly creates `New chat` when none
+exist. The webview sees only validated bridge events and can create, reopen, rename, or delete
+sessions without direct network access. The existing Socket.IO controller continues to own the live
+generation state for the selected session.
 
 ## Local Infrastructure
 

@@ -4,11 +4,13 @@ import { readBackendConfig } from "./config/backendConfig.js";
 import { ArcChatViewProvider } from "./features/chat/ArcChatViewProvider.js";
 import { ChatSessionController } from "./features/chat/ChatSessionController.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
+import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
 import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTransport.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const backendConfig = readBackendConfig();
   const chatSession = new ChatSessionController({
+    conversationClient: new ConversationClient(backendConfig.url),
     transport: new SocketIoChatTransport(backendConfig.url),
   });
   const chatViewProvider = new ArcChatViewProvider(context.extensionUri, backendConfig, chatSession);

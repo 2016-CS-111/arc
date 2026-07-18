@@ -1,4 +1,6 @@
 import {
+  ConversationIdSchema,
+  ConversationSessionSummarySchema,
   HealthResponseSchema,
   OllamaProviderStatusResponseSchema,
   type HealthResponse,
@@ -55,8 +57,13 @@ export const ActiveChatGenerationSchema = z.object({
 export const ChatSessionSnapshotSchema = z.object({
   activeGeneration: ActiveChatGenerationSchema.nullable(),
   connectionStatus: ChatConnectionStatusSchema,
-  messages: z.array(ChatSessionMessageSchema).max(80),
+  messages: z.array(ChatSessionMessageSchema).max(200),
   sessionId: ChatIdentifierSchema,
+});
+
+export const ConversationListSnapshotSchema = z.object({
+  activeSessionId: ConversationIdSchema.nullable(),
+  sessions: z.array(ConversationSessionSummarySchema).max(100),
 });
 
 export type ChatConnectionStatus = z.infer<typeof ChatConnectionStatusSchema>;
@@ -64,6 +71,7 @@ export type ChatClientError = z.infer<typeof ChatClientErrorSchema>;
 export type ChatSessionMessage = z.infer<typeof ChatSessionMessageSchema>;
 export type ActiveChatGeneration = z.infer<typeof ActiveChatGenerationSchema>;
 export type ChatSessionSnapshot = z.infer<typeof ChatSessionSnapshotSchema>;
+export type ConversationListSnapshot = z.infer<typeof ConversationListSnapshotSchema>;
 
 const ChatSubmitCommandSchema = z.object({
   content: z.string().trim().min(1).max(20_000),
@@ -75,6 +83,20 @@ export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("status:refresh") }),
   ChatSubmitCommandSchema,
   z.object({ type: z.literal("chat:cancel") }),
+  z.object({ type: z.literal("conversation:create") }),
+  z.object({
+    sessionId: ConversationIdSchema,
+    type: z.literal("conversation:select"),
+  }),
+  z.object({
+    sessionId: ConversationIdSchema,
+    title: z.string().trim().min(1).max(120),
+    type: z.literal("conversation:rename"),
+  }),
+  z.object({
+    sessionId: ConversationIdSchema,
+    type: z.literal("conversation:delete"),
+  }),
 ]);
 
 export type WebviewToExtensionMessage = z.infer<typeof WebviewToExtensionMessageSchema>;
@@ -87,6 +109,14 @@ export const ExtensionToWebviewMessageSchema = z.discriminatedUnion("type", [
   z.object({
     session: ChatSessionSnapshotSchema,
     type: z.literal("chat:hydrated"),
+  }),
+  z.object({
+    snapshot: ConversationListSnapshotSchema,
+    type: z.literal("conversations:updated"),
+  }),
+  z.object({
+    message: z.string().min(1).max(4_000),
+    type: z.literal("conversations:error"),
   }),
   z.object({
     session: ChatSessionSnapshotSchema,

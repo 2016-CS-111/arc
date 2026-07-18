@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
 
+import { APP_CONFIG } from "../config/config.constants.js";
+import type { AppConfig } from "../config/env.js";
 import { DATABASE } from "./database.constants.js";
 import type { ArcDatabase } from "./database.types.js";
 
@@ -7,7 +9,10 @@ import type { ArcDatabase } from "./database.types.js";
 export class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(DatabaseLifecycle.name);
 
-  public constructor(@Inject(DATABASE) private readonly database: ArcDatabase) {}
+  public constructor(
+    @Inject(DATABASE) private readonly database: ArcDatabase,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
 
   public async onApplicationBootstrap(): Promise<void> {
     try {
@@ -15,6 +20,18 @@ export class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationS
       this.logger.log("PostgreSQL connection ready");
     } catch (error) {
       this.logger.warn(`PostgreSQL connection unavailable: ${getErrorMessage(error)}`);
+      return;
+    }
+
+    if (!this.config.database.sync) {
+      return;
+    }
+
+    try {
+      await this.database.sequelize.sync();
+      this.logger.log("PostgreSQL Sequelize models synchronized");
+    } catch (error) {
+      this.logger.warn(`PostgreSQL Sequelize sync failed: ${getErrorMessage(error)}`);
     }
   }
 

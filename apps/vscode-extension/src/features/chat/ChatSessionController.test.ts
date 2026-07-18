@@ -1,12 +1,22 @@
-import type { ChatCancelCommand, ChatSendCommand } from "@arc/contracts";
+import type {
+  ChatCancelCommand,
+  ChatSendCommand,
+  ConversationSession,
+  ConversationSessionSnapshot,
+  ConversationSessionSummary,
+} from "@arc/contracts";
 import { describe, expect, it } from "vitest";
 
 import { ChatSessionController } from "./ChatSessionController.js";
 import type { ChatTransportEvent, ChatTransportPort, ChatTransportSubscription } from "./ChatTransportPort.js";
 import { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import type { ChatConnectionStatus } from "./chatWebview.contract.js";
+import type { ConversationClientPort } from "../../infrastructure/backend/ConversationClient.js";
 
 const timestamp = "2026-07-18T12:00:00.000Z";
+const sessionAId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
+const sessionBId = "7bc30c5f-4024-4d2f-a67d-8aa9e1570c92";
+const sessionCId = "f9e2a3bc-83a2-4df8-91c3-2a0af66b7b17";
 
 class FakeChatTransport implements ChatTransportPort {
   public readonly cancelled: ChatCancelCommand[] = [];
@@ -52,6 +62,59 @@ class FakeChatTransport implements ChatTransportPort {
   }
 }
 
+class FakeConversationClient implements ConversationClientPort {
+  private readonly snapshots = new Map<string, ConversationSessionSnapshot>();
+  private sessions: ConversationSessionSummary[];
+
+  public constructor() {
+    this.sessions = [createSessionSummary(sessionAId, "Architecture"), createSessionSummary(sessionBId, "Debug notes")];
+    this.snapshots.set(sessionAId, createConversationSnapshot(sessionAId, "Architecture", "Explain this service"));
+    this.snapshots.set(sessionBId, createConversationSnapshot(sessionBId, "Debug notes", "Inspect this error"));
+  }
+
+  public createSession(): Promise<ConversationSession> {
+    const session = createSessionSummary(sessionCId, "New chat");
+    this.sessions = [session, ...this.sessions];
+    this.snapshots.set(sessionCId, { ...session, messages: [] });
+    return Promise.resolve(session);
+  }
+
+  public deleteSession(sessionId: string): Promise<void> {
+    this.sessions = this.sessions.filter((session) => session.id !== sessionId);
+    this.snapshots.delete(sessionId);
+    return Promise.resolve();
+  }
+
+  public getSession(sessionId: string): Promise<ConversationSessionSnapshot> {
+    const snapshot = this.snapshots.get(sessionId);
+    if (snapshot === undefined) {
+      throw new Error("Conversation not found.");
+    }
+
+    return Promise.resolve(structuredClone(snapshot));
+  }
+
+  public listSessions(): Promise<ConversationSessionSummary[]> {
+    return Promise.resolve(structuredClone(this.sessions));
+  }
+
+  public renameSession(sessionId: string, title: string): Promise<ConversationSession> {
+    const session = this.sessions.find((candidate) => candidate.id === sessionId);
+    if (session === undefined) {
+      throw new Error("Conversation not found.");
+    }
+
+    const renamed = { ...session, title };
+    this.sessions = this.sessions.map((candidate) => (candidate.id === sessionId ? renamed : candidate));
+    const snapshot = this.snapshots.get(sessionId);
+    if (snapshot === undefined) {
+      throw new Error("Conversation not found.");
+    }
+    this.snapshots.set(sessionId, { ...snapshot, title });
+    return Promise.resolve(renamed);
+  }
+}
+
 function createSession(
   identifiers = ["session-1", "request-1", "assistant-1", "user-1"],
 ): InMemoryChatSessionController {
@@ -69,6 +132,41 @@ function createSession(
 }
 
 describe("ChatSessionController", () => {
+  it("hydrates, switches, renames, creates, and deletes durable conversations", async () => {
+    const controller = new ChatSessionController({
+      conversationClient: new FakeConversationClient(),
+      session: createSession(),
+      transport: new FakeChatTransport(),
+    });
+    const events: string[] = [];
+    controller.subscribe((event) => events.push(event.type));
+
+    await controller.hydrate();
+
+    expect(controller.getSnapshot()).toMatchObject({ sessionId: sessionAId });
+    expect(controller.getSnapshot().messages[0]).toMatchObject({ content: "Explain this service" });
+    expect(controller.getConversationSnapshot()).toMatchObject({ activeSessionId: sessionAId });
+
+    await controller.selectConversation(sessionBId);
+    await controller.renameConversation(sessionBId, "Resolved debug notes");
+    await controller.createConversation();
+
+    expect(controller.getSnapshot()).toMatchObject({ sessionId: sessionCId });
+    expect(controller.getConversationSnapshot().sessions[0]).toMatchObject({
+      id: sessionCId,
+      title: "New chat",
+    });
+
+    await controller.deleteConversation(sessionCId);
+
+    expect(controller.getSnapshot()).toMatchObject({ sessionId: sessionAId });
+    expect(controller.getConversationSnapshot().sessions).toContainEqual(
+      expect.objectContaining({ id: sessionBId, title: "Resolved debug notes" }),
+    );
+    expect(events).toContain("conversations:updated");
+    expect(events).toContain("chat:hydrated");
+  });
+
   it("sends a correlated command and forwards an ordered stream", () => {
     const transport = new FakeChatTransport();
     const controller = new ChatSessionController({ session: createSession(), transport });
@@ -211,3 +309,35 @@ describe("ChatSessionController", () => {
     expect(controller.getSnapshot().activeGeneration).toMatchObject({ requestId: "request-2" });
   });
 });
+
+function createSessionSummary(id: string, title: string): ConversationSessionSummary {
+  return {
+    createdAt: timestamp,
+    id,
+    messageCount: 1,
+    title,
+    updatedAt: timestamp,
+  };
+}
+
+function createConversationSnapshot(id: string, title: string, content: string): ConversationSessionSnapshot {
+  return {
+    createdAt: timestamp,
+    id,
+    messages: [
+      {
+        content,
+        createdAt: timestamp,
+        id: "8396c93e-e5f1-4ff3-a311-7d5e4f2baeaa",
+        ordinal: 1,
+        requestId: "request-1",
+        role: "user",
+        sessionId: id,
+        status: "completed",
+        updatedAt: timestamp,
+      },
+    ],
+    title,
+    updatedAt: timestamp,
+  };
+}
