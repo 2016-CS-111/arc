@@ -83,4 +83,6 @@ pnpm extension:run
 ```
 
 The extension window title should include `Extension Development Host`. In that window, run
-`Arc: Open Chat` from the Command Palette.
+`Arc: Open Chat` from the Command Palette. The Arc activity-bar view opens and reports the backend
+and Ollama readiness through the extension host. It is a connection-status foundation in Milestone
+2.3; prompt entry and streaming arrive in Milestone 2.4.

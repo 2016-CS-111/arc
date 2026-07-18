@@ -64,6 +64,14 @@ and `ActiveGenerationRegistry` holds cancellable in-memory work for one connecte
 session. The registry is deliberately not a conversation store: completed messages disappear on
 restart until durable sessions are added in Milestone 2.5.
 
+## Webview Boundary
+
+Milestone 2.3 gives the Arc activity-bar view a React and Tailwind UI that is bundled by Vite into
+local extension assets. The webview has no network permission: it exchanges validated messages with
+the extension host, which owns HTTP calls to the local backend. The initial bridge reports backend
+and Ollama readiness only. It uses a nonce-based content security policy and allows scripts and
+styles exclusively from the extension's generated webview assets.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

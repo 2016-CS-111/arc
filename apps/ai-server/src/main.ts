@@ -12,15 +12,9 @@ const logger = createConsoleLogger("ai-server");
 
 function toLogContext(error: unknown): LogContext {
   if (error instanceof Error) {
-    return {
-      message: error.message,
-      name: error.name,
-    };
+    return { message: error.message, name: error.name };
   }
-
-  return {
-    error: String(error),
-  };
+  return { error: String(error) };
 }
 
 async function bootstrap(): Promise<void> {
@@ -29,9 +23,7 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get<AppConfig>(APP_CONFIG);
 
-  app.enableCors({
-    origin: config.corsOrigin,
-  });
+  app.enableCors({ origin: config.corsOrigin });
 
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     logger.info("Shutdown signal received", { signal });

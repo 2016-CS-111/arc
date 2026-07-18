@@ -23,7 +23,7 @@ function run(command, args) {
   }
 }
 
-run("pnpm", ["--filter", "arc-vscode-extension", "build"]);
+run("pnpm", ["extension:build"]);
 
 console.info(`Opening VSCode Extension Development Host for ${extensionDir}`);
 

@@ -88,6 +88,8 @@ Not included yet:
 
 ### Milestone 2.3: VSCode Webview Foundation
 
+Status: Complete.
+
 Goal: establish a secure React + Vite webview and a typed message bridge to the VSCode extension
 host before connecting it to chat streaming.
 

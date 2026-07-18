@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-arc-accent: var(--vscode-textLink-foreground);
+  --color-arc-background: var(--vscode-sideBar-background);
+  --color-arc-border: var(--vscode-widget-border);
+  --color-arc-danger: var(--vscode-errorForeground);
+  --color-arc-focus: var(--vscode-focusBorder);
+  --color-arc-foreground: var(--vscode-sideBar-foreground);
+  --color-arc-hover: var(--vscode-toolbar-hoverBackground);
+  --color-arc-muted: var(--vscode-descriptionForeground);
+  --color-arc-success: var(--vscode-testing-iconPassed);
+  --color-arc-warning: var(--vscode-editorWarning-foreground);
+  --font-sans: var(--vscode-font-family);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+  }
+
+  button {
+    font: inherit;
+  }
+}
