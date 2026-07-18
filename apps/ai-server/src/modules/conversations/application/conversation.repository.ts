@@ -16,6 +16,7 @@ import type {
 
 export interface ConversationRepository {
   createSession(input: CreateConversationSessionInput): Promise<ConversationSession>;
+  ensureSession(sessionId: string): Promise<ConversationSession>;
   listSessions(options?: ConversationListOptions): Promise<ConversationSessionSummary[]>;
   getSession(sessionId: string): Promise<ConversationSessionSnapshot | undefined>;
   renameSession(sessionId: string, title: string): Promise<ConversationSession | undefined>;

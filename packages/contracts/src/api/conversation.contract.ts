@@ -43,6 +43,10 @@ export const RenameConversationSessionRequestSchema = z.object({
   title: ConversationTitleSchema,
 });
 
+export const ListConversationSessionsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 export type ConversationId = z.infer<typeof ConversationIdSchema>;
 export type ConversationMessage = z.infer<typeof ConversationMessageSchema>;
 export type ConversationMessageRole = z.infer<typeof ConversationMessageRoleSchema>;
@@ -52,3 +56,4 @@ export type ConversationSessionSummary = z.infer<typeof ConversationSessionSumma
 export type ConversationSessionSnapshot = z.infer<typeof ConversationSessionSnapshotSchema>;
 export type CreateConversationSessionRequest = z.infer<typeof CreateConversationSessionRequestSchema>;
 export type RenameConversationSessionRequest = z.infer<typeof RenameConversationSessionRequestSchema>;
+export type ListConversationSessionsQuery = z.infer<typeof ListConversationSessionsQuerySchema>;

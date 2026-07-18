@@ -6,6 +6,7 @@ import {
   ChatDeltaEventSchema,
   ChatErrorEventSchema,
   ChatSendCommandSchema,
+  type ChatError,
   type ChatSendCommand,
 } from "@arc/contracts";
 import type { Logger } from "@arc/shared";
@@ -20,6 +21,7 @@ import {
 
 import { ARC_LOGGER } from "../../logger/logger.constants.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
+import { DurableChatService, type DurableChatPreparation } from "../application/durable-chat.service.js";
 import { SendChatMessageService } from "../application/send-chat-message.service.js";
 import { createChatError, toChatError } from "../domain/chat.errors.js";
 import type { GenerationScope } from "../domain/chat.types.js";
@@ -35,16 +37,15 @@ export class ChatGateway implements OnGatewayDisconnect {
   public constructor(
     @Inject(ActiveGenerationRegistry)
     private readonly activeGenerationRegistry: ActiveGenerationRegistry,
+    @Inject(DurableChatService)
+    private readonly durableChatService: DurableChatService,
     @Inject(SendChatMessageService)
     private readonly sendChatMessageService: SendChatMessageService,
     @Inject(ARC_LOGGER) private readonly logger: Logger,
   ) {}
 
   @SubscribeMessage("chat:send")
-  public handleChatSend(
-    @ConnectedSocket() client: ChatSocket,
-    @MessageBody() payload: unknown,
-  ): void {
+  public handleChatSend(@ConnectedSocket() client: ChatSocket, @MessageBody() payload: unknown): void {
     const parsedCommand = ChatSendCommandSchema.safeParse(payload);
     if (!parsedCommand.success) {
       const correlation = this.extractCorrelation(payload);
@@ -70,31 +71,16 @@ export class ChatGateway implements OnGatewayDisconnect {
         client,
         command.requestId,
         command.sessionId,
-        createChatError(
-          "session_busy",
-          "A response is already being generated for this session.",
-          true,
-        ),
+        createChatError("session_busy", "A response is already being generated for this session.", true),
       );
       return;
     }
 
-    client.emit(
-      "chat:accepted",
-      ChatAcceptedEventSchema.parse({
-        requestId: command.requestId,
-        sessionId: command.sessionId,
-      }),
-    );
-
-    void this.streamResponse(client, command, scope, controller.signal);
+    void this.prepareAndStream(client, command, scope, controller.signal);
   }
 
   @SubscribeMessage("chat:cancel")
-  public handleChatCancel(
-    @ConnectedSocket() client: ChatSocket,
-    @MessageBody() payload: unknown,
-  ): void {
+  public handleChatCancel(@ConnectedSocket() client: ChatSocket, @MessageBody() payload: unknown): void {
     const parsedCommand = ChatCancelCommandSchema.safeParse(payload);
     if (!parsedCommand.success) {
       const correlation = this.extractCorrelation(payload);
@@ -119,11 +105,7 @@ export class ChatGateway implements OnGatewayDisconnect {
         client,
         command.requestId,
         command.sessionId,
-        createChatError(
-          "generation_not_found",
-          "No active generation matches this request.",
-          false,
-        ),
+        createChatError("generation_not_found", "No active generation matches this request.", false),
       );
     }
   }
@@ -133,15 +115,58 @@ export class ChatGateway implements OnGatewayDisconnect {
     this.logger.info("Chat client disconnected", { socketId: client.id });
   }
 
-  private async streamResponse(
+  private async prepareAndStream(
     client: ChatSocket,
     command: ChatSendCommand,
     scope: GenerationScope,
     signal: AbortSignal,
   ): Promise<void> {
     try {
-      for await (const event of this.sendChatMessageService.stream(command, signal)) {
+      const preparation = await this.durableChatService.prepare(command);
+      client.emit(
+        "chat:accepted",
+        ChatAcceptedEventSchema.parse({
+          requestId: command.requestId,
+          sessionId: command.sessionId,
+        }),
+      );
+
+      if (preparation.type === "existing") {
+        await this.replayExistingGeneration(client, command, preparation);
+        return;
+      }
+
+      await this.streamResponse(client, command, preparation, signal);
+    } catch (error) {
+      const chatError = toChatError(error);
+      await this.persistFailure(command, "", chatError);
+      this.emitError(client, command.requestId, command.sessionId, chatError);
+    } finally {
+      this.activeGenerationRegistry.complete(scope);
+    }
+  }
+
+  private async streamResponse(
+    client: ChatSocket,
+    command: ChatSendCommand,
+    preparation: Extract<DurableChatPreparation, { readonly type: "new" }>,
+    signal: AbortSignal,
+  ): Promise<void> {
+    let assistantContent = preparation.assistantMessage.content;
+
+    try {
+      for await (const event of this.sendChatMessageService.stream(preparation.modelMessages, signal)) {
         if (event.type === "delta") {
+          assistantContent += event.content;
+          const persisted = await this.durableChatService.stream(
+            command.sessionId,
+            command.requestId,
+            assistantContent,
+          );
+          if (persisted === undefined) {
+            throw new Error("Arc could not persist an assistant response delta.");
+          }
+
           client.emit(
             "chat:delta",
             ChatDeltaEventSchema.parse({
@@ -151,6 +176,15 @@ export class ChatGateway implements OnGatewayDisconnect {
             }),
           );
           continue;
+        }
+
+        const persisted = await this.durableChatService.complete(
+          command.sessionId,
+          command.requestId,
+          assistantContent,
+        );
+        if (persisted === undefined) {
+          throw new Error("Arc could not complete the persisted assistant response.");
         }
 
         client.emit(
@@ -167,6 +201,7 @@ export class ChatGateway implements OnGatewayDisconnect {
       const chatError = toChatError(error);
 
       if (chatError.code === "generation_cancelled") {
+        await this.persistCancellation(command, assistantContent);
         client.emit(
           "chat:cancelled",
           ChatCancelledEventSchema.parse({
@@ -175,11 +210,112 @@ export class ChatGateway implements OnGatewayDisconnect {
           }),
         );
       } else {
+        await this.persistFailure(command, assistantContent, chatError);
         this.emitError(client, command.requestId, command.sessionId, chatError);
       }
-    } finally {
-      this.activeGenerationRegistry.complete(scope);
     }
+  }
+
+  private async replayExistingGeneration(
+    client: ChatSocket,
+    command: ChatSendCommand,
+    preparation: Extract<DurableChatPreparation, { readonly type: "existing" }>,
+  ): Promise<void> {
+    const assistantMessage = preparation.assistantMessage;
+
+    switch (assistantMessage.status) {
+      case "completed":
+        if (assistantMessage.content.length > 0) {
+          client.emit(
+            "chat:delta",
+            ChatDeltaEventSchema.parse({
+              requestId: command.requestId,
+              sessionId: command.sessionId,
+              content: assistantMessage.content,
+            }),
+          );
+        }
+        client.emit(
+          "chat:completed",
+          ChatCompletedEventSchema.parse({
+            requestId: command.requestId,
+            sessionId: command.sessionId,
+          }),
+        );
+        return;
+      case "cancelled":
+        client.emit(
+          "chat:cancelled",
+          ChatCancelledEventSchema.parse({
+            requestId: command.requestId,
+            sessionId: command.sessionId,
+          }),
+        );
+        return;
+      case "failed":
+        this.emitError(
+          client,
+          command.requestId,
+          command.sessionId,
+          assistantMessage.error ?? this.createInterruptedGenerationError(),
+        );
+        return;
+      case "pending":
+      case "streaming": {
+        const error = this.createInterruptedGenerationError();
+        await this.persistFailure(command, assistantMessage.content, error);
+        this.emitError(client, command.requestId, command.sessionId, error);
+      }
+    }
+  }
+
+  private async persistCancellation(command: ChatSendCommand, assistantContent: string): Promise<void> {
+    try {
+      const persisted = await this.durableChatService.cancel(command.sessionId, command.requestId, assistantContent);
+      if (persisted === undefined) {
+        this.logger.warn("Arc generation cancellation was already terminal", {
+          requestId: command.requestId,
+          sessionId: command.sessionId,
+        });
+      }
+    } catch (error) {
+      this.logger.error("Could not persist Arc generation cancellation", {
+        error: getErrorMessage(error),
+        requestId: command.requestId,
+        sessionId: command.sessionId,
+      });
+    }
+  }
+
+  private async persistFailure(command: ChatSendCommand, assistantContent: string, error: ChatError): Promise<void> {
+    try {
+      const persisted = await this.durableChatService.fail(
+        command.sessionId,
+        command.requestId,
+        assistantContent,
+        error,
+      );
+      if (persisted === undefined) {
+        this.logger.warn("Arc generation failure was already terminal", {
+          requestId: command.requestId,
+          sessionId: command.sessionId,
+        });
+      }
+    } catch (persistenceError) {
+      this.logger.error("Could not persist Arc generation failure", {
+        error: getErrorMessage(persistenceError),
+        requestId: command.requestId,
+        sessionId: command.sessionId,
+      });
+    }
+  }
+
+  private createInterruptedGenerationError(): ChatError {
+    return createChatError(
+      "generation_failed",
+      "The previous Arc generation was interrupted before it completed.",
+      true,
+    );
   }
 
   private emitError(
@@ -218,4 +354,8 @@ export class ChatGateway implements OnGatewayDisconnect {
     const value = candidate[field];
     return typeof value === "string" && value.length > 0 ? value : "unknown";
   }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

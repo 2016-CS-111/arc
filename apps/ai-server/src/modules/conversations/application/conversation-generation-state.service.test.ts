@@ -32,6 +32,7 @@ function createRepository(): {
 } {
   const createPendingTurn = vi.fn(() =>
     Promise.resolve({
+      created: true,
       session,
       userMessage: {
         ...assistantMessage,
@@ -52,6 +53,7 @@ function createRepository(): {
   return {
     repository: {
       createSession: vi.fn(),
+      ensureSession: vi.fn(),
       listSessions: vi.fn(),
       getSession: vi.fn(),
       renameSession: vi.fn(),

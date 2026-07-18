@@ -15,6 +15,7 @@ export interface CreateConversationTurnInput {
 }
 
 export interface ConversationTurn {
+  readonly created: boolean;
   readonly session: ConversationSession;
   readonly userMessage: ConversationMessage;
   readonly assistantMessage: ConversationMessage;

@@ -82,7 +82,7 @@ describe("ChatSessionController", () => {
 
     expect(transport.sent).toEqual([
       {
-        messages: [{ content: "Explain this function", role: "user" }],
+        content: "Explain this function",
         requestId: "request-1",
         sessionId: "session-1",
       },

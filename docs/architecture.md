@@ -59,10 +59,10 @@ Milestone 2.2 adds a dedicated Socket.IO `/chat` namespace. Clients submit `chat
 `chat:completed`, `chat:cancelled`, and `chat:error` events. Every event is correlated by request
 and session identifier and validated with shared Zod contracts.
 
-The `ChatGateway` owns transport concerns only. `SendChatMessageService` invokes the provider port,
-and `ActiveGenerationRegistry` holds cancellable in-memory work for one connected client and
-session. The registry is deliberately not a conversation store: completed messages disappear on
-restart until durable sessions are added in Milestone 2.5.
+The `ChatGateway` owns Socket.IO correlation and event emission. `SendChatMessageService` invokes
+the provider port, while `DurableChatService` owns the durable request lifecycle. The active
+generation registry holds only cancellable in-memory work and permits one generation per durable
+session; it is not a conversation store.
 
 ## Webview Boundary
 
@@ -88,8 +88,8 @@ are deferred to Milestone 2.5.
 Milestone 2.4.2 introduces a provider-neutral `ChatTransportPort` in the extension host and a
 Socket.IO implementation for the backend `/chat` namespace. The transport validates every backend
 event against the shared contracts before the session controller can use it. The session controller
-builds commands from its in-memory conversation, correlates events by request ID, and forwards only
-normalized lifecycle updates to the webview.
+sends only the current user prompt and correlation identifiers; the backend owns retained context.
+It forwards normalized lifecycle updates to the webview.
 
 The Socket.IO client connects lazily when the Arc view becomes ready and uses bounded automatic
 reconnection. A disconnect fails the active local generation with a retryable error; it never
@@ -149,10 +149,27 @@ Schema changes stay in the explicit migration runner; the backend never uses `se
 startup it checks the PostgreSQL connection and logs a non-fatal availability warning, while the
 migration command fails clearly if the database cannot be updated.
 
-This layer is intentionally not wired into the current chat gateway. Milestone 2.5.3 will create
-the durable turn before inference, persist stream state, and use the stored snapshot to build model
-context. That keeps the database change independently testable and leaves the working ephemeral
-chat protocol unchanged while the transport contract evolves.
+Milestone 2.5.2 kept this layer independent from the gateway so its database behavior could be
+tested in isolation. Milestone 2.5.3 now composes it into the durable transport below.
+
+## Durable Chat Transport
+
+Milestone 2.5.3 makes PostgreSQL the authority for a running chat request. `POST /conversations`
+creates a session, `GET /conversations` lists sessions, and `GET`, `PATCH`, and `DELETE`
+`/conversations/:sessionId` provide snapshot, rename, and deletion operations for future clients.
+The gateway accepts only `{ sessionId, requestId, content }`; it does not accept client-supplied
+conversation history.
+
+Before accepting a request, `DurableChatService` ensures the UUID session exists, persists the
+completed user message and a pending assistant message, and loads the latest completed turns as
+model context. Each emitted delta is stored as `streaming` first, then the assistant record becomes
+`completed`, `cancelled`, or `failed` before the corresponding terminal event is emitted. Duplicate
+request IDs replay the stored outcome instead of calling the model again.
+
+At backend startup, unfinished assistant records are marked as retryable failures. The existing
+extension's UUID session is temporarily registered lazily so the streaming experience remains
+usable; Milestone 2.5.4 will replace that bridge with explicit REST-backed session creation and
+history hydration.
 
 ## Local Infrastructure
 

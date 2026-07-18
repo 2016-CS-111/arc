@@ -13,6 +13,7 @@ export interface ChatSessionControllerOptions {
 }
 
 export interface ChatSubmission {
+  readonly content: string;
   readonly requestId: string;
   readonly session: ChatSessionSnapshot;
 }
@@ -73,6 +74,7 @@ export class InMemoryChatSessionController {
     };
 
     return {
+      content: normalizedContent,
       requestId,
       session: this.getSnapshot(),
     };

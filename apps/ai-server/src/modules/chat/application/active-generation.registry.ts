@@ -7,7 +7,7 @@ export class ActiveGenerationRegistry {
   private readonly activeByScope = new Map<string, ActiveGeneration>();
 
   public start(scope: GenerationScope): AbortController | undefined {
-    const key = this.toKey(scope.clientId, scope.sessionId);
+    const key = this.toKey(scope.sessionId);
     if (this.activeByScope.has(key)) {
       return undefined;
     }
@@ -22,7 +22,7 @@ export class ActiveGenerationRegistry {
   }
 
   public complete(scope: GenerationScope): void {
-    const key = this.toKey(scope.clientId, scope.sessionId);
+    const key = this.toKey(scope.sessionId);
     const active = this.activeByScope.get(key);
 
     if (active?.requestId === scope.requestId) {
@@ -31,10 +31,10 @@ export class ActiveGenerationRegistry {
   }
 
   public cancel(scope: GenerationScope): boolean {
-    const key = this.toKey(scope.clientId, scope.sessionId);
+    const key = this.toKey(scope.sessionId);
     const active = this.activeByScope.get(key);
 
-    if (active?.requestId !== scope.requestId) {
+    if (active?.requestId !== scope.requestId || active.clientId !== scope.clientId) {
       return false;
     }
 
@@ -51,7 +51,7 @@ export class ActiveGenerationRegistry {
     }
   }
 
-  private toKey(clientId: string, sessionId: string): string {
-    return JSON.stringify([clientId, sessionId]);
+  private toKey(sessionId: string): string {
+    return sessionId;
   }
 }

@@ -22,6 +22,10 @@ export class ConversationSessionService {
     });
   }
 
+  public ensure(sessionId: string): Promise<ConversationSession> {
+    return this.conversationRepository.ensureSession(sessionId);
+  }
+
   public list(limit?: number): Promise<ConversationSessionSummary[]> {
     return this.conversationRepository.listSessions({
       ...(limit === undefined ? {} : { limit: Math.min(Math.max(limit, 1), 100) }),

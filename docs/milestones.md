@@ -285,12 +285,27 @@ Not included yet:
 
 #### Milestone 2.5.3: Durable Chat Transport
 
-Status: Not started.
+Status: Complete.
 
 Included:
 
 - Session REST API and durable streaming gateway integration.
 - Backend-owned context loading, persisted generation state, and recovery after restart.
+
+Details:
+
+- `POST`, `GET`, `PATCH`, and `DELETE` session endpoints at `/conversations`.
+- Socket commands carry only the current user prompt; retained context is loaded from PostgreSQL.
+- A user message and pending assistant placeholder are persisted before `chat:accepted`.
+- Every streamed assistant delta and terminal outcome is persisted before its matching socket event.
+- Pending and streaming records are recovered as retryable failures on backend startup.
+- Current UUID extension sessions are lazily registered for compatibility until the session-history UI
+  owns explicit creation and hydration in Milestone 2.5.4.
+
+Not included yet:
+
+- Extension synchronization with session snapshots.
+- Reopen, rename, delete, or history-list controls in the Arc view.
 
 #### Milestone 2.5.4: Session History UI
 

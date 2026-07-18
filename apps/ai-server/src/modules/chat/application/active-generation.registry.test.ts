@@ -9,7 +9,7 @@ const firstScope = {
 };
 
 describe("ActiveGenerationRegistry", () => {
-  it("allows one active generation per client and session", () => {
+  it("allows one active generation per durable session", () => {
     const registry = new ActiveGenerationRegistry();
 
     const controller = registry.start(firstScope);
@@ -43,7 +43,7 @@ describe("ActiveGenerationRegistry", () => {
     });
     const otherClientController = registry.start({
       clientId: "client_2",
-      sessionId: "session_1",
+      sessionId: "session_3",
       requestId: "request_3",
     });
 

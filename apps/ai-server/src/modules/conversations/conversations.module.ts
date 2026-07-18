@@ -8,6 +8,7 @@ import type { ConversationRepository } from "./application/conversation.reposito
 import { ConversationSessionService } from "./application/conversation-session.service.js";
 import { CONVERSATION_REPOSITORY } from "./conversations.constants.js";
 import { SequelizeConversationRepository } from "./infrastructure/sequelize-conversation.repository.js";
+import { ConversationsController } from "./presentation/conversations.controller.js";
 
 const conversationRepositoryProvider: Provider<ConversationRepository> = {
   provide: CONVERSATION_REPOSITORY,
@@ -17,6 +18,7 @@ const conversationRepositoryProvider: Provider<ConversationRepository> = {
 
 @Module({
   imports: [DatabaseModule],
+  controllers: [ConversationsController],
   providers: [conversationRepositoryProvider, ConversationSessionService, ConversationGenerationStateService],
   exports: [CONVERSATION_REPOSITORY, ConversationSessionService, ConversationGenerationStateService],
 })

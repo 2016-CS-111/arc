@@ -31,12 +31,14 @@ const message: ConversationMessage = {
 function createRepository(): {
   readonly repository: ConversationRepository;
   readonly createSession: ReturnType<typeof vi.fn>;
+  readonly ensureSession: ReturnType<typeof vi.fn>;
   readonly listSessions: ReturnType<typeof vi.fn>;
   readonly getSession: ReturnType<typeof vi.fn>;
   readonly renameSession: ReturnType<typeof vi.fn>;
   readonly deleteSession: ReturnType<typeof vi.fn>;
 } {
   const createSession = vi.fn(() => Promise.resolve(session));
+  const ensureSession = vi.fn(() => Promise.resolve(session));
   const listSessions = vi.fn(() =>
     Promise.resolve([{ ...session, messageCount: 1 }] satisfies ConversationSessionSummary[]),
   );
@@ -49,6 +51,7 @@ function createRepository(): {
   return {
     repository: {
       createSession,
+      ensureSession,
       listSessions,
       getSession,
       renameSession,
@@ -58,6 +61,7 @@ function createRepository(): {
       recoverInterruptedAssistantMessages: vi.fn(),
     },
     createSession,
+    ensureSession,
     listSessions,
     getSession,
     renameSession,
@@ -80,12 +84,14 @@ describe("ConversationSessionService", () => {
   });
 
   it("delegates session loading and deletion without changing identifiers", async () => {
-    const { repository, getSession, deleteSession } = createRepository();
+    const { repository, ensureSession, getSession, deleteSession } = createRepository();
     const service = new ConversationSessionService(repository);
 
     await expect(service.load(session.id)).resolves.toEqual({ ...session, messages: [message] });
+    await expect(service.ensure(session.id)).resolves.toEqual(session);
     await expect(service.delete(session.id)).resolves.toBe(true);
     expect(getSession).toHaveBeenCalledWith(session.id);
+    expect(ensureSession).toHaveBeenCalledWith(session.id);
     expect(deleteSession).toHaveBeenCalledWith(session.id);
   });
 });

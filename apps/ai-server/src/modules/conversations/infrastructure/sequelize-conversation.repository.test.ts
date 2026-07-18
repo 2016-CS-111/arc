@@ -2,13 +2,9 @@ import type { ChatError } from "@arc/contracts";
 import type { Transaction } from "sequelize";
 import { describe, expect, it, vi } from "vitest";
 
-import type {
-  ArcDatabase,
-  ChatMessageAttributes,
-  ChatMessageModel,
-  ChatSessionAttributes,
-  ChatSessionModel,
-} from "../../../database/database.types.js";
+import type { ArcDatabase, ChatMessageAttributes, ChatSessionAttributes } from "../../../database/database.types.js";
+import type { ChatMessageModel } from "../../../database/models/chat-message.model.js";
+import type { ChatSessionModel } from "../../../database/models/chat-session.model.js";
 import { SequelizeConversationRepository } from "./sequelize-conversation.repository.js";
 
 const sessionId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
@@ -65,6 +61,7 @@ function createMessage(attributes: ChatMessageAttributes): ChatMessageModel {
 function createDatabase(): {
   readonly database: ArcDatabase;
   readonly findByPk: ReturnType<typeof vi.fn>;
+  readonly findOrCreate: ReturnType<typeof vi.fn>;
   readonly findAll: ReturnType<typeof vi.fn>;
   readonly increment: ReturnType<typeof vi.fn>;
   readonly query: ReturnType<typeof vi.fn>;
@@ -74,6 +71,7 @@ function createDatabase(): {
   const increment = vi.fn();
   Object.assign(session, { increment });
   const findByPk = vi.fn(() => Promise.resolve(session));
+  const findOrCreate = vi.fn(() => Promise.resolve([session, false]));
   const findAll = vi.fn(() => Promise.resolve(existingTurnAttributes.map(createMessage)));
   const query = vi.fn(() => Promise.resolve([]));
   const update = vi.fn(() => Promise.resolve([0, []]));
@@ -85,11 +83,12 @@ function createDatabase(): {
     database: {
       sequelize: { query, transaction } as unknown as ArcDatabase["sequelize"],
       models: {
-        chatSessions: { findByPk } as unknown as ArcDatabase["models"]["chatSessions"],
+        chatSessions: { findByPk, findOrCreate } as unknown as ArcDatabase["models"]["chatSessions"],
         chatMessages: { findAll, update } as unknown as ArcDatabase["models"]["chatMessages"],
       },
     },
     findByPk,
+    findOrCreate,
     findAll,
     increment,
     query,
@@ -98,6 +97,17 @@ function createDatabase(): {
 }
 
 describe("SequelizeConversationRepository", () => {
+  it("uses a model-level find-or-create for UUID sessions supplied by the current extension", async () => {
+    const { database, findOrCreate } = createDatabase();
+    const repository = new SequelizeConversationRepository(database);
+
+    await expect(repository.ensureSession(sessionId)).resolves.toMatchObject({ id: sessionId });
+    expect(findOrCreate).toHaveBeenCalledWith({
+      where: { id: sessionId },
+      defaults: { id: sessionId },
+    });
+  });
+
   it("returns an existing request turn without allocating duplicate message ordinals", async () => {
     const { database, increment } = createDatabase();
     const repository = new SequelizeConversationRepository(database);

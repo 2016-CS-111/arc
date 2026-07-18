@@ -1,28 +1,17 @@
 import { z } from "zod";
 
 const ChatIdentifierSchema = z.string().min(1).max(160);
+const ChatSessionIdSchema = z.string().uuid();
 
-export const ChatTransportMessageRoleSchema = z.enum(["user", "assistant"]);
-
-export const ChatTransportMessageSchema = z.object({
-  role: ChatTransportMessageRoleSchema,
-  content: z.string().min(1).max(20_000),
+export const ChatSendCommandSchema = z.object({
+  requestId: ChatIdentifierSchema,
+  sessionId: ChatSessionIdSchema,
+  content: z.string().trim().min(1).max(20_000),
 });
-
-export const ChatSendCommandSchema = z
-  .object({
-    requestId: ChatIdentifierSchema,
-    sessionId: ChatIdentifierSchema,
-    messages: z.array(ChatTransportMessageSchema).min(1).max(40),
-  })
-  .refine((command) => command.messages.at(-1)?.role === "user", {
-    message: "The final chat message must have the user role.",
-    path: ["messages"],
-  });
 
 export const ChatCancelCommandSchema = z.object({
   requestId: ChatIdentifierSchema,
-  sessionId: ChatIdentifierSchema,
+  sessionId: ChatSessionIdSchema,
 });
 
 export const ChatErrorCodeSchema = z.enum([

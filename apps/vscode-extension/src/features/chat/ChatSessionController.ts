@@ -1,5 +1,3 @@
-import type { ChatSendCommand } from "@arc/contracts";
-
 import { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import type { ChatTransportEvent, ChatTransportPort, ChatTransportSubscription } from "./ChatTransportPort.js";
 import type {
@@ -60,7 +58,11 @@ export class ChatSessionController {
     }
 
     try {
-      this.options.transport.send(this.createSendCommand(submission.requestId));
+      this.options.transport.send({
+        content: submission.content,
+        requestId: submission.requestId,
+        sessionId: submission.session.sessionId,
+      });
     } catch (error) {
       this.failActiveGeneration(submission.requestId, toConnectionError(error));
     }
@@ -101,37 +103,6 @@ export class ChatSessionController {
     this.transportSubscription.dispose();
     this.options.transport.dispose();
     this.listeners.clear();
-  }
-
-  private createSendCommand(requestId: string): ChatSendCommand {
-    const snapshot = this.session.getSnapshot();
-    const activeGeneration = snapshot.activeGeneration;
-    if (activeGeneration?.requestId !== requestId) {
-      throw new Error("The active Arc generation changed before it could be sent.");
-    }
-
-    const messages: ChatSendCommand["messages"] = snapshot.messages.flatMap((message) => {
-      if (message.role === "assistant" && message.status !== "completed") {
-        return [];
-      }
-
-      if (message.content.length === 0) {
-        return [];
-      }
-
-      return [
-        {
-          content: message.content.slice(0, 20_000),
-          role: message.role,
-        },
-      ];
-    });
-
-    return {
-      messages,
-      requestId,
-      sessionId: snapshot.sessionId,
-    };
   }
 
   private handleTransportEvent(event: ChatTransportEvent): void {

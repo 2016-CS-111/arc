@@ -66,21 +66,21 @@ describe("SocketIoChatTransport", () => {
     const socket = new FakeSocketClient();
     const transport = new SocketIoChatTransport("http://127.0.0.1:7331", () => socket);
     const command: ChatSendCommand = {
-      messages: [{ content: "Explain this function", role: "user" }],
+      content: "Explain this function",
       requestId: "request-1",
-      sessionId: "session-1",
+      sessionId: "0d2e5770-f08e-48d5-871b-36bf734f535c",
     };
 
     transport.connect();
     socket.emitFromServer("connect", undefined);
     transport.send(command);
-    transport.cancel({ requestId: "request-1", sessionId: "session-1" });
+    transport.cancel({ requestId: "request-1", sessionId: "0d2e5770-f08e-48d5-871b-36bf734f535c" });
 
     expect(socket.emitted).toEqual([
       { eventName: "chat:send", payload: command },
       {
         eventName: "chat:cancel",
-        payload: { requestId: "request-1", sessionId: "session-1" },
+        payload: { requestId: "request-1", sessionId: "0d2e5770-f08e-48d5-871b-36bf734f535c" },
       },
     ]);
   });

@@ -12,13 +12,9 @@ import {
 } from "@arc/contracts";
 import { Op, QueryTypes, Transaction } from "sequelize";
 
-import type {
-  ArcDatabase,
-  ChatMessageAttributes,
-  ChatMessageModel,
-  ChatSessionAttributes,
-  ChatSessionModel,
-} from "../../../database/database.types.js";
+import type { ArcDatabase, ChatMessageAttributes, ChatSessionAttributes } from "../../../database/database.types.js";
+import type { ChatMessageModel } from "../../../database/models/chat-message.model.js";
+import type { ChatSessionModel } from "../../../database/models/chat-session.model.js";
 import type { ConversationRepository } from "../application/conversation.repository.js";
 import type {
   ConversationListOptions,
@@ -43,6 +39,15 @@ export class SequelizeConversationRepository implements ConversationRepository {
     const session = await this.database.models.chatSessions.create(
       input.title === undefined ? {} : { title: input.title },
     );
+
+    return toConversationSession(session);
+  }
+
+  public async ensureSession(sessionId: string): Promise<ConversationSession> {
+    const [session] = await this.database.models.chatSessions.findOrCreate({
+      where: { id: sessionId },
+      defaults: { id: sessionId },
+    });
 
     return toConversationSession(session);
   }
@@ -125,7 +130,7 @@ export class SequelizeConversationRepository implements ConversationRepository {
         transaction,
       });
       if (existingMessages.length > 0) {
-        return toConversationTurn(session, existingMessages);
+        return toConversationTurn(session, existingMessages, false);
       }
 
       await session.increment("nextMessageOrdinal", { by: 2, transaction });
@@ -155,7 +160,7 @@ export class SequelizeConversationRepository implements ConversationRepository {
       );
       await session.reload({ transaction });
 
-      return toConversationTurn(session, messages);
+      return toConversationTurn(session, messages, true);
     });
   }
 
@@ -245,7 +250,11 @@ function toConversationMessageAttributes(attributes: ChatMessageAttributes): Con
   });
 }
 
-function toConversationTurn(session: ChatSessionModel, messageModels: readonly ChatMessageModel[]): ConversationTurn {
+function toConversationTurn(
+  session: ChatSessionModel,
+  messageModels: readonly ChatMessageModel[],
+  created: boolean,
+): ConversationTurn {
   const messages = messageModels.map(toConversationMessage);
   const userMessage = messages.find((message) => message.role === "user");
   const assistantMessage = messages.find((message) => message.role === "assistant");
@@ -254,6 +263,7 @@ function toConversationTurn(session: ChatSessionModel, messageModels: readonly C
   }
 
   return {
+    created,
     session: toConversationSession(session),
     userMessage,
     assistantMessage,

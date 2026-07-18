@@ -1,15 +1,12 @@
-import type { ChatSendCommand } from "@arc/contracts";
+import type { ChatError, ChatSendCommand, ConversationMessage } from "@arc/contracts";
 import type { Logger } from "@arc/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ChatModelPort } from "../../inference/application/chat-model.port.js";
 import { ChatModelError } from "../../inference/domain/chat-model.errors.js";
-import type {
-  ChatModelEvent,
-  ChatModelRequest,
-  ChatModelStatus,
-} from "../../inference/domain/chat-model.types.js";
+import type { ChatModelEvent, ChatModelRequest, ChatModelStatus } from "../../inference/domain/chat-model.types.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
+import type { DurableChatPreparation, DurableChatService } from "../application/durable-chat.service.js";
 import { SendChatMessageService } from "../application/send-chat-message.service.js";
 import { ChatGateway } from "./chat.gateway.js";
 import type { ChatSocket } from "./chat.socket.js";
@@ -23,6 +20,10 @@ interface TestSocket extends ChatSocket {
   readonly emitted: EmittedEvent[];
 }
 
+const sessionId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
+const assistantMessageId = "1d089847-4de9-41c0-af93-3d7411a6068e";
+const timestamp = "2026-07-18T12:00:00.000Z";
+
 const logger: Logger = {
   debug: (): void => undefined,
   error: (): void => undefined,
@@ -32,9 +33,95 @@ const logger: Logger = {
 
 const command: ChatSendCommand = {
   requestId: "request_1",
-  sessionId: "session_1",
-  messages: [{ role: "user", content: "Say hello" }],
+  sessionId,
+  content: "Say hello",
 };
+
+class InMemoryDurableChatService {
+  public readonly completions: string[] = [];
+  public readonly streamedContent: string[] = [];
+  private assistantMessage: ConversationMessage | undefined;
+
+  public prepare(commandToPrepare: ChatSendCommand): Promise<DurableChatPreparation> {
+    if (this.assistantMessage !== undefined) {
+      return Promise.resolve({
+        type: "existing",
+        assistantMessage: this.assistantMessage,
+      });
+    }
+
+    this.assistantMessage = this.createAssistantMessage(commandToPrepare, "pending", "");
+    return Promise.resolve({
+      type: "new",
+      assistantMessage: this.assistantMessage,
+      modelMessages: [{ role: "user", content: commandToPrepare.content }],
+    });
+  }
+
+  public stream(sessionIdToUpdate: string, requestId: string, content: string): Promise<ConversationMessage> {
+    this.streamedContent.push(content);
+    this.assistantMessage = this.createAssistantMessage(
+      { sessionId: sessionIdToUpdate, requestId, content: "" },
+      "streaming",
+      content,
+    );
+    return Promise.resolve(this.assistantMessage);
+  }
+
+  public complete(sessionIdToUpdate: string, requestId: string, content: string): Promise<ConversationMessage> {
+    this.completions.push(content);
+    this.assistantMessage = this.createAssistantMessage(
+      { sessionId: sessionIdToUpdate, requestId, content: "" },
+      "completed",
+      content,
+    );
+    return Promise.resolve(this.assistantMessage);
+  }
+
+  public cancel(sessionIdToUpdate: string, requestId: string, content: string): Promise<ConversationMessage> {
+    this.assistantMessage = this.createAssistantMessage(
+      { sessionId: sessionIdToUpdate, requestId, content: "" },
+      "cancelled",
+      content,
+    );
+    return Promise.resolve(this.assistantMessage);
+  }
+
+  public fail(
+    sessionIdToUpdate: string,
+    requestId: string,
+    content: string,
+    error: ChatError,
+  ): Promise<ConversationMessage> {
+    this.assistantMessage = this.createAssistantMessage(
+      { sessionId: sessionIdToUpdate, requestId, content: "" },
+      "failed",
+      content,
+      error,
+    );
+    return Promise.resolve(this.assistantMessage);
+  }
+
+  private createAssistantMessage(
+    commandToPrepare: ChatSendCommand,
+    status: ConversationMessage["status"],
+    content: string,
+    error?: ChatError,
+  ): ConversationMessage {
+    return {
+      id: assistantMessageId,
+      sessionId: commandToPrepare.sessionId,
+      requestId: commandToPrepare.requestId,
+      ordinal: 2,
+      role: "assistant",
+      status,
+      content,
+      ...(error === undefined ? {} : { error }),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+  }
+}
 
 function createSocket(): TestSocket {
   const emitted: EmittedEvent[] = [];
@@ -49,9 +136,7 @@ function createSocket(): TestSocket {
   };
 }
 
-function createChatModel(
-  stream: (signal: AbortSignal | undefined) => AsyncIterable<ChatModelEvent>,
-): ChatModelPort {
+function createChatModel(stream: (signal: AbortSignal | undefined) => AsyncIterable<ChatModelEvent>): ChatModelPort {
   return {
     getStatus: (): Promise<ChatModelStatus> =>
       Promise.resolve({
@@ -59,33 +144,32 @@ function createChatModel(
         model: "qwen2.5-coder:7b",
         latencyMs: 1,
       }),
-    streamChat: (
-      request: ChatModelRequest,
-      signal?: AbortSignal,
-    ): AsyncIterable<ChatModelEvent> => {
+    streamChat: (request: ChatModelRequest, signal?: AbortSignal): AsyncIterable<ChatModelEvent> => {
       void request;
       return stream(signal);
     },
   };
 }
 
-function createGateway(chatModel: ChatModelPort): ChatGateway {
+function createGateway(chatModel: ChatModelPort, durableChatService: InMemoryDurableChatService): ChatGateway {
   return new ChatGateway(
     new ActiveGenerationRegistry(),
+    durableChatService as unknown as DurableChatService,
     new SendChatMessageService(chatModel),
     logger,
   );
 }
 
 describe("ChatGateway", () => {
-  it("emits accepted, ordered deltas, and completion events", async () => {
+  it("persists ordered deltas before emitting completion", async () => {
+    const durableChatService = new InMemoryDurableChatService();
     const chatModel = createChatModel(async function* (): AsyncGenerator<ChatModelEvent> {
       await Promise.resolve();
       yield { type: "delta", content: "Hello" };
       yield { type: "delta", content: " world" };
       yield { type: "completed", finishReason: "stop" };
     });
-    const gateway = createGateway(chatModel);
+    const gateway = createGateway(chatModel, durableChatService);
     const socket = createSocket();
 
     gateway.handleChatSend(socket, command);
@@ -98,9 +182,37 @@ describe("ChatGateway", () => {
         "chat:completed",
       ]);
     });
+    expect(durableChatService.streamedContent).toEqual(["Hello", "Hello world"]);
+    expect(durableChatService.completions).toEqual(["Hello world"]);
   });
 
-  it("rejects a concurrent request and emits cancellation after the active request is stopped", async () => {
+  it("replays a duplicate request from durable state without invoking the model again", async () => {
+    let modelCalls = 0;
+    const durableChatService = new InMemoryDurableChatService();
+    const chatModel = createChatModel(async function* (): AsyncGenerator<ChatModelEvent> {
+      modelCalls += 1;
+      await Promise.resolve();
+      yield { type: "delta", content: "Stored response" };
+      yield { type: "completed" };
+    });
+    const gateway = createGateway(chatModel, durableChatService);
+    const socket = createSocket();
+
+    gateway.handleChatSend(socket, command);
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toContain("chat:completed");
+    });
+
+    socket.emitted.splice(0);
+    gateway.handleChatSend(socket, command);
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:delta", "chat:completed"]);
+    });
+    expect(modelCalls).toBe(1);
+  });
+
+  it("rejects a concurrent request and persists cancellation after the active request is stopped", async () => {
+    const durableChatService = new InMemoryDurableChatService();
     const chatModel = createChatModel(async function* (
       signal: AbortSignal | undefined,
     ): AsyncGenerator<ChatModelEvent> {
@@ -114,10 +226,13 @@ describe("ChatGateway", () => {
 
       yield { type: "completed" };
     });
-    const gateway = createGateway(chatModel);
+    const gateway = createGateway(chatModel, durableChatService);
     const socket = createSocket();
 
     gateway.handleChatSend(socket, command);
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted"]);
+    });
     gateway.handleChatSend(socket, {
       ...command,
       requestId: "request_2",
@@ -128,11 +243,7 @@ describe("ChatGateway", () => {
     });
 
     await vi.waitFor(() => {
-      expect(socket.emitted.map((entry) => entry.event)).toEqual([
-        "chat:accepted",
-        "chat:error",
-        "chat:cancelled",
-      ]);
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:error", "chat:cancelled"]);
     });
   });
 });

@@ -16,7 +16,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createConsoleLogger("chat-socket-smoke");
   const requestId = createId("request");
-  const sessionId = createId("session");
+  const sessionId = randomUUID();
   const argumentsWithoutFlags = process.argv.slice(2);
   const cancelOnAcceptance = argumentsWithoutFlags.includes("--cancel");
   const prompt =
@@ -149,12 +149,7 @@ function streamResponse(
     socket.emit("chat:send", {
       requestId,
       sessionId,
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      content: prompt,
     });
   });
 }
@@ -166,3 +161,4 @@ main().catch((error: unknown) => {
   });
   process.exitCode = 1;
 });
+import { randomUUID } from "node:crypto";
