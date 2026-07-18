@@ -23,5 +23,5 @@ export interface ConversationRepository {
   deleteSession(sessionId: string): Promise<boolean>;
   createPendingTurn(input: CreateConversationTurnInput): Promise<ConversationTurn | undefined>;
   updateAssistantMessage(input: UpdateAssistantMessageInput): Promise<ConversationMessage | undefined>;
-  recoverInterruptedAssistantMessages(error: ChatError): Promise<number>;
+  recoverInterruptedAssistantMessages(error: ChatError, sessionId?: string): Promise<number>;
 }

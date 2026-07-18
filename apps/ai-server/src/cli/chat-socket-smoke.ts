@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { createId, createConsoleLogger } from "@arc/shared";
 import {
   ChatAcceptedEventSchema,
@@ -161,4 +163,3 @@ main().catch((error: unknown) => {
   });
   process.exitCode = 1;
 });
-import { randomUUID } from "node:crypto";

@@ -190,7 +190,7 @@ export class SequelizeConversationRepository implements ConversationRepository {
     return toConversationMessage(message);
   }
 
-  public async recoverInterruptedAssistantMessages(error: ChatError): Promise<number> {
+  public async recoverInterruptedAssistantMessages(error: ChatError, sessionId?: string): Promise<number> {
     const [updatedCount] = await this.database.models.chatMessages.update(
       {
         status: "failed",
@@ -200,6 +200,7 @@ export class SequelizeConversationRepository implements ConversationRepository {
         where: {
           role: "assistant",
           status: { [Op.in]: ["pending", "streaming"] },
+          ...(sessionId === undefined ? {} : { sessionId }),
         },
       },
     );

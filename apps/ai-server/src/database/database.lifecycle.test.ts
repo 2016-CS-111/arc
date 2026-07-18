@@ -10,7 +10,7 @@ function createConfig(sync: boolean): AppConfig {
     database: {
       connectTimeoutMs: 5_000,
       sync,
-      url: "postgresql://arc:arc@127.0.0.1:5433/arc",
+      url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     },
     host: "127.0.0.1",
     nodeEnv: "test",

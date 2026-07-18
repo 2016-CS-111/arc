@@ -21,7 +21,7 @@ const rawEnvSchema = z.object({
   ARC_SERVER_HOST: z.string().min(1).default("127.0.0.1"),
   ARC_SERVER_PORT: z.coerce.number().int().positive().max(65535).default(7331),
   ARC_CORS_ORIGIN: z.string().min(1).default("*"),
-  ARC_DATABASE_URL: databaseUrlSchema.default("postgresql://arc:arc@127.0.0.1:5433/arc"),
+  ARC_DATABASE_URL: databaseUrlSchema.default("postgresql://postgres:postgres@127.0.0.1:5432/arc"),
   ARC_DATABASE_CONNECT_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
   ARC_DATABASE_SYNC: z
     .enum(["true", "false"])

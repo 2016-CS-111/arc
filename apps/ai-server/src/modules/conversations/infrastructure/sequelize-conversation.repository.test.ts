@@ -149,7 +149,8 @@ describe("SequelizeConversationRepository", () => {
       retryable: true,
     };
 
-    await expect(repository.recoverInterruptedAssistantMessages(error)).resolves.toBe(2);
+    await expect(repository.recoverInterruptedAssistantMessages(error, sessionId)).resolves.toBe(2);
     expect(update).toHaveBeenCalledOnce();
+    expect(update.mock.calls.at(0)?.at(1)).toMatchObject({ where: { sessionId } });
   });
 });

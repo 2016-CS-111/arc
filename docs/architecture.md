@@ -175,6 +175,15 @@ exist. The webview sees only validated bridge events and can create, reopen, ren
 sessions without direct network access. The existing Socket.IO controller continues to own the live
 generation state for the selected session.
 
+## Persistence Acceptance
+
+`pnpm db:verify` is the real PostgreSQL acceptance command. It applies pending migrations and uses
+two Sequelize connections to verify a session survives a simulated backend restart. The command
+checks session creation, request idempotency, streaming and completion states, reopening and
+continuing a session, scoped interrupted-generation recovery, listing, rename, and deletion. Its
+temporary session is removed in `finally`; recovery is scoped to that session so the command never
+changes another active conversation.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

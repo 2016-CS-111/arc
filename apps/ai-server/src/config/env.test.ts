@@ -14,7 +14,7 @@ describe("loadConfig", () => {
     expect(config.database).toEqual({
       connectTimeoutMs: 5_000,
       sync: false,
-      url: "postgresql://arc:arc@127.0.0.1:5433/arc",
+      url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     });
   });
 

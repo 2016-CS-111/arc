@@ -256,7 +256,7 @@ Status: Complete.
 
 Included:
 
-- PostgreSQL 16 Docker Compose development infrastructure.
+- Local PostgreSQL development configuration.
 - Typed database environment configuration.
 - Explicit, ordered SQL migration runner.
 - Initial session and message schema with durable terminal states.
@@ -337,12 +337,27 @@ Not included yet:
 
 #### Milestone 2.5.5: Persistence Acceptance
 
-Status: Not started.
+Status: Complete.
 
 Included:
 
-- Repository integration tests against PostgreSQL.
-- Restart-recovery and manual durable-session acceptance coverage.
+- `pnpm db:verify` PostgreSQL repository acceptance command.
+- Isolated checks for create, idempotency, streaming, completion, reopen-and-continue, list,
+  rename, delete, and restart recovery.
+- Scoped recovery verification that cannot alter another in-progress session.
+- Manual VSCode/backend restart acceptance instructions.
+
+Local acceptance:
+
+1. Start local PostgreSQL, then run `pnpm db:create` and `pnpm db:verify`.
+2. Run `pnpm backend:dev`, `pnpm extension:watch`, and `pnpm extension:run`.
+3. Create a conversation, stream a response, restart the backend or Extension Development Host,
+   reopen that conversation, and send a follow-up prompt.
+
+Acceptance evidence:
+
+- `pnpm db:verify` passed against the configured native PostgreSQL database after applying
+  `0001_chat_sessions.sql`.
 
 Acceptance gate:
 

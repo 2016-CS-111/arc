@@ -27,8 +27,9 @@ pnpm build
 pnpm test
 pnpm lint
 pnpm backend:dev
-pnpm db:up
+pnpm db:create
 pnpm db:migrate
+pnpm db:verify
 pnpm ollama:smoke
 pnpm chat:socket-smoke
 pnpm chat:cancel-smoke
@@ -40,18 +41,29 @@ The AI server listens on `http://127.0.0.1:7331` by default.
 
 ## PostgreSQL
 
-Milestone 2.5 uses Sequelize with PostgreSQL-backed durable sessions. Start the local database and
-apply its explicit SQL migrations before starting the durable gateway:
+Milestone 2.5 uses your locally running PostgreSQL server with Sequelize-backed durable sessions.
+Create the configured local development database and apply migrations before starting the gateway:
 
 ```sh
-pnpm db:up
+pnpm db:create
 pnpm db:migrate
 ```
 
-The default connection is `postgresql://arc:arc@127.0.0.1:5433/arc`; see `.env.example` for the
-configuration values. `ARC_DATABASE_SYNC=true` invokes non-destructive `sequelize.sync()` after a
-successful connection, but it is opt-in and does not replace `pnpm db:migrate`. `pnpm db:down`
-stops PostgreSQL without deleting the named data volume.
+The default connection is `postgresql://postgres:postgres@127.0.0.1:5432/arc`; see `.env.example`
+for configuration values. `pnpm db:create` only creates the database named in `ARC_DATABASE_URL`;
+it never starts, stops, or manages your local PostgreSQL service. `ARC_DATABASE_SYNC=true` invokes
+non-destructive `sequelize.sync()` after a successful connection, but it does not replace
+`pnpm db:migrate`.
+
+`pnpm db:verify` applies any pending migrations, then verifies durable session creation, idempotent
+turns, streaming/completion persistence, reopen-and-continue behavior, scoped restart recovery,
+rename, and deletion against the configured PostgreSQL database. It creates one temporary session
+and removes it before exiting.
+
+For the final local acceptance pass, run `pnpm db:verify`, start `pnpm backend:dev`, then open Arc
+in the Extension Development Host. Create a conversation, send a prompt, restart the backend or
+extension host, reopen the same conversation, and send a follow-up prompt. The prior messages must
+remain visible and only the current prompt is sent to the backend.
 
 ## Ollama
 
