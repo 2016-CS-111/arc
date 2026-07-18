@@ -83,6 +83,19 @@ This state is deliberately local and non-durable. The webview cannot open a tran
 choose correlation IDs; Socket.IO transport is added in Milestone 2.4.2, and persistent sessions
 are deferred to Milestone 2.5.
 
+## Extension Chat Transport
+
+Milestone 2.4.2 introduces a provider-neutral `ChatTransportPort` in the extension host and a
+Socket.IO implementation for the backend `/chat` namespace. The transport validates every backend
+event against the shared contracts before the session controller can use it. The session controller
+builds commands from its in-memory conversation, correlates events by request ID, and forwards only
+normalized lifecycle updates to the webview.
+
+The Socket.IO client connects lazily when the Arc view becomes ready and uses bounded automatic
+reconnection. A disconnect fails the active local generation with a retryable error; it never
+silently repeats a user prompt. The future composer and conversation presentation remain separate
+work in Milestone 2.4.3.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

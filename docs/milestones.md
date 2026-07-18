@@ -157,7 +157,7 @@ Not included yet:
 
 #### Milestone 2.4.2: Extension Chat Transport
 
-Status: Not started.
+Status: Complete.
 
 Goal: connect the extension-host chat controller to the existing NestJS `/chat` namespace through a
 provider-neutral transport boundary.

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
-import type { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
+import type { ChatSessionController, ChatSessionEventSubscription } from "./ChatSessionController.js";
 import { createWebviewHtml, type WebviewAsset } from "./createWebviewHtml.js";
 import {
   type BackendStatusSnapshot,
@@ -26,13 +26,18 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
   public static readonly viewType = "arc.chat";
 
   private currentAbortController: AbortController | undefined;
+  private readonly chatSessionSubscription: ChatSessionEventSubscription;
   private view: vscode.WebviewView | undefined;
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly backendConfig: BackendConfig,
-    private readonly chatSession: InMemoryChatSessionController,
-  ) {}
+    private readonly chatSession: ChatSessionController,
+  ) {
+    this.chatSessionSubscription = this.chatSession.subscribe((message) => {
+      void this.postChatMessage(message);
+    });
+  }
 
   public resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
@@ -50,16 +55,17 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
       switch (parsedMessage?.type) {
         case "webview:ready":
           void this.refreshStatus();
+          this.chatSession.connect();
           void this.hydrateChat();
           return;
         case "status:refresh":
           void this.refreshStatus();
           return;
         case "chat:submit":
-          void this.submitChat(parsedMessage.content);
+          this.submitChat(parsedMessage.content);
           return;
         case "chat:cancel":
-          void this.cancelChat();
+          this.cancelChat();
           return;
         default:
           return;
@@ -69,6 +75,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   public dispose(): void {
     this.disposeView();
+    this.chatSessionSubscription.dispose();
   }
 
   private async render(webview: vscode.Webview): Promise<void> {
@@ -132,30 +139,12 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     });
   }
 
-  private async submitChat(content: string): Promise<void> {
-    const submission = this.chatSession.submit(content);
-    if (submission === undefined) {
-      return;
-    }
-
-    await this.postChatMessage({
-      session: submission.session,
-      type: "chat:submitted",
-    });
+  private submitChat(content: string): void {
+    this.chatSession.submit(content);
   }
 
-  private async cancelChat(): Promise<void> {
-    const activeGeneration = this.chatSession.getSnapshot().activeGeneration;
-    if (activeGeneration === null) {
-      return;
-    }
-
-    if (this.chatSession.cancel(activeGeneration.requestId) !== undefined) {
-      await this.postChatMessage({
-        requestId: activeGeneration.requestId,
-        type: "chat:generation-cancelled",
-      });
-    }
+  private cancelChat(): void {
+    this.chatSession.cancelActiveGeneration();
   }
 
   private async postChatMessage(message: ExtensionToWebviewMessage): Promise<void> {
