@@ -402,6 +402,8 @@ Acceptance gate:
 
 #### Milestone 2.6.2: Code Blocks and Trusted Actions
 
+Status: Complete.
+
 - Add fenced-code language labels and syntax highlighting.
 - Add a code-copy action through the validated extension-host bridge.
 - Open external links only after extension-host URL validation.
@@ -409,6 +411,7 @@ Acceptance gate:
 #### Milestone 2.6.3: Streaming Performance and Scroll
 
 - Batch streamed UI updates and memoize completed messages.
+- Reduce or lazy-load the syntax grammar footprint to keep the webview bundle below its warning threshold.
 - Preserve follow mode while the user is near the latest message.
 - Pause automatic scrolling during manual review and provide a jump-to-latest action.
 - Keep long responses, tables, and code blocks usable in narrow layouts.

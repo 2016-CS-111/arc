@@ -78,6 +78,19 @@ const ChatSubmitCommandSchema = z.object({
   type: z.literal("chat:submit"),
 });
 
+const ExternalHttpUrlSchema = z
+  .string()
+  .url()
+  .max(2_048)
+  .refine((value) => {
+    try {
+      const protocol = new URL(value).protocol;
+      return protocol === "http:" || protocol === "https:";
+    } catch {
+      return false;
+    }
+  });
+
 export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("webview:ready") }),
   z.object({ type: z.literal("status:refresh") }),
@@ -96,6 +109,14 @@ export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
   z.object({
     sessionId: ConversationIdSchema,
     type: z.literal("conversation:delete"),
+  }),
+  z.object({
+    content: z.string().min(1).max(200_000),
+    type: z.literal("code:copy"),
+  }),
+  z.object({
+    type: z.literal("link:open"),
+    url: ExternalHttpUrlSchema,
   }),
 ]);
 

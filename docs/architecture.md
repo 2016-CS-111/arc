@@ -106,6 +106,11 @@ The conversation follows new streaming output until the user scrolls away, keepi
 usable without fighting deliberate review of earlier messages. The webview remains a projection of
 extension-host state, so its reload hydration behavior and transport ownership are unchanged.
 
+Milestone 2.6 renders assistant Markdown through an allowlisted pipeline. Syntax highlighting runs
+before sanitization so only approved `language-*` and `hljs-*` classes reach React; raw HTML and
+remote images remain disabled. Code-copy and external-link clicks cross the validated webview bridge,
+while the extension host owns the clipboard and opens only credential-free HTTP or HTTPS URLs.
+
 ## Integration and Resilience
 
 Milestone 2.4.4 proves the prompt-to-token flow with a deterministic in-process model test spanning

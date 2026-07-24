@@ -29,10 +29,22 @@ describe("webview chat contract", () => {
         type: "conversation:rename",
       }),
     ).toMatchObject({ type: "conversation:rename" });
+    expect(parseWebviewToExtensionMessage({ content: "const answer = 42;", type: "code:copy" })).toEqual({
+      content: "const answer = 42;",
+      type: "code:copy",
+    });
+    expect(parseWebviewToExtensionMessage({ type: "link:open", url: "https://example.com/docs" })).toEqual({
+      type: "link:open",
+      url: "https://example.com/docs",
+    });
   });
 
   it("rejects unrecognized webview messages", () => {
     expect(parseWebviewToExtensionMessage({ type: "chat:send", prompt: "hello" })).toBeNull();
+    expect(
+      parseWebviewToExtensionMessage({ type: "link:open", url: "vscode:workbench.action.openSettings" }),
+    ).toBeNull();
+    expect(parseWebviewToExtensionMessage({ type: "link:open", url: "not a url" })).toBeNull();
   });
 
   it("accepts a validated status update", () => {

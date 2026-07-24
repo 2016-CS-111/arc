@@ -118,6 +118,14 @@ export function App() {
     postToExtension({ sessionId, type: "conversation:delete" });
   }
 
+  function copyCode(content: string): void {
+    postToExtension({ content, type: "code:copy" });
+  }
+
+  function openExternal(url: string): void {
+    postToExtension({ type: "link:open", url });
+  }
+
   return (
     <main className="flex min-h-screen flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
@@ -155,7 +163,7 @@ export function App() {
           {state.conversationError}
         </p>
       )}
-      <ConversationView messages={state.chat?.messages ?? []} />
+      <ConversationView messages={state.chat?.messages ?? []} onCopyCode={copyCode} onOpenExternal={openExternal} />
       <ChatComposer
         connectionReady={isConnectionReady}
         isGenerating={isGenerating}

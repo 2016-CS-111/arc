@@ -102,6 +102,7 @@
 
   .arc-markdown a {
     color: var(--vscode-textLink-foreground);
+    cursor: pointer;
     text-decoration: underline;
   }
 
@@ -129,6 +130,77 @@
   .arc-markdown pre code {
     background: transparent;
     padding: 0;
+  }
+
+  .arc-code-block {
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .arc-code-block-header {
+    align-items: center;
+    background: var(--vscode-editorGroupHeader-tabsBackground);
+    border-bottom: 1px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    font-size: 0.6875rem;
+    height: 1.875rem;
+    justify-content: space-between;
+    padding: 0 0.25rem 0 0.625rem;
+  }
+
+  .arc-code-block pre {
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .arc-markdown .hljs-comment,
+  .arc-markdown .hljs-quote {
+    color: var(--vscode-descriptionForeground);
+  }
+
+  .arc-markdown .hljs-keyword,
+  .arc-markdown .hljs-selector-tag,
+  .arc-markdown .hljs-built_in,
+  .arc-markdown .hljs-type {
+    color: var(--vscode-symbolIcon-keywordForeground, #c586c0);
+  }
+
+  .arc-markdown .hljs-string,
+  .arc-markdown .hljs-attribute,
+  .arc-markdown .hljs-template-tag,
+  .arc-markdown .hljs-template-variable {
+    color: var(--vscode-symbolIcon-stringForeground, #ce9178);
+  }
+
+  .arc-markdown .hljs-number,
+  .arc-markdown .hljs-literal,
+  .arc-markdown .hljs-variable,
+  .arc-markdown .hljs-params {
+    color: var(--vscode-symbolIcon-numberForeground, #b5cea8);
+  }
+
+  .arc-markdown .hljs-title,
+  .arc-markdown .hljs-title.function_,
+  .arc-markdown .hljs-section {
+    color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+  }
+
+  .arc-markdown .hljs-meta,
+  .arc-markdown .hljs-symbol,
+  .arc-markdown .hljs-bullet {
+    color: var(--vscode-symbolIcon-operatorForeground, #d7ba7d);
+  }
+
+  .arc-markdown .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .arc-markdown .hljs-strong {
+    font-weight: 600;
   }
 
   .arc-markdown table {

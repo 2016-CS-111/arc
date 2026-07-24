@@ -7,6 +7,7 @@ import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
 import type { ChatSessionController, ChatSessionEventSubscription } from "./ChatSessionController.js";
 import { createWebviewHtml, type WebviewAsset } from "./createWebviewHtml.js";
+import { WebviewActionService } from "./WebviewActionService.js";
 import {
   type BackendStatusSnapshot,
   type ExtensionToWebviewMessage,
@@ -27,13 +28,21 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
 
   private currentAbortController: AbortController | undefined;
   private readonly chatSessionSubscription: ChatSessionEventSubscription;
+  private readonly webviewActions: WebviewActionService;
   private view: vscode.WebviewView | undefined;
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly backendConfig: BackendConfig,
     private readonly chatSession: ChatSessionController,
+    webviewActions?: WebviewActionService,
   ) {
+    this.webviewActions =
+      webviewActions ??
+      new WebviewActionService({
+        openExternal: async (url) => vscode.env.openExternal(vscode.Uri.parse(url, true)),
+        writeClipboard: (content) => vscode.env.clipboard.writeText(content),
+      });
     this.chatSessionSubscription = this.chatSession.subscribe((message) => {
       void this.postChatMessage(message);
     });
@@ -78,6 +87,12 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         case "conversation:delete":
           void this.chatSession.deleteConversation(parsedMessage.sessionId);
+          return;
+        case "code:copy":
+          void this.webviewActions.copyCode(parsedMessage.content);
+          return;
+        case "link:open":
+          void this.webviewActions.openExternalUrl(parsedMessage.url);
           return;
         default:
           return;

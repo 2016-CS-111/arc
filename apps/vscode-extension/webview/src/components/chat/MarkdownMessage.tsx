@@ -1,7 +1,10 @@
 import ReactMarkdown, { type UrlTransform } from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
 import rehypeSanitize, { type Options as RehypeSanitizeSchema } from "rehype-sanitize";
-import { type ReactElement } from "react";
+import { type KeyboardEvent, type MouseEvent, type ReactElement } from "react";
 import remarkGfm from "remark-gfm";
+
+import { CodeBlock } from "./CodeBlock.js";
 
 const allowedMarkdownElements = [
   "a",
@@ -22,6 +25,7 @@ const allowedMarkdownElements = [
   "ol",
   "p",
   "pre",
+  "span",
   "strong",
   "table",
   "tbody",
@@ -35,8 +39,14 @@ const allowedMarkdownElements = [
 export const markdownSanitizationSchema: RehypeSanitizeSchema = {
   attributes: {
     a: ["href", "title"],
-    input: [["checked", true], ["disabled", true], ["type", "checkbox"]],
+    code: [["className", "hljs", /^language-/]],
+    input: [
+      ["checked", true],
+      ["disabled", true],
+      ["type", "checkbox"],
+    ],
     ol: ["start"],
+    span: [["className", /^hljs-/]],
     td: ["align"],
     th: ["align"],
   },
@@ -60,16 +70,65 @@ export const markdownUrlTransform: UrlTransform = (url) => {
 };
 
 export interface MarkdownMessageProps {
+  readonly canCopy?: boolean;
   readonly content: string;
+  readonly onCopyCode?: (content: string) => void;
+  readonly onOpenExternal?: (url: string) => void;
 }
 
 /** Renders persisted model Markdown without accepting raw HTML or unsafe URLs. */
-export function MarkdownMessage({ content }: MarkdownMessageProps): ReactElement {
+export function MarkdownMessage({
+  canCopy = false,
+  content,
+  onCopyCode,
+  onOpenExternal,
+}: MarkdownMessageProps): ReactElement {
   return (
     <div className="arc-markdown">
       <ReactMarkdown
         allowedElements={allowedMarkdownElements}
-        rehypePlugins={[[rehypeSanitize, markdownSanitizationSchema]]}
+        components={{
+          a: (properties) => {
+            function requestOpen(): void {
+              if (properties.href !== undefined) {
+                onOpenExternal?.(properties.href);
+              }
+            }
+
+            function openLink(event: MouseEvent<HTMLAnchorElement>): void {
+              event.preventDefault();
+              requestOpen();
+            }
+
+            function openLinkWithKeyboard(event: KeyboardEvent<HTMLAnchorElement>): void {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                requestOpen();
+              }
+            }
+
+            return (
+              <a
+                onClick={openLink}
+                onKeyDown={openLinkWithKeyboard}
+                role="link"
+                tabIndex={0}
+                title={properties.title ?? properties.href}
+              >
+                {properties.children}
+              </a>
+            );
+          },
+          pre: (properties) => (
+            <CodeBlock canCopy={canCopy} onCopy={(code) => onCopyCode?.(code)}>
+              {properties.children}
+            </CodeBlock>
+          ),
+        }}
+        rehypePlugins={[
+          [rehypeHighlight, { detect: false }],
+          [rehypeSanitize, markdownSanitizationSchema],
+        ]}
         remarkPlugins={[remarkGfm]}
         skipHtml
         urlTransform={markdownUrlTransform}

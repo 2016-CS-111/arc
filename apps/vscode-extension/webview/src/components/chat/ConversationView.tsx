@@ -7,9 +7,11 @@ import { MarkdownMessage } from "./MarkdownMessage.js";
 
 export interface ConversationViewProps {
   readonly messages: readonly ChatSessionMessage[];
+  readonly onCopyCode: (content: string) => void;
+  readonly onOpenExternal: (url: string) => void;
 }
 
-export function ConversationView({ messages }: ConversationViewProps): ReactElement {
+export function ConversationView({ messages, onCopyCode, onOpenExternal }: ConversationViewProps): ReactElement {
   const viewportRef = useRef<HTMLDivElement>(null);
   const shouldFollowRef = useRef(true);
 
@@ -50,14 +52,22 @@ export function ConversationView({ messages }: ConversationViewProps): ReactElem
     >
       <div className="flex flex-col gap-4">
         {messages.map((message) => (
-          <MessageItem key={message.id} message={message} />
+          <MessageItem key={message.id} message={message} onCopyCode={onCopyCode} onOpenExternal={onOpenExternal} />
         ))}
       </div>
     </section>
   );
 }
 
-function MessageItem({ message }: { readonly message: ChatSessionMessage }): ReactElement {
+function MessageItem({
+  message,
+  onCopyCode,
+  onOpenExternal,
+}: {
+  readonly message: ChatSessionMessage;
+  readonly onCopyCode: (content: string) => void;
+  readonly onOpenExternal: (url: string) => void;
+}): ReactElement {
   const isUser = message.role === "user";
   const isWorking = message.status === "pending" || message.status === "streaming";
   const fallbackContent = message.status === "pending" ? "Thinking..." : "Generating...";
@@ -84,7 +94,12 @@ function MessageItem({ message }: { readonly message: ChatSessionMessage }): Rea
         {isUser ? (
           <p className="m-0 whitespace-pre-wrap break-words leading-5">{message.content}</p>
         ) : (
-          <MarkdownMessage content={message.content.length > 0 ? message.content : fallbackContent} />
+          <MarkdownMessage
+            canCopy={!isWorking}
+            content={message.content.length > 0 ? message.content : fallbackContent}
+            onCopyCode={onCopyCode}
+            onOpenExternal={onOpenExternal}
+          />
         )}
         {isWorking ? (
           <LoaderCircle aria-label="Generating response" className="mt-2 animate-spin text-arc-muted" size={14} />
