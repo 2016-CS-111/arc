@@ -1,26 +1,49 @@
-import { Bot, CircleAlert, LoaderCircle, UserRound } from "lucide-react";
-import { type ReactElement, useEffect, useRef } from "react";
+import { ArrowDown, Bot, CircleAlert, LoaderCircle, UserRound } from "lucide-react";
+import { lazy, memo, Suspense, type ReactElement, useEffect, useRef, useState } from "react";
 
 import type { ChatSessionMessage } from "../../../../src/features/chat/chatWebview.contract.js";
 import { cn } from "../../lib/cn.js";
-import { MarkdownMessage } from "./MarkdownMessage.js";
+import { IconButton } from "../ui/IconButton.js";
+
+const MarkdownMessage = lazy(async () => {
+  const module = await import("./MarkdownMessage.js");
+  return { default: module.MarkdownMessage };
+});
+
+const followThresholdPx = 24;
+
+interface ScrollMetrics {
+  readonly clientHeight: number;
+  readonly scrollHeight: number;
+  readonly scrollTop: number;
+}
 
 export interface ConversationViewProps {
   readonly messages: readonly ChatSessionMessage[];
   readonly onCopyCode: (content: string) => void;
   readonly onOpenExternal: (url: string) => void;
+  readonly sessionId: string | undefined;
 }
 
-export function ConversationView({ messages, onCopyCode, onOpenExternal }: ConversationViewProps): ReactElement {
+export function ConversationView({
+  messages,
+  onCopyCode,
+  onOpenExternal,
+  sessionId,
+}: ConversationViewProps): ReactElement {
+  const [isFollowing, setIsFollowing] = useState(true);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const shouldFollowRef = useRef(true);
+
+  useEffect(() => {
+    setIsFollowing(true);
+  }, [sessionId]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
-    if (viewport !== null && shouldFollowRef.current) {
+    if (viewport !== null && isFollowing) {
       viewport.scrollTop = viewport.scrollHeight;
     }
-  }, [messages]);
+  }, [isFollowing, messages]);
 
   function handleScroll(): void {
     const viewport = viewportRef.current;
@@ -28,7 +51,18 @@ export function ConversationView({ messages, onCopyCode, onOpenExternal }: Conve
       return;
     }
 
-    shouldFollowRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 24;
+    const nextIsFollowing = isNearConversationBottom(viewport);
+    setIsFollowing((currentIsFollowing) =>
+      currentIsFollowing === nextIsFollowing ? currentIsFollowing : nextIsFollowing,
+    );
+  }
+
+  function jumpToLatest(): void {
+    const viewport = viewportRef.current;
+    if (viewport !== null) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+    setIsFollowing(true);
   }
 
   if (messages.length === 0) {
@@ -43,37 +77,46 @@ export function ConversationView({ messages, onCopyCode, onOpenExternal }: Conve
   }
 
   return (
-    <section
-      ref={viewportRef}
-      aria-label="Conversation"
-      className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
-      onScroll={handleScroll}
-      role="log"
-    >
-      <div className="flex flex-col gap-4">
-        {messages.map((message) => (
-          <MessageItem key={message.id} message={message} onCopyCode={onCopyCode} onOpenExternal={onOpenExternal} />
-        ))}
-      </div>
-    </section>
+    <div className="relative min-h-0 flex-1">
+      <section
+        ref={viewportRef}
+        aria-label="Conversation"
+        className="h-full overflow-x-hidden overflow-y-auto px-3 py-4"
+        onScroll={handleScroll}
+        role="log"
+      >
+        <div className="flex min-w-0 flex-col gap-4">
+          {messages.map((message) => (
+            <MessageItem key={message.id} message={message} onCopyCode={onCopyCode} onOpenExternal={onOpenExternal} />
+          ))}
+        </div>
+      </section>
+      {isFollowing ? null : (
+        <IconButton
+          className="absolute bottom-3 right-3 border-arc-border bg-arc-surface text-arc-foreground shadow-md"
+          label="Jump to latest message"
+          onClick={jumpToLatest}
+        >
+          <ArrowDown aria-hidden="true" size={15} strokeWidth={1.8} />
+        </IconButton>
+      )}
+    </div>
   );
 }
 
-function MessageItem({
-  message,
-  onCopyCode,
-  onOpenExternal,
-}: {
+interface MessageItemProps {
   readonly message: ChatSessionMessage;
   readonly onCopyCode: (content: string) => void;
   readonly onOpenExternal: (url: string) => void;
-}): ReactElement {
+}
+
+const MessageItem = memo(function MessageItem({ message, onCopyCode, onOpenExternal }: MessageItemProps): ReactElement {
   const isUser = message.role === "user";
   const isWorking = message.status === "pending" || message.status === "streaming";
   const fallbackContent = message.status === "pending" ? "Thinking..." : "Generating...";
 
   return (
-    <article className={cn("flex gap-2", isUser ? "flex-row-reverse" : "flex-row")}>
+    <article className={cn("flex min-w-0 gap-2", isUser ? "flex-row-reverse" : "flex-row")}>
       <div
         aria-hidden="true"
         className={cn(
@@ -85,21 +128,29 @@ function MessageItem({
       </div>
       <div
         className={cn(
-          "min-w-0 max-w-[calc(100%-2rem)] rounded-md border px-3 py-2 text-sm",
+          "min-w-0 rounded-md border px-3 py-2 text-sm",
           isUser
-            ? "border-arc-user bg-arc-user text-arc-user-foreground"
-            : "border-arc-border bg-arc-surface text-arc-foreground",
+            ? "max-w-[calc(100%-2rem)] border-arc-user bg-arc-user text-arc-user-foreground"
+            : "flex-1 border-arc-border bg-arc-surface text-arc-foreground",
         )}
       >
         {isUser ? (
           <p className="m-0 whitespace-pre-wrap break-words leading-5">{message.content}</p>
         ) : (
-          <MarkdownMessage
-            canCopy={!isWorking}
-            content={message.content.length > 0 ? message.content : fallbackContent}
-            onCopyCode={onCopyCode}
-            onOpenExternal={onOpenExternal}
-          />
+          <Suspense
+            fallback={
+              <p className="m-0 whitespace-pre-wrap break-words leading-5">
+                {message.content.length > 0 ? message.content : fallbackContent}
+              </p>
+            }
+          >
+            <MarkdownMessage
+              canCopy={!isWorking}
+              content={message.content.length > 0 ? message.content : fallbackContent}
+              onCopyCode={onCopyCode}
+              onOpenExternal={onOpenExternal}
+            />
+          </Suspense>
         )}
         {isWorking ? (
           <LoaderCircle aria-label="Generating response" className="mt-2 animate-spin text-arc-muted" size={14} />
@@ -114,4 +165,8 @@ function MessageItem({
       </div>
     </article>
   );
+});
+
+export function isNearConversationBottom(metrics: ScrollMetrics): boolean {
+  return metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight <= followThresholdPx;
 }

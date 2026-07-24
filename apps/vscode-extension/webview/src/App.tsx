@@ -1,7 +1,8 @@
 import { Bot, RefreshCw } from "lucide-react";
-import { type ReactElement, useEffect, useReducer, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useReducer, useState } from "react";
 
 import { parseExtensionToWebviewMessage } from "../../src/features/chat/chatWebview.contract.js";
+import { ChatDeltaBatcher } from "./ChatDeltaBatcher.js";
 import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
 import { SessionHistory } from "./components/chat/SessionHistory.js";
@@ -15,6 +16,10 @@ export function App() {
   const [draft, setDraft] = useState("");
 
   useEffect(() => {
+    const deltaBatcher = new ChatDeltaBatcher((delta) => {
+      dispatch({ content: delta.content, requestId: delta.requestId, type: "chat:generation-delta" });
+    });
+
     const onMessage = (event: MessageEvent<unknown>): void => {
       const message = parseExtensionToWebviewMessage(event.data);
       switch (message?.type) {
@@ -22,6 +27,7 @@ export function App() {
           dispatch({ snapshot: message.snapshot, type: "status:received" });
           return;
         case "chat:hydrated":
+          deltaBatcher.clear();
           dispatch({ session: message.session, type: "chat:hydrated" });
           return;
         case "conversations:updated":
@@ -31,25 +37,25 @@ export function App() {
           dispatch({ message: message.message, type: "conversations:error" });
           return;
         case "chat:submitted":
+          deltaBatcher.clear();
           dispatch({ session: message.session, type: "chat:submitted" });
           return;
         case "chat:generation-started":
           dispatch({ requestId: message.requestId, type: "chat:generation-started" });
           return;
         case "chat:generation-delta":
-          dispatch({
-            content: message.content,
-            requestId: message.requestId,
-            type: "chat:generation-delta",
-          });
+          deltaBatcher.append(message.requestId, message.content);
           return;
         case "chat:generation-completed":
+          deltaBatcher.flush(message.requestId);
           dispatch({ requestId: message.requestId, type: "chat:generation-completed" });
           return;
         case "chat:generation-cancelled":
+          deltaBatcher.flush(message.requestId);
           dispatch({ requestId: message.requestId, type: "chat:generation-cancelled" });
           return;
         case "chat:generation-failed":
+          deltaBatcher.flush(message.requestId);
           dispatch({
             error: message.error,
             requestId: message.requestId,
@@ -68,6 +74,7 @@ export function App() {
     postToExtension({ type: "webview:ready" });
     return () => {
       window.removeEventListener("message", onMessage);
+      deltaBatcher.dispose();
     };
   }, []);
 
@@ -118,13 +125,13 @@ export function App() {
     postToExtension({ sessionId, type: "conversation:delete" });
   }
 
-  function copyCode(content: string): void {
+  const copyCode = useCallback((content: string): void => {
     postToExtension({ content, type: "code:copy" });
-  }
+  }, []);
 
-  function openExternal(url: string): void {
+  const openExternal = useCallback((url: string): void => {
     postToExtension({ type: "link:open", url });
-  }
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-col bg-arc-background text-arc-foreground">
@@ -163,7 +170,12 @@ export function App() {
           {state.conversationError}
         </p>
       )}
-      <ConversationView messages={state.chat?.messages ?? []} onCopyCode={copyCode} onOpenExternal={openExternal} />
+      <ConversationView
+        messages={state.chat?.messages ?? []}
+        onCopyCode={copyCode}
+        onOpenExternal={openExternal}
+        sessionId={state.chat?.sessionId}
+      />
       <ChatComposer
         connectionReady={isConnectionReady}
         isGenerating={isGenerating}

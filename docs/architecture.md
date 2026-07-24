@@ -111,6 +111,11 @@ before sanitization so only approved `language-*` and `hljs-*` classes reach Rea
 remote images remain disabled. Code-copy and external-link clicks cross the validated webview bridge,
 while the extension host owns the clipboard and opens only credential-free HTTP or HTTPS URLs.
 
+Streaming deltas are coalesced into short webview updates before they reach the React reducer. Stable
+message objects are memoized, and the Markdown/highlighting pipeline is loaded as a separate chunk on
+first use. The conversation follows output only while the viewport remains near the bottom; scrolling
+away pauses movement and exposes an explicit jump-to-latest action.
+
 ## Integration and Resilience
 
 Milestone 2.4.4 proves the prompt-to-token flow with a deterministic in-process model test spanning

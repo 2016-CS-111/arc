@@ -45,6 +45,8 @@
 @layer components {
   .arc-markdown {
     line-height: 1.25rem;
+    max-width: 100%;
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 
@@ -137,6 +139,7 @@
     border-radius: 4px;
     margin: 0.5rem 0;
     max-width: 100%;
+    min-width: 0;
     overflow: hidden;
   }
 
@@ -155,6 +158,7 @@
   .arc-code-block pre {
     border-radius: 0;
     margin: 0;
+    width: 100%;
   }
 
   .arc-markdown .hljs-comment,
@@ -208,6 +212,7 @@
     display: block;
     max-width: 100%;
     overflow-x: auto;
+    white-space: nowrap;
   }
 
   .arc-markdown th,

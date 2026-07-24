@@ -410,6 +410,8 @@ Status: Complete.
 
 #### Milestone 2.6.3: Streaming Performance and Scroll
 
+Status: Complete.
+
 - Batch streamed UI updates and memoize completed messages.
 - Reduce or lazy-load the syntax grammar footprint to keep the webview bundle below its warning threshold.
 - Preserve follow mode while the user is near the latest message.
