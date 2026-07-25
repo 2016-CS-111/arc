@@ -99,7 +99,7 @@ silently repeats a user prompt.
 
 Milestone 2.4.3 presents the normalized session snapshot in the Arc webview. The React view renders
 plain-text user and assistant messages, including pending, streaming, completed, cancelled, and
-failed states. Its composer emits only validated bridge commands and is disabled while disconnected
+failed states. Its composer emits only validated bridge commands and is disabled while offline
 or while a generation is active; Stop forwards a cancellation request to the extension host.
 
 The conversation follows new streaming output until the user scrolls away, keeping a narrow sidebar
@@ -122,11 +122,22 @@ Milestone 2.4.4 proves the prompt-to-token flow with a deterministic in-process 
 the NestJS gateway and extension-host session controller. It covers ordered deltas, correlated
 cancellation, and timeout normalization without requiring a local model during automated tests.
 
+The extension transport exposes `idle`, `connecting`, `connected`, `reconnecting`, and `offline`
+states. Socket.IO performs at most four automatic reconnect attempts with deterministic exponential
+backoff starting at 500 ms and capped at 5 seconds. Exhaustion moves the transport to `offline`; the
+webview can explicitly restart the connection through the validated `chat:reconnect` bridge command.
+
 On backend loss, the extension marks the active assistant message as a retryable failure and leaves
-the session available for an explicit future prompt. Socket.IO may reconnect, but the controller
-never re-emits an earlier `chat:send` command, so a backend restart cannot create a duplicate
-generation. The terminal smoke commands and manual test matrix document the matching Ollama and
-Arc-view checks for a local machine.
+the session available for an explicit future prompt. Reconnecting never re-emits an earlier
+`chat:send` command, so a backend restart cannot create a duplicate generation. The backend retains
+ownership of the configured Ollama request timeout, which defaults to 300 seconds. A 330-second
+extension-host watchdog is reset by accepted and delta events, cancels a silent request on expiry,
+and provides a final client-side guard if a terminal backend event is lost.
+
+The webview maps typed backend, provider, model, timeout, cancellation, and connection errors to a
+small set of stable user-facing messages. Unknown error details are not rendered, preventing
+transport or provider internals from leaking into the chat surface. The terminal smoke commands and
+manual test matrix document the matching Ollama and Arc-view checks for a local machine.
 
 ## Durable Conversation Foundation
 

@@ -2,6 +2,7 @@ import { ArrowDown, Bot, CircleAlert, LoaderCircle, UserRound } from "lucide-rea
 import { lazy, memo, Suspense, type ReactElement, useEffect, useRef, useState } from "react";
 
 import type { ChatSessionMessage } from "../../../../src/features/chat/chatWebview.contract.js";
+import { ChatErrorPresenter } from "../../ChatErrorPresenter.js";
 import { cn } from "../../lib/cn.js";
 import { IconButton } from "../ui/IconButton.js";
 
@@ -11,6 +12,7 @@ const MarkdownMessage = lazy(async () => {
 });
 
 const followThresholdPx = 24;
+const errorPresenter = new ChatErrorPresenter();
 
 interface ScrollMetrics {
   readonly clientHeight: number;
@@ -159,7 +161,7 @@ const MessageItem = memo(function MessageItem({ message, onCopyCode, onOpenExter
         {message.status === "failed" && message.error !== undefined ? (
           <p className="mb-0 mt-2 flex items-start gap-1.5 text-xs text-arc-danger">
             <CircleAlert aria-hidden="true" className="mt-0.5 shrink-0" size={13} />
-            <span>{message.error.message}</span>
+            <span>{errorPresenter.getMessage(message.error)}</span>
           </p>
         ) : null}
       </div>

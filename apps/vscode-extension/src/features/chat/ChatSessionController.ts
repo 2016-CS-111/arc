@@ -1,6 +1,7 @@
 import type { ConversationSession, ConversationSessionSnapshot, ConversationSessionSummary } from "@arc/contracts";
 
 import type { ConversationClientPort } from "../../infrastructure/backend/ConversationClient.js";
+import { GenerationWatchdog } from "./GenerationWatchdog.js";
 import { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import type { ChatTransportEvent, ChatTransportPort, ChatTransportSubscription } from "./ChatTransportPort.js";
 import type {
@@ -20,17 +21,20 @@ export interface ChatSessionControllerOptions {
   readonly conversationClient?: ConversationClientPort;
   readonly session?: InMemoryChatSessionController;
   readonly transport: ChatTransportPort;
+  readonly watchdog?: GenerationWatchdog;
 }
 
 export class ChatSessionController {
   private readonly listeners = new Set<(event: ExtensionToWebviewMessage) => void>();
   private readonly session: InMemoryChatSessionController;
   private readonly transportSubscription: ChatTransportSubscription;
+  private readonly watchdog: GenerationWatchdog;
   private conversationOperation: Promise<void> | undefined;
   private sessions: ConversationSessionSummary[] = [];
 
   public constructor(private readonly options: ChatSessionControllerOptions) {
     this.session = options.session ?? new InMemoryChatSessionController();
+    this.watchdog = options.watchdog ?? new GenerationWatchdog();
     this.transportSubscription = options.transport.subscribe((event) => {
       this.handleTransportEvent(event);
     });
@@ -161,6 +165,10 @@ export class ChatSessionController {
       return;
     }
 
+    this.watchdog.arm(submission.requestId, () => {
+      this.handleWatchdogTimeout(submission.requestId);
+    });
+
     try {
       this.options.transport.send({
         content: submission.content,
@@ -204,6 +212,7 @@ export class ChatSessionController {
   }
 
   public dispose(): void {
+    this.watchdog.dispose();
     this.transportSubscription.dispose();
     this.options.transport.dispose();
     this.listeners.clear();
@@ -265,6 +274,13 @@ export class ChatSessionController {
       sessionId: snapshot.id,
     });
 
+    this.watchdog.clear();
+    if (activeMessage !== undefined) {
+      this.watchdog.arm(activeMessage.requestId, () => {
+        this.handleWatchdogTimeout(activeMessage.requestId);
+      });
+    }
+
     this.sessions = sessions;
     this.publishConversationSnapshot();
     this.publish({ session, type: "chat:hydrated" });
@@ -288,11 +304,13 @@ export class ChatSessionController {
         return;
       case "accepted":
         if (this.session.startGeneration(event.payload.requestId) !== undefined) {
+          this.watchdog.touch(event.payload.requestId);
           this.publish({ requestId: event.payload.requestId, type: "chat:generation-started" });
         }
         return;
       case "delta":
         if (this.session.appendDelta(event.payload.requestId, event.payload.content) !== undefined) {
+          this.watchdog.touch(event.payload.requestId);
           this.publish({
             content: event.payload.content,
             requestId: event.payload.requestId,
@@ -302,11 +320,13 @@ export class ChatSessionController {
         return;
       case "completed":
         if (this.session.complete(event.payload.requestId) !== undefined) {
+          this.watchdog.clear(event.payload.requestId);
           this.publish({ requestId: event.payload.requestId, type: "chat:generation-completed" });
         }
         return;
       case "cancelled":
         if (this.session.cancel(event.payload.requestId) !== undefined) {
+          this.watchdog.clear(event.payload.requestId);
           this.publish({ requestId: event.payload.requestId, type: "chat:generation-cancelled" });
         }
         return;
@@ -322,7 +342,7 @@ export class ChatSessionController {
     this.session.updateConnectionStatus(status);
     this.publish({ status, type: "chat:connection-updated" });
 
-    if (status === "disconnected") {
+    if (status === "reconnecting" || status === "offline") {
       this.handleConnectionFailure(toConnectionError(undefined));
     }
   }
@@ -336,8 +356,28 @@ export class ChatSessionController {
 
   private failActiveGeneration(requestId: string, error: ChatClientError): void {
     if (this.session.fail(requestId, error) !== undefined) {
+      this.watchdog.clear(requestId);
       this.publish({ error, requestId, type: "chat:generation-failed" });
     }
+  }
+
+  private handleWatchdogTimeout(requestId: string): void {
+    if (this.options.transport.connectionStatus === "connected") {
+      try {
+        this.options.transport.cancel({
+          requestId,
+          sessionId: this.session.getSnapshot().sessionId,
+        });
+      } catch {
+        // The local failure below remains authoritative if cancellation cannot be delivered.
+      }
+    }
+
+    this.failActiveGeneration(requestId, {
+      code: "client_timeout",
+      message: "Arc stopped waiting because no model activity was received.",
+      retryable: true,
+    });
   }
 
   private publish(event: ExtensionToWebviewMessage): void {

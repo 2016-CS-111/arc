@@ -16,13 +16,17 @@ import type {
 } from "../../features/chat/ChatTransportPort.js";
 import type { ChatConnectionStatus } from "../../features/chat/chatWebview.contract.js";
 
+export type SocketManagerEventName = "reconnect_attempt" | "reconnect_failed";
+
 export interface SocketClient {
   readonly connected: boolean;
 
   connect(): void;
   disconnect(): void;
   emit(eventName: string, payload: unknown): void;
+  offManager(eventName: SocketManagerEventName, listener: (...payload: unknown[]) => void): void;
   on(eventName: string, listener: (payload: unknown) => void): void;
+  onManager(eventName: SocketManagerEventName, listener: (...payload: unknown[]) => void): void;
   removeAllListeners(): void;
 }
 
@@ -31,6 +35,16 @@ export type SocketClientFactory = (url: string) => SocketClient;
 export class SocketIoChatTransport implements ChatTransportPort {
   private connectionState: ChatConnectionStatus = "idle";
   private readonly listeners = new Set<(event: ChatTransportEvent) => void>();
+  private readonly onReconnectAttempt = (): void => {
+    this.updateConnectionStatus("reconnecting");
+  };
+  private readonly onReconnectFailed = (): void => {
+    this.updateConnectionStatus("offline");
+    this.emit({
+      message: "Arc could not reconnect to the backend.",
+      type: "connection-error",
+    });
+  };
   private socket: SocketClient | undefined;
 
   public constructor(
@@ -43,7 +57,11 @@ export class SocketIoChatTransport implements ChatTransportPort {
   }
 
   public connect(): void {
-    if (this.connectionState === "connected" || this.connectionState === "connecting") {
+    if (
+      this.connectionState === "connected" ||
+      this.connectionState === "connecting" ||
+      this.connectionState === "reconnecting"
+    ) {
       return;
     }
 
@@ -80,6 +98,8 @@ export class SocketIoChatTransport implements ChatTransportPort {
   }
 
   public dispose(): void {
+    this.socket?.offManager("reconnect_attempt", this.onReconnectAttempt);
+    this.socket?.offManager("reconnect_failed", this.onReconnectFailed);
     this.socket?.removeAllListeners();
     this.socket?.disconnect();
     this.socket = undefined;
@@ -97,16 +117,15 @@ export class SocketIoChatTransport implements ChatTransportPort {
     socket.on("connect", () => {
       this.updateConnectionStatus("connected");
     });
-    socket.on("disconnect", () => {
-      this.updateConnectionStatus("disconnected");
+    socket.on("disconnect", (reason) => {
+      const reconnectsAutomatically = reason !== "io server disconnect" && reason !== "io client disconnect";
+      this.updateConnectionStatus(reconnectsAutomatically ? "reconnecting" : "offline");
     });
-    socket.on("connect_error", (error) => {
-      this.updateConnectionStatus("disconnected");
-      this.emit({
-        message: error instanceof Error ? error.message : "Unable to connect to the Arc backend.",
-        type: "connection-error",
-      });
+    socket.on("connect_error", () => {
+      this.updateConnectionStatus("reconnecting");
     });
+    socket.onManager("reconnect_attempt", this.onReconnectAttempt);
+    socket.onManager("reconnect_failed", this.onReconnectFailed);
     socket.on("chat:accepted", (payload: unknown) => {
       const parsed = ChatAcceptedEventSchema.safeParse(payload);
       if (parsed.success) {
@@ -169,12 +188,52 @@ export class SocketIoChatTransport implements ChatTransportPort {
 }
 
 function createSocketClient(url: string): SocketClient {
-  return io(url, {
-    autoConnect: false,
-    reconnection: true,
-    reconnectionAttempts: 3,
-    reconnectionDelay: 500,
-    reconnectionDelayMax: 2_000,
-    transports: ["websocket"],
-  });
+  return new SocketIoClientAdapter(
+    io(url, {
+      autoConnect: false,
+      randomizationFactor: 0,
+      reconnection: true,
+      reconnectionAttempts: 4,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5_000,
+      timeout: 10_000,
+      transports: ["websocket"],
+    }),
+  );
+}
+
+class SocketIoClientAdapter implements SocketClient {
+  public constructor(private readonly socket: ReturnType<typeof io>) {}
+
+  public get connected(): boolean {
+    return this.socket.connected;
+  }
+
+  public connect(): void {
+    this.socket.connect();
+  }
+
+  public disconnect(): void {
+    this.socket.disconnect();
+  }
+
+  public emit(eventName: string, payload: unknown): void {
+    this.socket.emit(eventName, payload);
+  }
+
+  public offManager(eventName: SocketManagerEventName, listener: (...payload: unknown[]) => void): void {
+    this.socket.io.off(eventName, listener);
+  }
+
+  public on(eventName: string, listener: (payload: unknown) => void): void {
+    this.socket.on(eventName, listener);
+  }
+
+  public onManager(eventName: SocketManagerEventName, listener: (...payload: unknown[]) => void): void {
+    this.socket.io.on(eventName, listener);
+  }
+
+  public removeAllListeners(): void {
+    this.socket.removeAllListeners();
+  }
 }

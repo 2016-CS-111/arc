@@ -420,10 +420,15 @@ Status: Complete.
 
 #### Milestone 2.6.4: Transport Resilience and Error UX
 
-- Add bounded reconnect attempts with explicit connection states.
-- Keep backend model timeout ownership and add a client-side safety watchdog.
-- Normalize backend, provider, cancellation, and connection errors for the chat UI.
-- Never automatically resend a user prompt after a disconnect.
+Status: Complete.
+
+- Added bounded Socket.IO reconnect attempts with `connecting`, `connected`, `reconnecting`, and
+  `offline` states plus an explicit reconnect action.
+- Kept the backend's 300-second model timeout ownership and added a 330-second activity watchdog in
+  the extension host.
+- Normalized backend, provider, model, timeout, cancellation, and connection errors for the chat UI.
+- Verified that disconnect and watchdog paths terminate the active request without automatically
+  resending a user prompt.
 
 #### Milestone 2.6.5: Privacy Logging and Acceptance
 

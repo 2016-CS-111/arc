@@ -1,7 +1,10 @@
-import { Bot, RefreshCw } from "lucide-react";
+import { Bot, LoaderCircle, RefreshCw, WifiOff } from "lucide-react";
 import { type ReactElement, useCallback, useEffect, useReducer, useState } from "react";
 
-import { parseExtensionToWebviewMessage } from "../../src/features/chat/chatWebview.contract.js";
+import {
+  type ChatConnectionStatus,
+  parseExtensionToWebviewMessage,
+} from "../../src/features/chat/chatWebview.contract.js";
 import { ChatDeltaBatcher } from "./ChatDeltaBatcher.js";
 import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
@@ -93,6 +96,7 @@ export function App() {
   function refreshStatus(): void {
     dispatch({ type: "status:refresh" });
     postToExtension({ type: "status:refresh" });
+    postToExtension({ type: "chat:reconnect" });
   }
 
   function submitChat(): void {
@@ -142,7 +146,10 @@ export function App() {
         </div>
         <div className="flex min-w-0 items-center gap-1">
           <span className="truncate text-xs text-arc-muted">{connectionLabel}</span>
-          <IconButton label="Refresh connection status" onClick={refreshStatus}>
+          <IconButton
+            label={connectionStatus === "offline" ? "Reconnect Arc" : "Refresh connection status"}
+            onClick={refreshStatus}
+          >
             <RefreshCw aria-hidden="true" size={15} strokeWidth={1.8} />
           </IconButton>
         </div>
@@ -170,6 +177,7 @@ export function App() {
           {state.conversationError}
         </p>
       )}
+      <ConnectionNotice onReconnect={refreshStatus} status={connectionStatus} />
       <ConversationView
         messages={state.chat?.messages ?? []}
         onCopyCode={copyCode}
@@ -245,14 +253,51 @@ function getOllamaTone(status: string | undefined): StatusTone {
   }
 }
 
-function getConnectionLabel(status: string): string {
+function ConnectionNotice({
+  onReconnect,
+  status,
+}: {
+  readonly onReconnect: () => void;
+  readonly status: ChatConnectionStatus;
+}): ReactElement | null {
+  if (status === "connected" || status === "idle") {
+    return null;
+  }
+
+  const isOffline = status === "offline";
+  return (
+    <div
+      aria-live="polite"
+      className="flex min-h-9 items-center gap-2 border-b border-arc-border px-3 py-1.5 text-xs text-arc-muted"
+      role={isOffline ? "alert" : "status"}
+    >
+      {isOffline ? (
+        <WifiOff aria-hidden="true" className="shrink-0 text-arc-warning" size={14} strokeWidth={1.8} />
+      ) : (
+        <LoaderCircle aria-hidden="true" className="shrink-0 animate-spin" size={14} strokeWidth={1.8} />
+      )}
+      <span className="min-w-0 flex-1">
+        {status === "connecting" ? "Connecting to Arc" : isOffline ? "Arc is offline" : "Connection lost. Reconnecting"}
+      </span>
+      {isOffline ? (
+        <IconButton label="Reconnect Arc" onClick={onReconnect}>
+          <RefreshCw aria-hidden="true" size={14} strokeWidth={1.8} />
+        </IconButton>
+      ) : null}
+    </div>
+  );
+}
+
+function getConnectionLabel(status: ChatConnectionStatus): string {
   switch (status) {
     case "connected":
       return "Connected";
     case "connecting":
       return "Connecting";
-    case "disconnected":
-      return "Disconnected";
+    case "reconnecting":
+      return "Reconnecting";
+    case "offline":
+      return "Offline";
     default:
       return "Starting";
   }

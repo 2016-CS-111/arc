@@ -124,10 +124,10 @@ describe("chatViewReducer", () => {
 
     expect(
       chatViewReducer(hydrated, {
-        status: "disconnected",
+        status: "offline",
         type: "chat:connection-updated",
       }).chat,
-    ).toMatchObject({ connectionStatus: "disconnected" });
+    ).toMatchObject({ connectionStatus: "offline" });
   });
 
   it("keeps durable conversation state and a history error", () => {

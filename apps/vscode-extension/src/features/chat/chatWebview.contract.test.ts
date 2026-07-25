@@ -12,6 +12,9 @@ describe("webview chat contract", () => {
     expect(parseWebviewToExtensionMessage({ type: "status:refresh" })).toEqual({
       type: "status:refresh",
     });
+    expect(parseWebviewToExtensionMessage({ type: "chat:reconnect" })).toEqual({
+      type: "chat:reconnect",
+    });
     expect(parseWebviewToExtensionMessage({ content: "Explain this function", type: "chat:submit" })).toEqual({
       content: "Explain this function",
       type: "chat:submit",

@@ -70,6 +70,9 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
         case "status:refresh":
           void this.refreshStatus();
           return;
+        case "chat:reconnect":
+          this.chatSession.connect();
+          return;
         case "chat:submit":
           this.submitChat(parsedMessage.content);
           return;

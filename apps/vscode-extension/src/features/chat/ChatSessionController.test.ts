@@ -5,10 +5,11 @@ import type {
   ConversationSessionSnapshot,
   ConversationSessionSummary,
 } from "@arc/contracts";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChatSessionController } from "./ChatSessionController.js";
 import type { ChatTransportEvent, ChatTransportPort, ChatTransportSubscription } from "./ChatTransportPort.js";
+import { GenerationWatchdog } from "./GenerationWatchdog.js";
 import { InMemoryChatSessionController } from "./InMemoryChatSessionController.js";
 import type { ChatConnectionStatus } from "./chatWebview.contract.js";
 import type { ConversationClientPort } from "../../infrastructure/backend/ConversationClient.js";
@@ -17,6 +18,10 @@ const timestamp = "2026-07-18T12:00:00.000Z";
 const sessionAId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
 const sessionBId = "7bc30c5f-4024-4d2f-a67d-8aa9e1570c92";
 const sessionCId = "f9e2a3bc-83a2-4df8-91c3-2a0af66b7b17";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 class FakeChatTransport implements ChatTransportPort {
   public readonly cancelled: ChatCancelCommand[] = [];
@@ -262,7 +267,7 @@ describe("ChatSessionController", () => {
 
     expect(controller.getSnapshot()).toEqual(beforeStaleEvents);
 
-    transport.setConnectionStatus("disconnected");
+    transport.setConnectionStatus("reconnecting");
 
     expect(controller.getSnapshot()).toMatchObject({ activeGeneration: null });
     expect(controller.getSnapshot().messages[1]).toMatchObject({
@@ -284,8 +289,7 @@ describe("ChatSessionController", () => {
       payload: { requestId: "request-1", sessionId: "session-1" },
       type: "accepted",
     });
-    transport.setConnectionStatus("disconnected");
-    transport.setConnectionStatus("connecting");
+    transport.setConnectionStatus("reconnecting");
     transport.setConnectionStatus("connected");
 
     expect(transport.sent).toHaveLength(1);
@@ -307,6 +311,28 @@ describe("ChatSessionController", () => {
       sessionId: "session-1",
     });
     expect(controller.getSnapshot().activeGeneration).toMatchObject({ requestId: "request-2" });
+  });
+
+  it("fails a silent generation after the client safety interval without replaying it", () => {
+    vi.useFakeTimers();
+    const transport = new FakeChatTransport();
+    const controller = new ChatSessionController({
+      session: createSession(),
+      transport,
+      watchdog: new GenerationWatchdog(1_000),
+    });
+
+    controller.connect();
+    controller.submit("Explain this function");
+    vi.advanceTimersByTime(1_000);
+
+    expect(transport.sent).toHaveLength(1);
+    expect(transport.cancelled).toEqual([{ requestId: "request-1", sessionId: "session-1" }]);
+    expect(controller.getSnapshot()).toMatchObject({ activeGeneration: null });
+    expect(controller.getSnapshot().messages[1]).toMatchObject({
+      error: { code: "client_timeout", retryable: true },
+      status: "failed",
+    });
   });
 });
 

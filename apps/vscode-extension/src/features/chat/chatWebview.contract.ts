@@ -28,7 +28,7 @@ export interface BackendStatusSnapshot {
 
 const ChatIdentifierSchema = z.string().min(1).max(160);
 
-export const ChatConnectionStatusSchema = z.enum(["idle", "connecting", "connected", "disconnected"]);
+export const ChatConnectionStatusSchema = z.enum(["idle", "connecting", "connected", "reconnecting", "offline"]);
 
 export const ChatSessionMessageRoleSchema = z.enum(["user", "assistant"]);
 
@@ -94,6 +94,7 @@ const ExternalHttpUrlSchema = z
 export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("webview:ready") }),
   z.object({ type: z.literal("status:refresh") }),
+  z.object({ type: z.literal("chat:reconnect") }),
   ChatSubmitCommandSchema,
   z.object({ type: z.literal("chat:cancel") }),
   z.object({ type: z.literal("conversation:create") }),
