@@ -26,6 +26,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" --max-warnings=0",
     "ollama:smoke": "pnpm --filter @arc/ai-server ollama:smoke",
+    "project:verify": "pnpm --filter @arc/ai-server project:verify",
     "test": "vitest run"
   },
   "devDependencies": {

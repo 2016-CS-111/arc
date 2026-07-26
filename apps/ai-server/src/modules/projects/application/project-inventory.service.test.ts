@@ -53,6 +53,7 @@ function createService(
   readonly completeScan: ReturnType<typeof vi.fn>;
   readonly failScan: ReturnType<typeof vi.fn>;
   readonly getLatestScan: ReturnType<typeof vi.fn>;
+  readonly recoverInterruptedScans: ReturnType<typeof vi.fn>;
   readonly walk: ReturnType<typeof vi.fn>;
 } {
   const projectRepository = {
@@ -72,11 +73,13 @@ function createService(
     }),
   );
   const getLatestScan = vi.fn(() => Promise.resolve(completedScan));
+  const recoverInterruptedScans = vi.fn(() => Promise.resolve(0));
   const inventoryRepository = {
     beginScan,
     completeScan,
     failScan,
     getLatestScan,
+    recoverInterruptedScans,
   } satisfies ProjectInventoryRepository;
   const walk = vi.fn(() =>
     options.walkError === undefined
@@ -112,6 +115,7 @@ function createService(
     completeScan,
     failScan,
     getLatestScan,
+    recoverInterruptedScans,
     service: new ProjectInventoryService(projectRepository, inventoryRepository, inventoryWalker, ignorePolicy, config),
     walk,
   };
@@ -170,5 +174,16 @@ describe("ProjectInventoryService", () => {
     const unknown = createService({ projectResult: null });
     await expect(unknown.service.scan(project.id)).rejects.toBeInstanceOf(ProjectNotFoundError);
     expect(unknown.beginScan).not.toHaveBeenCalled();
+  });
+
+  it("recovers interrupted scans without preventing backend startup", async () => {
+    const recovered = createService();
+    recovered.recoverInterruptedScans.mockResolvedValueOnce(2);
+
+    await expect(recovered.service.onApplicationBootstrap()).resolves.toBeUndefined();
+    expect(recovered.recoverInterruptedScans).toHaveBeenCalledOnce();
+
+    recovered.recoverInterruptedScans.mockRejectedValueOnce(new Error("database unavailable"));
+    await expect(recovered.service.onApplicationBootstrap()).resolves.toBeUndefined();
   });
 });

@@ -464,7 +464,7 @@ calling, file editing, memory, and autonomous execution remain outside this mile
 
 ## Milestone 3: Project Registration
 
-Status: In progress.
+Status: Complete.
 
 Goal: allow the extension to register the active workspace with the backend.
 
@@ -605,15 +605,35 @@ Not included yet:
 
 ### Milestone 3.4: Registration Integration and Acceptance
 
-Status: Planned.
+Status: Complete.
 
 Goal: connect registration, ignore evaluation, and inventory scanning into an observable,
 recoverable workspace workflow.
 
-Expected additions:
+Included:
 
-- Explicit initial scan and rescan controls.
-- Progress and terminal scan status in the VSCode client.
-- Restart and partial-failure recovery.
-- Local PostgreSQL acceptance coverage.
-- Final Milestone 3 operating guide and test matrix.
+- Registration notification with an explicit `Scan now` action.
+- `Arc: Scan Workspace` for initial scans and rescans of the selected registered folder.
+- Shared active-folder selection for single-root and multi-root workspaces.
+- Validated backend project identities stored per VSCode workspace folder.
+- Indeterminate notification progress during the synchronous metadata scan.
+- Clickable status-bar presentation for not-scanned, running, completed, limited, failed, backend
+  unavailable, and restart-interrupted states.
+- Latest durable status restoration on extension activation and active-folder changes.
+- Backend bootstrap recovery of abandoned `running` scans to `failed/scan_interrupted`.
+- Preservation of the last usable inventory during scan failure and restart recovery.
+- `pnpm project:verify` acceptance command with temporary filesystem and PostgreSQL cleanup.
+- Final workflow and test matrix in `docs/milestone-3-acceptance.md`.
+
+Acceptance gate:
+
+- Registering a workspace offers, but never silently starts, the initial scan.
+- Scan progress and terminal state remain visible in VSCode.
+- The status bar restores durable state after an Extension Host restart.
+- Backend-unavailable and failed scans terminate cleanly and remain retryable by explicit command.
+- Abandoned backend scans recover to a stable interrupted state without deleting current files.
+- The automated project verifier, full workspace gate, and applicable Extension Development Host
+  checks pass.
+
+Milestone 3 is complete. File contents, language parsing, hashing, embeddings, semantic retrieval,
+filesystem watching, and automatic background indexing remain outside this milestone.

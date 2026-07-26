@@ -30,6 +30,7 @@ pnpm backend:dev
 pnpm db:create
 pnpm db:migrate
 pnpm db:verify
+pnpm project:verify
 pnpm ollama:smoke
 pnpm chat:socket-smoke
 pnpm chat:cancel-smoke
@@ -130,9 +131,8 @@ backend and Extension Development Host, then run `Arc: Register Workspace` from 
 The backend validates and canonicalizes the selected local directory and returns the same project
 UUID when that directory is registered again.
 
-Registration stores only the workspace name, canonical root path, identity, and timestamps. Ignore
-rules are evaluated by the backend in Milestone 3.2; repository scanning begins in a later
-Milestone 3 slice.
+Registration stores only the workspace name, canonical root path, identity, and timestamps. It
+offers an explicit `Scan now` action but never starts filesystem work silently.
 
 The ignore policy combines built-in safety and generated-file rules, root and nested `.gitignore`
 files, and an optional root `.arcignore`. Arc-specific rules are additional exclusions and cannot
@@ -160,3 +160,9 @@ The first endpoint performs a bounded rescan and atomically replaces the current
 second returns the latest durable scan status. Scans never follow symlinks or read file contents.
 Configure their limits with `ARC_PROJECT_SCAN_MAX_FILES`, `ARC_PROJECT_SCAN_MAX_TOTAL_BYTES`,
 `ARC_PROJECT_SCAN_MAX_DEPTH`, and `ARC_PROJECT_SCAN_BATCH_SIZE`.
+
+In the Extension Development Host, use `Arc: Scan Workspace` for an initial scan or rescan. The
+notification and Arc status-bar item show progress and terminal state, and the status is restored
+after an extension reload. `pnpm project:verify` runs the repeatable filesystem, PostgreSQL, atomic
+replacement, and restart-recovery acceptance gate. See
+[the Milestone 3 acceptance guide](docs/milestone-3-acceptance.md) for the complete matrix.

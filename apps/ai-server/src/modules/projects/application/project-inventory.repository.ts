@@ -7,4 +7,5 @@ export interface ProjectInventoryRepository {
   completeScan(input: CompleteProjectScanInput): Promise<ProjectScan>;
   failScan(input: FailProjectScanInput): Promise<ProjectScan>;
   getLatestScan(projectId: string): Promise<ProjectScan | null>;
+  recoverInterruptedScans(): Promise<number>;
 }

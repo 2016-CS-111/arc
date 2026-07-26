@@ -13,6 +13,7 @@
     "db:verify": "tsx src/cli/db-verify.ts",
     "dev": "tsx watch src/main.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
+    "project:verify": "tsx src/cli/project-inventory-verify.ts",
     "start": "node dist/main.js",
     "test": "vitest run"
   },

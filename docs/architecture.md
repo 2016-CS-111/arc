@@ -312,6 +312,39 @@ transaction. Filesystem or persistence failures update only the scan record, pre
 usable inventory. Milestone 3.4 will add client progress, restart recovery, and workflow controls;
 incremental watching and content indexing remain later concerns.
 
+## Project Workflow And Recovery
+
+Milestone 3.4 composes registration and inventory without moving backend ownership into VSCode.
+After explicit registration, the extension stores the validated project identity by workspace URI
+and offers a separate `Scan now` action. `Arc: Scan Workspace` invokes the same path for later
+rescans. Multi-root selection prefers the active editor's folder and otherwise asks the user.
+
+The Extension Host owns an indeterminate progress notification and a clickable status-bar item. It
+does not infer scan results locally: completed, limited, failed, and interrupted presentations are
+derived from shared backend contracts. On activation and active-folder changes, the extension asks
+the backend for the latest durable scan and restores that presentation.
+
+```mermaid
+flowchart LR
+  Register["Register workspace"] --> Choice{"Scan now?"}
+  Choice -->|Yes| Scan["Arc: Scan Workspace"]
+  Choice -->|No| Identity["Identity only"]
+  Scan --> Progress["VSCode progress and status"]
+  Progress --> Backend["Backend inventory service"]
+  Backend --> Durable["Durable terminal scan"]
+  Durable --> Restore["Status restored after reload"]
+```
+
+If the backend exits during a scan, its `running` row remains durable. On the next backend
+bootstrap, `ProjectInventoryService` changes every abandoned scan to `failed` with
+`scan_interrupted`; current `project_files` are untouched. Client or persistence failures never
+trigger an automatic rescan, preventing hidden filesystem work and duplicate scans.
+
+`pnpm project:verify` is the Milestone 3 local acceptance boundary. It applies migrations, creates a
+temporary repository and project, verifies ignore and symlink behavior, performs atomic initial and
+replacement scans, simulates restart recovery through a second Sequelize connection, confirms
+inventory preservation, and removes all temporary state.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

@@ -6,7 +6,12 @@ import { ProjectRelativePathSchema } from "./project-ignore.contract.js";
 export const ProjectScanIdSchema = z.string().uuid();
 export const ProjectScanStatusSchema = z.enum(["running", "completed", "limited", "failed"]);
 export const ProjectScanLimitReasonSchema = z.enum(["file_count", "total_bytes", "depth"]);
-export const ProjectScanErrorCodeSchema = z.enum(["filesystem_error", "inventory_persistence_error", "unknown_error"]);
+export const ProjectScanErrorCodeSchema = z.enum([
+  "filesystem_error",
+  "inventory_persistence_error",
+  "scan_interrupted",
+  "unknown_error",
+]);
 
 export const ProjectFileMetadataSchema = z.object({
   path: ProjectRelativePathSchema,

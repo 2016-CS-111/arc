@@ -83,6 +83,22 @@ export class SequelizeProjectInventoryRepository implements ProjectInventoryRepo
     return scan === null ? null : toProjectScan(scan);
   }
 
+  public async recoverInterruptedScans(): Promise<number> {
+    const [updatedCount] = await this.database.models.projectScans.update(
+      {
+        completedAt: new Date(),
+        errorCode: "scan_interrupted",
+        limitReasons: [],
+        status: "failed",
+      },
+      {
+        where: { status: "running" },
+      },
+    );
+
+    return updatedCount;
+  }
+
   private async findRunningScan(
     scanId: string,
     projectId: string,

@@ -49,11 +49,13 @@ function createDatabase(scan: ProjectScanModel): {
   readonly findOne: ReturnType<typeof vi.fn>;
   readonly transaction: ReturnType<typeof vi.fn>;
   readonly transactionValue: Transaction;
+  readonly update: ReturnType<typeof vi.fn>;
 } {
   const create = vi.fn(() => Promise.resolve(scan));
   const findOne = vi.fn(() => Promise.resolve(scan));
   const destroy = vi.fn(() => Promise.resolve(2));
   const bulkCreate = vi.fn(() => Promise.resolve([]));
+  const update = vi.fn(() => Promise.resolve([0]));
   const transactionValue = { id: "transaction" } as unknown as Transaction;
   const transaction = vi.fn((operation: (transaction: Transaction) => Promise<unknown>) => operation(transactionValue));
 
@@ -66,7 +68,7 @@ function createDatabase(scan: ProjectScanModel): {
         chatSessions: {} as ArcDatabase["models"]["chatSessions"],
         projectFiles: { bulkCreate, destroy } as unknown as ArcDatabase["models"]["projectFiles"],
         projects: {} as ArcDatabase["models"]["projects"],
-        projectScans: { create, findOne } as unknown as ArcDatabase["models"]["projectScans"],
+        projectScans: { create, findOne, update } as unknown as ArcDatabase["models"]["projectScans"],
       },
       sequelize: { transaction } as unknown as ArcDatabase["sequelize"],
     },
@@ -74,6 +76,7 @@ function createDatabase(scan: ProjectScanModel): {
     findOne,
     transaction,
     transactionValue,
+    update,
   };
 }
 
@@ -164,5 +167,22 @@ describe("SequelizeProjectInventoryRepository", () => {
       ],
       where: { projectId },
     });
+  });
+
+  it("recovers every scan left running by a backend restart", async () => {
+    const { scan } = createScan();
+    const { database, update } = createDatabase(scan);
+    update.mockResolvedValueOnce([2]);
+    const repository = new SequelizeProjectInventoryRepository(database);
+
+    await expect(repository.recoverInterruptedScans()).resolves.toBe(2);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCode: "scan_interrupted",
+        limitReasons: [],
+        status: "failed",
+      }),
+      { where: { status: "running" } },
+    );
   });
 });

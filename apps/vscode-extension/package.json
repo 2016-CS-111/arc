@@ -15,6 +15,7 @@
   "activationEvents": [
     "onCommand:arc.openChat",
     "onCommand:arc.registerWorkspace",
+    "onCommand:arc.scanWorkspace",
     "onView:arc.chat"
   ],
   "main": "./dist/extension.js",
@@ -46,6 +47,11 @@
       {
         "command": "arc.registerWorkspace",
         "title": "Arc: Register Workspace",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.scanWorkspace",
+        "title": "Arc: Scan Workspace",
         "category": "Arc"
       }
     ],

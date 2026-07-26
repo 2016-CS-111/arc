@@ -4,7 +4,7 @@ import {
   type ProjectScan,
   type ProjectScanErrorCode,
 } from "@arc/contracts";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, type OnApplicationBootstrap } from "@nestjs/common";
 
 import { APP_CONFIG } from "../../../config/config.constants.js";
 import type { AppConfig } from "../../../config/env.js";
@@ -20,7 +20,7 @@ import type { ProjectRepository } from "./project.repository.js";
 import type { RepositoryInventoryWalker } from "./repository-inventory.walker.js";
 
 @Injectable()
-export class ProjectInventoryService {
+export class ProjectInventoryService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ProjectInventoryService.name);
 
   public constructor(
@@ -35,6 +35,17 @@ export class ProjectInventoryService {
     @Inject(APP_CONFIG)
     private readonly config: AppConfig,
   ) {}
+
+  public async onApplicationBootstrap(): Promise<void> {
+    try {
+      const recoveredCount = await this.inventoryRepository.recoverInterruptedScans();
+      if (recoveredCount > 0) {
+        this.logger.warn("Recovered interrupted Arc project inventory scans.", { recoveredCount });
+      }
+    } catch {
+      this.logger.warn("Could not recover interrupted Arc project inventory scans.");
+    }
+  }
 
   public async scan(projectId: string): Promise<ProjectScan> {
     const project = await this.projectRepository.findById(projectId);
