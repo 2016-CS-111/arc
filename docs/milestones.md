@@ -464,12 +464,87 @@ calling, file editing, memory, and autonomous execution remain outside this mile
 
 ## Milestone 3: Project Registration
 
+Status: In progress.
+
 Goal: allow the extension to register the active workspace with the backend.
+
+Milestone 3 is divided into identity, ignore-policy, repository-inventory, and integration gates.
+Registration establishes a stable project identity first; it does not implicitly read or index
+workspace files.
+
+### Milestone 3.1: Project Identity and Registration
+
+Status: Complete.
+
+Goal: establish one durable backend-owned project identity for each canonical local workspace root.
+
+Included:
+
+- Shared request, response, and project identity contracts.
+- A `projects` PostgreSQL table and class-based Sequelize model.
+- A project repository port with an idempotent Sequelize adapter.
+- Canonical workspace-directory validation owned by the backend.
+- `POST /projects/register` for backend clients.
+- `Arc: Register Workspace` for the active VSCode workspace folder.
+- Workspace-state storage of the returned project identity.
+- Contract, resolver, repository, controller, and extension REST-client tests.
+
+Acceptance gate:
+
+- Registering a real local directory returns a server-generated project UUID.
+- Registering the same directory through an equivalent path returns the same UUID.
+- Missing, relative, and non-directory roots are rejected.
+- A multi-root VSCode window registers the active editor's folder or asks the user to select one.
+- No workspace file contents are read or stored.
+- Build, test, lint, and format checks pass.
+
+Not included yet:
+
+- Ignore rules.
+- Repository traversal or file metadata.
+- File contents, embeddings, or semantic indexing.
+- Automatic registration when a workspace opens.
+
+### Milestone 3.2: Workspace Ignore Policy
+
+Status: Planned.
+
+Goal: produce one testable ignore decision for a project-relative path before any repository
+traversal is introduced.
 
 Expected additions:
 
-- Project identity.
-- Workspace root registration.
-- Ignore rules.
-- Initial repository scan.
-- Project metadata storage.
+- Built-in safety and generated-file exclusions.
+- `.gitignore` parsing with nested rule support.
+- Arc-specific ignore configuration.
+- Normalized project-relative path handling.
+- Explainable ignore decisions and focused rule tests.
+
+### Milestone 3.3: Bounded Repository Inventory
+
+Status: Planned.
+
+Goal: scan non-ignored paths into a bounded metadata inventory without reading file contents.
+
+Expected additions:
+
+- Symlink-safe directory traversal.
+- File count, size, and depth limits.
+- Batched file metadata persistence.
+- Scan status and failure metadata.
+- Explicit rescan service and repository tests.
+
+### Milestone 3.4: Registration Integration and Acceptance
+
+Status: Planned.
+
+Goal: connect registration, ignore evaluation, and inventory scanning into an observable,
+recoverable workspace workflow.
+
+Expected additions:
+
+- Explicit initial scan and rescan controls.
+- Progress and terminal scan status in the VSCode client.
+- Restart and partial-failure recovery.
+- Local PostgreSQL acceptance coverage.
+- Final Milestone 3 operating guide and test matrix.

@@ -122,3 +122,13 @@ and Ollama readiness through the extension host. Enter a prompt to stream from t
 model, or use Stop to cancel the active generation. See
 [the Milestone 2.6 acceptance guide](docs/milestone-2.6-acceptance.md) for the final security,
 resilience, privacy, and local Ollama verification matrix.
+
+## Project Registration
+
+Milestone 3.1 adds durable project identities. Apply the latest database migration, start the
+backend and Extension Development Host, then run `Arc: Register Workspace` from the Command Palette.
+The backend validates and canonicalizes the selected local directory and returns the same project
+UUID when that directory is registered again.
+
+Registration stores only the workspace name, canonical root path, identity, and timestamps. Ignore
+rules and repository scanning begin in later Milestone 3 slices.

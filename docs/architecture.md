@@ -218,6 +218,37 @@ continuing a session, scoped interrupted-generation recovery, listing, rename, a
 temporary session is removed in `finally`; recovery is scoped to that session so the command never
 changes another active conversation.
 
+## Project Identity and Registration
+
+Milestone 3.1 introduces a durable `projects` record before Arc traverses or indexes a repository.
+The VSCode extension registers an explicitly selected local workspace through
+`POST /projects/register`; the webview is not involved. The backend resolves the supplied absolute
+directory through the operating system, then uses that canonical path as the idempotency key for a
+server-generated project UUID.
+
+```mermaid
+sequenceDiagram
+  participant Command as "VSCode registration command"
+  participant API as "NestJS projects controller"
+  participant Resolver as "Workspace root resolver"
+  participant Repository as "Project repository"
+  participant DB as "PostgreSQL"
+
+  Command->>API: "POST /projects/register"
+  API->>Resolver: "Validate and canonicalize root"
+  Resolver-->>API: "Canonical local directory"
+  API->>Repository: "Register name and canonical root"
+  Repository->>DB: "Find or create by root_path"
+  DB-->>Repository: "Stable project UUID"
+  Repository-->>Command: "Project identity and created flag"
+```
+
+The extension prefers the active editor's folder in a multi-root window and otherwise asks the user
+to choose. It stores the returned project identity in VSCode workspace state as a client-side
+reference only; PostgreSQL remains authoritative. Registration stores the project name, canonical
+root, UUID, and timestamps. It does not read file contents, apply ignore rules, or trigger a scan.
+Those boundaries are introduced independently in Milestones 3.2 and 3.3.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
