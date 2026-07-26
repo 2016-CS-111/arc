@@ -35,6 +35,10 @@ const rawEnvSchema = z.object({
   ARC_OLLAMA_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(900_000).default(300_000),
   ARC_OLLAMA_READINESS_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
+  ARC_PROJECT_SCAN_MAX_FILES: z.coerce.number().int().positive().max(100_000).default(20_000),
+  ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(1_099_511_627_776).default(2_147_483_648),
+  ARC_PROJECT_SCAN_MAX_DEPTH: z.coerce.number().int().positive().max(100).default(32),
+  ARC_PROJECT_SCAN_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
 });
 
 export interface AppConfig {
@@ -52,6 +56,12 @@ export interface AppConfig {
     readonly model?: string;
     readonly requestTimeoutMs: number;
     readonly readinessTimeoutMs: number;
+  };
+  readonly projectScan: {
+    readonly maxFiles: number;
+    readonly maxTotalBytes: number;
+    readonly maxDepth: number;
+    readonly batchSize: number;
   };
 }
 
@@ -78,5 +88,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     corsOrigin: parsed.ARC_CORS_ORIGIN,
     database,
     ollama,
+    projectScan: {
+      maxFiles: parsed.ARC_PROJECT_SCAN_MAX_FILES,
+      maxTotalBytes: parsed.ARC_PROJECT_SCAN_MAX_TOTAL_BYTES,
+      maxDepth: parsed.ARC_PROJECT_SCAN_MAX_DEPTH,
+      batchSize: parsed.ARC_PROJECT_SCAN_BATCH_SIZE,
+    },
   };
 }

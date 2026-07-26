@@ -1,9 +1,12 @@
 import {
   CheckProjectPathRequestSchema,
+  LatestProjectScanResponseSchema,
   ProjectIdSchema,
   RegisterProjectRequestSchema,
   type CheckProjectPathRequest,
+  type LatestProjectScanResponse,
   type ProjectIgnoreDecision,
+  type ProjectScan,
   type RegisterProjectRequest,
   type RegisterProjectResponse,
 } from "@arc/contracts";
@@ -11,20 +14,26 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
+  Get,
   Inject,
   NotFoundException,
   Param,
   Post,
+  ServiceUnavailableException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 
 import { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
+import { ProjectInventoryService } from "../application/project-inventory.service.js";
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
   InvalidProjectRootError,
   ProjectNotFoundError,
+  ProjectScanAlreadyRunningError,
+  ProjectScanFailedError,
 } from "../domain/project.errors.js";
 
 @Controller("projects")
@@ -34,6 +43,8 @@ export class ProjectsController {
     private readonly projectRegistrationService: ProjectRegistrationService,
     @Inject(ProjectIgnorePolicyService)
     private readonly projectIgnorePolicyService: ProjectIgnorePolicyService,
+    @Inject(ProjectInventoryService)
+    private readonly projectInventoryService: ProjectInventoryService,
   ) {}
 
   @Post("register")
@@ -48,6 +59,28 @@ export class ProjectsController {
       }
 
       throw error;
+    }
+  }
+
+  @Post(":projectId/inventory/scan")
+  public async scanInventory(@Param("projectId") projectIdValue: unknown): Promise<ProjectScan> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return await this.projectInventoryService.scan(projectId);
+    } catch (error) {
+      this.mapInventoryError(error);
+    }
+  }
+
+  @Get(":projectId/inventory/scan")
+  public async getLatestInventoryScan(@Param("projectId") projectIdValue: unknown): Promise<LatestProjectScanResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return LatestProjectScanResponseSchema.parse(await this.projectInventoryService.getLatestScan(projectId));
+    } catch (error) {
+      this.mapInventoryError(error);
     }
   }
 
@@ -101,5 +134,19 @@ export class ProjectsController {
     }
 
     return parsed.data;
+  }
+
+  private mapInventoryError(error: unknown): never {
+    if (error instanceof ProjectNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof ProjectScanAlreadyRunningError) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectScanFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
+
+    throw error;
   }
 }

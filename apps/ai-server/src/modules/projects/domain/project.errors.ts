@@ -25,3 +25,17 @@ export class IgnoreRulesFileTooLargeError extends Error {
     this.name = "IgnoreRulesFileTooLargeError";
   }
 }
+
+export class ProjectScanAlreadyRunningError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} already has a running inventory scan.`);
+    this.name = "ProjectScanAlreadyRunningError";
+  }
+}
+
+export class ProjectScanFailedError extends Error {
+  public constructor() {
+    super("Arc could not complete the project inventory scan.");
+    this.name = "ProjectScanFailedError";
+  }
+}

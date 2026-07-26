@@ -555,17 +555,53 @@ Not included yet:
 
 ### Milestone 3.3: Bounded Repository Inventory
 
-Status: Planned.
+Status: Complete.
 
 Goal: scan non-ignored paths into a bounded metadata inventory without reading file contents.
 
-Expected additions:
+Included:
 
-- Symlink-safe directory traversal.
-- File count, size, and depth limits.
-- Batched file metadata persistence.
-- Scan status and failure metadata.
-- Explicit rescan service and repository tests.
+- Durable `project_scans` and current `project_files` tables with class-based Sequelize models.
+- Explicit `POST /projects/:projectId/inventory/scan` rescan endpoint.
+- Latest durable status at `GET /projects/:projectId/inventory/scan`.
+- Deterministic directory traversal that never follows symlinks.
+- Reuse of one prepared Milestone 3.2 ignore evaluator for every candidate path.
+- Metadata-only entries containing relative path, byte size, and modification time.
+- Configurable file-count, total-byte, and depth limits.
+- `running`, `completed`, `limited`, and `failed` scan states with stable limit reasons and error
+  codes.
+- One running scan per project, enforced by a partial unique PostgreSQL index.
+- Atomic replacement of the current inventory in configurable Sequelize bulk-create batches.
+- Failed-scan recording that preserves the last completed or limited inventory.
+- Contract, configuration, walker, service, repository, controller, limit, symlink, concurrency, and
+  failure-path tests.
+
+Default limits:
+
+- 20,000 files.
+- 2 GiB aggregate file size.
+- 32 path segments.
+- 500 metadata rows per persistence batch.
+
+Acceptance gate:
+
+- Ignored files and directories never enter the inventory.
+- Symbolic links are counted and skipped without being followed.
+- Traversal stops before exceeding file-count or total-byte limits and does not descend beyond the
+  depth limit.
+- A completed or limited scan atomically replaces the previous inventory.
+- A failed scan stores a stable error code without deleting the previous inventory.
+- Concurrent scan requests for one project return a conflict.
+- No file contents are read or stored.
+- Full workspace build, test, lint, format, migration, and local scan checks pass.
+
+Not included yet:
+
+- Automatic scanning during registration.
+- Filesystem watching or incremental inventory updates.
+- Scan progress events or cancellation.
+- VSCode scan controls and inventory presentation.
+- File content parsing, hashing, embeddings, or semantic search.
 
 ### Milestone 3.4: Registration Integration and Acceptance
 

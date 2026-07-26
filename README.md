@@ -145,3 +145,18 @@ Content-Type: application/json
 
 {"path":"packages/api/dist","kind":"directory"}
 ```
+
+## Repository Inventory
+
+Milestone 3.3 adds explicit metadata-only repository scans. Apply migrations after pulling the
+milestone, then start a scan for a registered project:
+
+```txt
+POST /projects/:projectId/inventory/scan
+GET  /projects/:projectId/inventory/scan
+```
+
+The first endpoint performs a bounded rescan and atomically replaces the current inventory. The
+second returns the latest durable scan status. Scans never follow symlinks or read file contents.
+Configure their limits with `ARC_PROJECT_SCAN_MAX_FILES`, `ARC_PROJECT_SCAN_MAX_TOTAL_BYTES`,
+`ARC_PROJECT_SCAN_MAX_DEPTH`, and `ARC_PROJECT_SCAN_BATCH_SIZE`.

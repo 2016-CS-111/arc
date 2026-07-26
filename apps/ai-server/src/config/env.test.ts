@@ -16,6 +16,12 @@ describe("loadConfig", () => {
       sync: false,
       url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     });
+    expect(config.projectScan).toEqual({
+      batchSize: 500,
+      maxDepth: 32,
+      maxFiles: 20_000,
+      maxTotalBytes: 2_147_483_648,
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -27,6 +33,10 @@ describe("loadConfig", () => {
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
       ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
+      ARC_PROJECT_SCAN_BATCH_SIZE: "250",
+      ARC_PROJECT_SCAN_MAX_DEPTH: "20",
+      ARC_PROJECT_SCAN_MAX_FILES: "5000",
+      ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: "104857600",
     });
 
     expect(config.ollama).toEqual({
@@ -39,6 +49,12 @@ describe("loadConfig", () => {
       connectTimeoutMs: 8_000,
       sync: true,
       url: "postgres://arc:arc@localhost:5433/arc_test",
+    });
+    expect(config.projectScan).toEqual({
+      batchSize: 250,
+      maxDepth: 20,
+      maxFiles: 5_000,
+      maxTotalBytes: 104_857_600,
     });
   });
 

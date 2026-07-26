@@ -85,7 +85,9 @@ function createDatabase(): {
       models: {
         chatSessions: { findByPk, findOrCreate } as unknown as ArcDatabase["models"]["chatSessions"],
         chatMessages: { findAll, update } as unknown as ArcDatabase["models"]["chatMessages"],
+        projectFiles: {} as ArcDatabase["models"]["projectFiles"],
         projects: {} as ArcDatabase["models"]["projects"],
+        projectScans: {} as ArcDatabase["models"]["projectScans"],
       },
     },
     findByPk,

@@ -276,6 +276,42 @@ files are accepted, symlinks are not followed, and each rules file is bounded to
 3.2 does not walk the workspace or persist path decisions. Milestone 3.3 must consume this service
 as its sole ignore boundary while building a bounded metadata inventory.
 
+## Bounded Repository Inventory
+
+Milestone 3.3 adds explicit metadata-only scans. A scan prepares one cached ignore evaluator for the
+registered project, traverses candidates in deterministic path order, and records only relative
+path, byte size, and modification time. Directory entries and `lstat` provide the metadata; Arc
+does not open or read candidate file contents.
+
+```mermaid
+sequenceDiagram
+  participant API as "Projects controller"
+  participant Service as "Inventory service"
+  participant DB as "PostgreSQL"
+  participant Walker as "Filesystem walker"
+  participant Ignore as "Prepared ignore evaluator"
+
+  API->>Service: "Start explicit scan"
+  Service->>DB: "Create running scan"
+  Service->>Walker: "Walk with configured limits"
+  Walker->>Ignore: "Check each file or directory"
+  Ignore-->>Walker: "Include or exclude"
+  Walker-->>Service: "Metadata, counts, and limits"
+  Service->>DB: "Replace inventory and finish scan transaction"
+  DB-->>API: "Completed or limited summary"
+```
+
+The walker never follows symbolic links. It stops before exceeding the configured file count or
+aggregate byte limit and prunes directories at the depth limit. Hitting any limit produces a usable
+`limited` inventory with explicit reasons rather than a generic failure.
+
+`project_scans` owns the `running`, `completed`, `limited`, and `failed` lifecycle. PostgreSQL
+allows only one running scan per project. On successful or limited traversal, the repository
+deletes the old `project_files`, bulk-inserts the new metadata, and completes the scan in one
+transaction. Filesystem or persistence failures update only the scan record, preserving the last
+usable inventory. Milestone 3.4 will add client progress, restart recovery, and workflow controls;
+incremental watching and content indexing remain later concerns.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
