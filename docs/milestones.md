@@ -507,18 +507,51 @@ Not included yet:
 
 ### Milestone 3.2: Workspace Ignore Policy
 
-Status: Planned.
+Status: Complete.
 
 Goal: produce one testable ignore decision for a project-relative path before any repository
 traversal is introduced.
 
-Expected additions:
+Included:
 
-- Built-in safety and generated-file exclusions.
-- `.gitignore` parsing with nested rule support.
-- Arc-specific ignore configuration.
-- Normalized project-relative path handling.
-- Explainable ignore decisions and focused rule tests.
+- Hard built-in exclusions for Git internals, Arc internals, environment files, and common private
+  key formats.
+- Built-in exclusions for dependency, generated-output, cache, coverage, and temporary directories.
+- Git-compatible root and nested `.gitignore` parsing through the `ignore` library.
+- Root `.arcignore` rules for Arc-only additional exclusions and local negation within that file.
+- Portable project-relative path normalization with absolute and parent traversal rejection.
+- Bounded regular-file reads for ignore files; symlinks are not followed and each file is limited to
+  1 MiB.
+- `POST /projects/:projectId/ignore/check` with the normalized path, decision, source file, and
+  matching pattern.
+- Contract, normalization, nested-rule, precedence, filesystem, repository, and controller tests.
+
+Precedence:
+
+1. Built-in safety exclusions.
+2. Built-in generated-file exclusions.
+3. Root and nested `.gitignore` rules, with normal Git parent-directory behavior.
+4. Root `.arcignore` as an additional exclusion layer.
+
+An `.arcignore` negation can refine another rule in the same `.arcignore` file. It cannot reinclude
+a path excluded by a safety, generated, or Git rule.
+
+Acceptance gate:
+
+- Secret and generated paths are excluded without project configuration.
+- A nested `.gitignore` is relative to its own directory and can negate a parent file pattern only
+  when its parent directory remains traversable.
+- `.arcignore` can add Arc-only exclusions without changing Git state.
+- Invalid, absolute, escaping, oversized, and unknown-project requests fail with stable API errors.
+- Included and excluded decisions identify their normalized path and exclusion source.
+- Build, test, lint, and format checks pass.
+
+Not included yet:
+
+- Directory traversal.
+- Persisted file metadata or scan status.
+- Ignore decision caching or file watching.
+- VSCode scan controls.
 
 ### Milestone 3.3: Bounded Repository Inventory
 

@@ -249,6 +249,33 @@ reference only; PostgreSQL remains authoritative. Registration stores the projec
 root, UUID, and timestamps. It does not read file contents, apply ignore rules, or trigger a scan.
 Those boundaries are introduced independently in Milestones 3.2 and 3.3.
 
+## Workspace Ignore Policy
+
+Milestone 3.2 adds one reusable backend policy for deciding whether a project-relative file or
+directory may enter a future repository inventory. Callers provide a registered project UUID, a
+portable relative path, and whether the candidate is a file or directory. The service loads the
+authoritative project root, normalizes separators, rejects absolute or parent-traversing paths, and
+returns an explainable decision through `POST /projects/:projectId/ignore/check`.
+
+```mermaid
+flowchart LR
+  Candidate["Project-relative candidate"] --> Safety["Built-in safety rules"]
+  Safety --> Generated["Generated-file defaults"]
+  Generated --> Git["Root and nested .gitignore"]
+  Git --> ArcIgnore["Root .arcignore"]
+  ArcIgnore --> Decision["Decision with source and pattern"]
+```
+
+Safety and generated defaults are evaluated before project files. Git rules are evaluated from the
+root toward the candidate's parent directory, preserving nested rule bases and preventing a child
+rule from re-including content below an ignored parent. `.arcignore` is a final additive layer for
+Arc-only exclusions; its negations refine its own rules but do not override an earlier exclusion.
+
+Ignore files are read on demand so configuration changes are immediately visible. Only regular
+files are accepted, symlinks are not followed, and each rules file is bounded to 1 MiB. Milestone
+3.2 does not walk the workspace or persist path decisions. Milestone 3.3 must consume this service
+as its sole ignore boundary while building a bounded metadata inventory.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

@@ -131,4 +131,17 @@ The backend validates and canonicalizes the selected local directory and returns
 UUID when that directory is registered again.
 
 Registration stores only the workspace name, canonical root path, identity, and timestamps. Ignore
-rules and repository scanning begin in later Milestone 3 slices.
+rules are evaluated by the backend in Milestone 3.2; repository scanning begins in a later
+Milestone 3 slice.
+
+The ignore policy combines built-in safety and generated-file rules, root and nested `.gitignore`
+files, and an optional root `.arcignore`. Arc-specific rules are additional exclusions and cannot
+reinclude a path already excluded by built-in or Git rules. The diagnostic endpoint returns the
+matched source and pattern:
+
+```txt
+POST /projects/:projectId/ignore/check
+Content-Type: application/json
+
+{"path":"packages/api/dist","kind":"directory"}
+```

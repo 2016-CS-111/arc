@@ -25,6 +25,7 @@
     "@nestjs/platform-socket.io": "^11.1.28",
     "@nestjs/websockets": "^11.1.28",
     "dotenv": "^17.2.0",
+    "ignore": "7.0.5",
     "pg": "^8.22.0",
     "pg-hstore": "^2.3.4",
     "reflect-metadata": "^0.2.2",

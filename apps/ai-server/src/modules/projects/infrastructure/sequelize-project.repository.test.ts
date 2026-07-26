@@ -37,18 +37,35 @@ function createProject(name = "Arc"): {
   return { project, save, set };
 }
 
-function createDatabase(findOrCreate: ReturnType<typeof vi.fn>): ArcDatabase {
+function createDatabase(
+  findOrCreate: ReturnType<typeof vi.fn>,
+  findByPk: ReturnType<typeof vi.fn> = vi.fn(() => Promise.resolve(null)),
+): ArcDatabase {
   return {
     sequelize: {} as ArcDatabase["sequelize"],
     models: {
       chatMessages: {} as ArcDatabase["models"]["chatMessages"],
       chatSessions: {} as ArcDatabase["models"]["chatSessions"],
-      projects: { findOrCreate } as unknown as ModelStatic<ProjectModel>,
+      projects: { findByPk, findOrCreate } as unknown as ModelStatic<ProjectModel>,
     },
   };
 }
 
 describe("SequelizeProjectRepository", () => {
+  it("loads a project by its server-owned identity", async () => {
+    const { project } = createProject();
+    const findByPk = vi.fn(() => Promise.resolve(project));
+    const repository = new SequelizeProjectRepository(createDatabase(vi.fn(), findByPk));
+
+    await expect(repository.findById("03f4c07e-e890-454d-b557-17b780906ceb")).resolves.toMatchObject({
+      id: "03f4c07e-e890-454d-b557-17b780906ceb",
+      rootPath: "/workspace/arc",
+    });
+    await expect(
+      new SequelizeProjectRepository(createDatabase(vi.fn())).findById("03f4c07e-e890-454d-b557-17b780906ceb"),
+    ).resolves.toBeNull();
+  });
+
   it("creates one durable project for a canonical root", async () => {
     const { project } = createProject();
     const findOrCreate = vi.fn(() => Promise.resolve([project, true]));

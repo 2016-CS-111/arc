@@ -4,3 +4,24 @@ export class InvalidProjectRootError extends Error {
     this.name = "InvalidProjectRootError";
   }
 }
+
+export class InvalidProjectPathError extends Error {
+  public constructor() {
+    super("Project path must remain relative to the registered workspace.");
+    this.name = "InvalidProjectPathError";
+  }
+}
+
+export class ProjectNotFoundError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} was not found.`);
+    this.name = "ProjectNotFoundError";
+  }
+}
+
+export class IgnoreRulesFileTooLargeError extends Error {
+  public constructor(relativePath: string) {
+    super(`Ignore rules file ${relativePath} exceeds the 1 MiB limit.`);
+    this.name = "IgnoreRulesFileTooLargeError";
+  }
+}

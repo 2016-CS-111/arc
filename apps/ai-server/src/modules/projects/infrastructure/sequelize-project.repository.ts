@@ -13,6 +13,11 @@ import type { RegisterProjectInput } from "../domain/project.types.js";
 export class SequelizeProjectRepository implements ProjectRepository {
   public constructor(private readonly database: ArcDatabase) {}
 
+  public async findById(projectId: string): Promise<Project | null> {
+    const project = await this.database.models.projects.findByPk(projectId);
+    return project === null ? null : toProject(project);
+  }
+
   public async register(input: RegisterProjectInput): Promise<RegisterProjectResponse> {
     const [project, created] = await this.database.models.projects.findOrCreate({
       where: { rootPath: input.rootPath },

@@ -21,7 +21,7 @@ describe("ProjectRegistrationService", () => {
     const resolveDirectory = vi.fn(() => Promise.resolve("/canonical/arc"));
     const register = vi.fn(() => Promise.resolve(registration));
     const service = new ProjectRegistrationService(
-      { register } satisfies ProjectRepository,
+      { findById: vi.fn(), register } satisfies ProjectRepository,
       { resolveDirectory } satisfies WorkspaceRootResolver,
     );
 
