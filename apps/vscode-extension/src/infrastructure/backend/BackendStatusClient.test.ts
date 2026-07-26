@@ -47,11 +47,7 @@ describe("BackendStatusClient", () => {
         status: "ready",
       },
     });
-    expect(fetchImplementation).toHaveBeenNthCalledWith(
-      1,
-      "http://127.0.0.1:7331/health",
-      expect.any(Object),
-    );
+    expect(fetchImplementation).toHaveBeenNthCalledWith(1, "http://127.0.0.1:7331/health", expect.any(Object));
   });
 
   it("keeps backend status when its provider endpoint is unavailable", async () => {

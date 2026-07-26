@@ -1,7 +1,4 @@
-import {
-  OllamaProviderStatusResponseSchema,
-  type OllamaProviderStatusResponse,
-} from "@arc/contracts";
+import { OllamaProviderStatusResponseSchema, type OllamaProviderStatusResponse } from "@arc/contracts";
 import { Controller, Get, Inject } from "@nestjs/common";
 
 import { CheckModelReadinessService } from "../application/check-model-readiness.service.js";

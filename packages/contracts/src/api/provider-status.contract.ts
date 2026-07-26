@@ -1,12 +1,6 @@
 import { z } from "zod";
 
-export const OllamaProviderStatusSchema = z.enum([
-  "ready",
-  "not_configured",
-  "unreachable",
-  "model_missing",
-  "error",
-]);
+export const OllamaProviderStatusSchema = z.enum(["ready", "not_configured", "unreachable", "model_missing", "error"]);
 
 export const OllamaProviderStatusResponseSchema = z.object({
   provider: z.literal("ollama"),

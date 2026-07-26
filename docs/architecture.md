@@ -139,6 +139,19 @@ small set of stable user-facing messages. Unknown error details are not rendered
 transport or provider internals from leaking into the chat surface. The terminal smoke commands and
 manual test matrix document the matching Ollama and Arc-view checks for a local machine.
 
+## Privacy-Safe Chat Logging
+
+The chat gateway owns lifecycle logging because it observes the complete durable generation without
+requiring prompt or response text in its log context. Each generation records its request ID,
+session ID, elapsed milliseconds, new-or-existing mode, lifecycle status, and typed terminal error
+code when applicable. Cancellation requests and rejected commands use the same content-free
+correlation fields.
+
+Prompt content, accumulated assistant output, model messages, and raw persistence error messages
+are excluded. Persistence failures record only the JavaScript error type because database error
+messages may include query values. Invalid correlation fields are reduced to `unknown` unless they
+match the bounded identifier character set.
+
 ## Durable Conversation Foundation
 
 Milestone 2.5.1 introduces PostgreSQL as the planned authority for conversation history without

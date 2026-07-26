@@ -138,7 +138,7 @@ export function App() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col bg-arc-background text-arc-foreground">
+    <main className="flex h-screen overflow-hidden flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
         <div className="flex min-w-0 items-center gap-2">
           <Bot aria-hidden="true" className="shrink-0 text-arc-accent" size={16} strokeWidth={1.8} />

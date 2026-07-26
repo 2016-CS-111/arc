@@ -21,6 +21,7 @@ import {
 
 import { ARC_LOGGER } from "../../logger/logger.constants.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
+import { ChatGenerationLifecycleLogger } from "../application/chat-generation-lifecycle.logger.js";
 import { DurableChatService, type DurableChatPreparation } from "../application/durable-chat.service.js";
 import { SendChatMessageService } from "../application/send-chat-message.service.js";
 import { createChatError, toChatError } from "../domain/chat.errors.js";
@@ -49,7 +50,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     const parsedCommand = ChatSendCommandSchema.safeParse(payload);
     if (!parsedCommand.success) {
       const correlation = this.extractCorrelation(payload);
-      this.emitError(
+      this.rejectRequest(
         client,
         correlation.requestId,
         correlation.sessionId,
@@ -67,7 +68,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     const controller = this.activeGenerationRegistry.start(scope);
 
     if (controller === undefined) {
-      this.emitError(
+      this.rejectRequest(
         client,
         command.requestId,
         command.sessionId,
@@ -76,7 +77,12 @@ export class ChatGateway implements OnGatewayDisconnect {
       return;
     }
 
-    void this.prepareAndStream(client, command, scope, controller.signal);
+    const lifecycle = new ChatGenerationLifecycleLogger(this.logger, {
+      requestId: command.requestId,
+      sessionId: command.sessionId,
+    });
+    lifecycle.started();
+    void this.prepareAndStream(client, command, scope, controller.signal, lifecycle);
   }
 
   @SubscribeMessage("chat:cancel")
@@ -84,7 +90,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     const parsedCommand = ChatCancelCommandSchema.safeParse(payload);
     if (!parsedCommand.success) {
       const correlation = this.extractCorrelation(payload);
-      this.emitError(
+      this.rejectRequest(
         client,
         correlation.requestId,
         correlation.sessionId,
@@ -101,13 +107,20 @@ export class ChatGateway implements OnGatewayDisconnect {
     });
 
     if (!cancelled) {
-      this.emitError(
+      this.rejectRequest(
         client,
         command.requestId,
         command.sessionId,
         createChatError("generation_not_found", "No active generation matches this request.", false),
       );
+      return;
     }
+
+    this.logger.info("Chat generation cancellation requested", {
+      requestId: command.requestId,
+      sessionId: command.sessionId,
+      status: "cancellation_requested",
+    });
   }
 
   public handleDisconnect(client: ChatSocket): void {
@@ -120,6 +133,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     command: ChatSendCommand,
     scope: GenerationScope,
     signal: AbortSignal,
+    lifecycle: ChatGenerationLifecycleLogger,
   ): Promise<void> {
     try {
       const preparation = await this.durableChatService.prepare(command);
@@ -130,17 +144,19 @@ export class ChatGateway implements OnGatewayDisconnect {
           sessionId: command.sessionId,
         }),
       );
+      lifecycle.accepted(preparation.type);
 
       if (preparation.type === "existing") {
-        await this.replayExistingGeneration(client, command, preparation);
+        await this.replayExistingGeneration(client, command, preparation, lifecycle);
         return;
       }
 
-      await this.streamResponse(client, command, preparation, signal);
+      await this.streamResponse(client, command, preparation, signal, lifecycle);
     } catch (error) {
       const chatError = toChatError(error);
       await this.persistFailure(command, "", chatError);
       this.emitError(client, command.requestId, command.sessionId, chatError);
+      lifecycle.failed(chatError.code);
     } finally {
       this.activeGenerationRegistry.complete(scope);
     }
@@ -151,6 +167,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     command: ChatSendCommand,
     preparation: Extract<DurableChatPreparation, { readonly type: "new" }>,
     signal: AbortSignal,
+    lifecycle: ChatGenerationLifecycleLogger,
   ): Promise<void> {
     let assistantContent = preparation.assistantMessage.content;
 
@@ -196,6 +213,7 @@ export class ChatGateway implements OnGatewayDisconnect {
             ...(event.usage === undefined ? {} : { usage: event.usage }),
           }),
         );
+        lifecycle.completed();
       }
     } catch (error) {
       const chatError = toChatError(error);
@@ -209,9 +227,11 @@ export class ChatGateway implements OnGatewayDisconnect {
             sessionId: command.sessionId,
           }),
         );
+        lifecycle.cancelled();
       } else {
         await this.persistFailure(command, assistantContent, chatError);
         this.emitError(client, command.requestId, command.sessionId, chatError);
+        lifecycle.failed(chatError.code);
       }
     }
   }
@@ -220,6 +240,7 @@ export class ChatGateway implements OnGatewayDisconnect {
     client: ChatSocket,
     command: ChatSendCommand,
     preparation: Extract<DurableChatPreparation, { readonly type: "existing" }>,
+    lifecycle: ChatGenerationLifecycleLogger,
   ): Promise<void> {
     const assistantMessage = preparation.assistantMessage;
 
@@ -242,6 +263,7 @@ export class ChatGateway implements OnGatewayDisconnect {
             sessionId: command.sessionId,
           }),
         );
+        lifecycle.completed();
         return;
       case "cancelled":
         client.emit(
@@ -251,20 +273,20 @@ export class ChatGateway implements OnGatewayDisconnect {
             sessionId: command.sessionId,
           }),
         );
+        lifecycle.cancelled();
         return;
-      case "failed":
-        this.emitError(
-          client,
-          command.requestId,
-          command.sessionId,
-          assistantMessage.error ?? this.createInterruptedGenerationError(),
-        );
+      case "failed": {
+        const error = assistantMessage.error ?? this.createInterruptedGenerationError();
+        this.emitError(client, command.requestId, command.sessionId, error);
+        lifecycle.failed(error.code);
         return;
+      }
       case "pending":
       case "streaming": {
         const error = this.createInterruptedGenerationError();
         await this.persistFailure(command, assistantMessage.content, error);
         this.emitError(client, command.requestId, command.sessionId, error);
+        lifecycle.failed(error.code);
       }
     }
   }
@@ -280,7 +302,7 @@ export class ChatGateway implements OnGatewayDisconnect {
       }
     } catch (error) {
       this.logger.error("Could not persist Arc generation cancellation", {
-        error: getErrorMessage(error),
+        errorType: getErrorType(error),
         requestId: command.requestId,
         sessionId: command.sessionId,
       });
@@ -303,7 +325,7 @@ export class ChatGateway implements OnGatewayDisconnect {
       }
     } catch (persistenceError) {
       this.logger.error("Could not persist Arc generation failure", {
-        error: getErrorMessage(persistenceError),
+        errorType: getErrorType(persistenceError),
         requestId: command.requestId,
         sessionId: command.sessionId,
       });
@@ -334,6 +356,16 @@ export class ChatGateway implements OnGatewayDisconnect {
     );
   }
 
+  private rejectRequest(client: ChatSocket, requestId: string, sessionId: string, error: ChatError): void {
+    this.logger.warn("Chat request rejected", {
+      errorCode: error.code,
+      requestId,
+      sessionId,
+      status: "rejected",
+    });
+    this.emitError(client, requestId, sessionId, error);
+  }
+
   private extractCorrelation(payload: unknown): { requestId: string; sessionId: string } {
     if (typeof payload !== "object" || payload === null) {
       return {
@@ -352,10 +384,14 @@ export class ChatGateway implements OnGatewayDisconnect {
 
   private getStringField(candidate: Record<string, unknown>, field: string): string {
     const value = candidate[field];
-    return typeof value === "string" && value.length > 0 ? value : "unknown";
+    return typeof value === "string" && /^[A-Za-z0-9._:-]{1,160}$/.test(value) ? value : "unknown";
   }
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function getErrorType(error: unknown): string {
+  if (error instanceof Error && /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(error.name)) {
+    return error.name;
+  }
+
+  return "UnknownError";
 }

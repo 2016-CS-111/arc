@@ -119,5 +119,6 @@ pnpm extension:run
 The extension window title should include `Extension Development Host`. In that window, run
 `Arc: Open Chat` from the Command Palette. The Arc activity-bar view opens and reports the backend
 and Ollama readiness through the extension host. Enter a prompt to stream from the configured local
-model, or use Stop to cancel the active generation. See [the Milestone 2.4 operating guide](docs/milestone-2.4-test-matrix.md)
-for the full manual acceptance sequence and resilience checks.
+model, or use Stop to cancel the active generation. See
+[the Milestone 2.6 acceptance guide](docs/milestone-2.6-acceptance.md) for the final security,
+resilience, privacy, and local Ollama verification matrix.

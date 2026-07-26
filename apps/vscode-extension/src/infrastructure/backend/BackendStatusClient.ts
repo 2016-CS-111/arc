@@ -19,10 +19,7 @@ export class BackendStatusClient {
 
   public async getStatus(signal?: AbortSignal): Promise<BackendStatus> {
     try {
-      const healthResponse = await this.fetchImplementation(
-        this.urlFor("health"),
-        requestOptions(signal),
-      );
+      const healthResponse = await this.fetchImplementation(this.urlFor("health"), requestOptions(signal));
       if (!healthResponse.ok) {
         return {
           backend: null,

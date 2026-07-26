@@ -20,6 +20,12 @@ interface TestSocket extends ChatSocket {
   readonly emitted: EmittedEvent[];
 }
 
+interface CapturedLogEntry {
+  readonly context: Readonly<Record<string, unknown>> | undefined;
+  readonly level: keyof Logger;
+  readonly message: string;
+}
+
 const sessionId = "0d2e5770-f08e-48d5-871b-36bf734f535c";
 const assistantMessageId = "1d089847-4de9-41c0-af93-3d7411a6068e";
 const timestamp = "2026-07-18T12:00:00.000Z";
@@ -30,6 +36,30 @@ const logger: Logger = {
   info: (): void => undefined,
   warn: (): void => undefined,
 };
+
+class CapturedLogger implements Logger {
+  public readonly entries: CapturedLogEntry[] = [];
+
+  public debug(message: string, context?: Readonly<Record<string, unknown>>): void {
+    this.capture("debug", message, context);
+  }
+
+  public error(message: string, context?: Readonly<Record<string, unknown>>): void {
+    this.capture("error", message, context);
+  }
+
+  public info(message: string, context?: Readonly<Record<string, unknown>>): void {
+    this.capture("info", message, context);
+  }
+
+  public warn(message: string, context?: Readonly<Record<string, unknown>>): void {
+    this.capture("warn", message, context);
+  }
+
+  private capture(level: keyof Logger, message: string, context?: Readonly<Record<string, unknown>>): void {
+    this.entries.push({ context, level, message });
+  }
+}
 
 const command: ChatSendCommand = {
   requestId: "request_1",
@@ -151,12 +181,16 @@ function createChatModel(stream: (signal: AbortSignal | undefined) => AsyncItera
   };
 }
 
-function createGateway(chatModel: ChatModelPort, durableChatService: InMemoryDurableChatService): ChatGateway {
+function createGateway(
+  chatModel: ChatModelPort,
+  durableChatService: InMemoryDurableChatService,
+  gatewayLogger: Logger = logger,
+): ChatGateway {
   return new ChatGateway(
     new ActiveGenerationRegistry(),
     durableChatService as unknown as DurableChatService,
     new SendChatMessageService(chatModel),
-    logger,
+    gatewayLogger,
   );
 }
 
@@ -245,5 +279,58 @@ describe("ChatGateway", () => {
     await vi.waitFor(() => {
       expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:error", "chat:cancelled"]);
     });
+  });
+
+  it("logs correlated lifecycle metadata without prompt, response, or persistence error content", async () => {
+    const promptSecret = "PRIVATE_PROMPT_CONTENT";
+    const responseSecret = "PRIVATE_RESPONSE_CONTENT";
+    const persistenceSecret = "PRIVATE_DATABASE_ERROR_CONTENT";
+    const durableChatService = new InMemoryDurableChatService();
+    vi.spyOn(durableChatService, "fail").mockRejectedValue(new Error(persistenceSecret));
+    const chatModel = createChatModel(async function* (): AsyncGenerator<ChatModelEvent> {
+      await Promise.resolve();
+      yield { type: "delta", content: responseSecret };
+      throw new ChatModelError("OLLAMA_REQUEST_FAILED", "Provider request failed.");
+    });
+    const capturedLogger = new CapturedLogger();
+    const gateway = createGateway(chatModel, durableChatService, capturedLogger);
+    const socket = createSocket();
+
+    gateway.handleChatSend(socket, { ...command, content: promptSecret });
+
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:delta", "chat:error"]);
+    });
+
+    const serializedLogs = JSON.stringify(capturedLogger.entries);
+    expect(serializedLogs).not.toContain(promptSecret);
+    expect(serializedLogs).not.toContain(responseSecret);
+    expect(serializedLogs).not.toContain(persistenceSecret);
+    expect(
+      capturedLogger.entries.some(
+        (entry) =>
+          entry.context?.requestId === command.requestId &&
+          entry.context.sessionId === command.sessionId &&
+          entry.context.status === "started",
+      ),
+    ).toBe(true);
+    expect(
+      capturedLogger.entries.some(
+        (entry) =>
+          entry.context?.errorCode === "generation_failed" &&
+          entry.context.requestId === command.requestId &&
+          entry.context.sessionId === command.sessionId &&
+          entry.context.status === "failed",
+      ),
+    ).toBe(true);
+    expect(
+      capturedLogger.entries.some(
+        (entry) =>
+          entry.context?.errorType === "Error" &&
+          entry.context.requestId === command.requestId &&
+          entry.context.sessionId === command.sessionId &&
+          entry.level === "error",
+      ),
+    ).toBe(true);
   });
 });

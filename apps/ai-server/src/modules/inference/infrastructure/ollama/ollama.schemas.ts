@@ -62,11 +62,9 @@ export function parseOllamaStreamRecord(value: unknown): OllamaStreamRecord {
 
   const chatResponse = OllamaChatResponseSchema.safeParse(value);
   if (!chatResponse.success) {
-    throw new ChatModelError(
-      "OLLAMA_PROTOCOL_ERROR",
-      "Ollama returned an invalid streaming response.",
-      { cause: chatResponse.error },
-    );
+    throw new ChatModelError("OLLAMA_PROTOCOL_ERROR", "Ollama returned an invalid streaming response.", {
+      cause: chatResponse.error,
+    });
   }
 
   return {

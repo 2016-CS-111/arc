@@ -116,16 +116,10 @@ export class OllamaChatModelAdapter implements ChatModelPort {
     }
   }
 
-  public async *streamChat(
-    request: ChatModelRequest,
-    signal?: AbortSignal,
-  ): AsyncGenerator<ChatModelEvent> {
+  public async *streamChat(request: ChatModelRequest, signal?: AbortSignal): AsyncGenerator<ChatModelEvent> {
     const model = this.getConfiguredModel();
     if (request.messages.length === 0) {
-      throw new ChatModelError(
-        "OLLAMA_REQUEST_FAILED",
-        "A chat request requires at least one message.",
-      );
+      throw new ChatModelError("OLLAMA_REQUEST_FAILED", "A chat request requires at least one message.");
     }
 
     const requestContext = this.createRequestContext(this.config.ollama.requestTimeoutMs, signal);
@@ -150,10 +144,7 @@ export class OllamaChatModelAdapter implements ChatModelPort {
       );
 
       if (response.status === 404) {
-        throw new ChatModelError(
-          "OLLAMA_MODEL_NOT_FOUND",
-          `The configured Ollama model '${model}' is not installed.`,
-        );
+        throw new ChatModelError("OLLAMA_MODEL_NOT_FOUND", `The configured Ollama model '${model}' is not installed.`);
       }
 
       if (!response.ok) {
@@ -164,10 +155,7 @@ export class OllamaChatModelAdapter implements ChatModelPort {
       }
 
       if (response.body === null) {
-        throw new ChatModelError(
-          "OLLAMA_PROTOCOL_ERROR",
-          "Ollama returned a response without a body.",
-        );
+        throw new ChatModelError("OLLAMA_PROTOCOL_ERROR", "Ollama returned a response without a body.");
       }
 
       let completed = false;
@@ -193,10 +181,7 @@ export class OllamaChatModelAdapter implements ChatModelPort {
       }
 
       if (!completed) {
-        throw new ChatModelError(
-          "OLLAMA_PROTOCOL_ERROR",
-          "Ollama ended the stream without a completion record.",
-        );
+        throw new ChatModelError("OLLAMA_PROTOCOL_ERROR", "Ollama ended the stream without a completion record.");
       }
     } catch (error) {
       throw this.toChatModelError(error, requestContext, signal);
@@ -297,21 +282,13 @@ export class OllamaChatModelAdapter implements ChatModelPort {
     }
 
     return {
-      ...(response.prompt_eval_count === undefined
-        ? {}
-        : { promptTokens: response.prompt_eval_count }),
+      ...(response.prompt_eval_count === undefined ? {} : { promptTokens: response.prompt_eval_count }),
       ...(response.eval_count === undefined ? {} : { completionTokens: response.eval_count }),
-      ...(response.total_duration === undefined
-        ? {}
-        : { totalDurationMs: response.total_duration / 1_000_000 }),
+      ...(response.total_duration === undefined ? {} : { totalDurationMs: response.total_duration / 1_000_000 }),
     };
   }
 
-  private toChatModelError(
-    error: unknown,
-    requestContext: RequestContext,
-    callerSignal?: AbortSignal,
-  ): ChatModelError {
+  private toChatModelError(error: unknown, requestContext: RequestContext, callerSignal?: AbortSignal): ChatModelError {
     if (error instanceof ChatModelError) {
       return error;
     }
@@ -323,11 +300,9 @@ export class OllamaChatModelAdapter implements ChatModelPort {
     }
 
     if (requestContext.didTimeout()) {
-      return new ChatModelError(
-        "OLLAMA_TIMEOUT",
-        "Ollama did not respond before the configured timeout.",
-        { cause: error },
-      );
+      return new ChatModelError("OLLAMA_TIMEOUT", "Ollama did not respond before the configured timeout.", {
+        cause: error,
+      });
     }
 
     return new ChatModelError("OLLAMA_UNREACHABLE", "Unable to connect to Ollama.", {

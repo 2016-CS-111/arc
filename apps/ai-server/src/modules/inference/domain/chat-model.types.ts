@@ -26,8 +26,7 @@ export type ChatModelEvent =
       readonly usage?: ChatModelUsage;
     };
 
-export type ChatModelStatusCode =
-  "ready" | "not_configured" | "unreachable" | "model_missing" | "error";
+export type ChatModelStatusCode = "ready" | "not_configured" | "unreachable" | "model_missing" | "error";
 
 export interface ChatModelStatus {
   readonly status: ChatModelStatusCode;

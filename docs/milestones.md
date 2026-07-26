@@ -25,6 +25,8 @@ Not included yet:
 
 ## Milestone 2: Local Chat MVP
 
+Status: Complete.
+
 Goal: deliver the first complete local chat path from VSCode to Ollama. Milestone 2 is divided into
 small, independently testable sub-milestones so each boundary is proven before another layer is
 added.
@@ -374,6 +376,8 @@ Not included yet:
 
 ### Milestone 2.6: Chat Presentation and Resilience
 
+Status: Complete.
+
 Goal: complete the Local Chat MVP with safe rich rendering and production-quality failure handling.
 
 Included:
@@ -417,6 +421,8 @@ Status: Complete.
 - Preserve follow mode while the user is near the latest message.
 - Pause automatic scrolling during manual review and provide a jump-to-latest action.
 - Keep long responses, tables, and code blocks usable in narrow layouts.
+- Constrain the webview root to the available viewport so long transcripts cannot push the composer
+  or jump-to-latest action outside the VSCode panel.
 
 #### Milestone 2.6.4: Transport Resilience and Error UX
 
@@ -432,9 +438,18 @@ Status: Complete.
 
 #### Milestone 2.6.5: Privacy Logging and Acceptance
 
-- Add content-free lifecycle logging with request identifiers, timing, and status.
-- Document the security, resilience, and manual Ollama test matrix.
-- Complete workspace build, test, lint, format, and end-to-end verification.
+Status: Complete.
+
+- Added content-free generation lifecycle logging with request and session identifiers, duration,
+  mode, status, and typed error codes.
+- Removed raw persistence error messages from chat logs and added privacy regression coverage.
+- Documented the automated gate and security, resilience, presentation, durability, privacy, and
+  manual Ollama test matrix in `docs/milestone-2.6-acceptance.md`.
+- Workspace tests, lint, format, type-check, production builds, PostgreSQL verification, direct
+  Ollama streaming, Socket.IO streaming/cancellation, unavailable-provider, missing-model, timeout,
+  and privacy-log checks pass.
+- VSCode presentation, security, narrow/wide layout, scroll-follow, cancellation, reconnect, and
+  backend/Extension Development Host restart observations pass on the target local machine.
 
 Acceptance gate:
 
@@ -444,8 +459,8 @@ Acceptance gate:
   are manually verified.
 - Full workspace build, test, lint, and format checks pass.
 
-Milestone 2 is complete only after all six acceptance gates pass. Repository context, embeddings,
-tool calling, file editing, memory, and autonomous execution remain outside this milestone.
+Milestone 2 is complete with all six acceptance gates passing. Repository context, embeddings, tool
+calling, file editing, memory, and autonomous execution remain outside this milestone.
 
 ## Milestone 3: Project Registration
 

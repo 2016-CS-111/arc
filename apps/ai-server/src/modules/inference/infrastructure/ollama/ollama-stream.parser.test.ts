@@ -81,9 +81,7 @@ describe("parseOllamaNdjson", () => {
   });
 
   it("returns mid-stream Ollama errors as typed records", async () => {
-    const body = createBody([
-      new TextEncoder().encode(JSON.stringify({ error: "model overloaded" }) + "\n"),
-    ]);
+    const body = createBody([new TextEncoder().encode(JSON.stringify({ error: "model overloaded" }) + "\n")]);
 
     await expect(collectRecords(body)).resolves.toEqual([
       {

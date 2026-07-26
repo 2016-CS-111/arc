@@ -1,10 +1,6 @@
 import type { Logger } from "@arc/shared";
 import { Inject } from "@nestjs/common";
-import {
-  WebSocketGateway,
-  type OnGatewayConnection,
-  type OnGatewayDisconnect,
-} from "@nestjs/websockets";
+import { WebSocketGateway, type OnGatewayConnection, type OnGatewayDisconnect } from "@nestjs/websockets";
 import type { Socket } from "socket.io";
 
 import { ARC_LOGGER } from "../logger/logger.constants.js";

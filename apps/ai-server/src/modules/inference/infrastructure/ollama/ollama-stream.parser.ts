@@ -1,9 +1,7 @@
 import { ChatModelError } from "../../domain/chat-model.errors.js";
 import { parseOllamaStreamRecord, type OllamaStreamRecord } from "./ollama.schemas.js";
 
-export async function* parseOllamaNdjson(
-  body: ReadableStream<Uint8Array>,
-): AsyncGenerator<OllamaStreamRecord> {
+export async function* parseOllamaNdjson(body: ReadableStream<Uint8Array>): AsyncGenerator<OllamaStreamRecord> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffered = "";
