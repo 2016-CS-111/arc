@@ -345,6 +345,23 @@ temporary repository and project, verifies ignore and symlink behavior, performs
 replacement scans, simulates restart recovery through a second Sequelize connection, confirms
 inventory preservation, and removes all temporary state.
 
+## Source Content Safety and Fingerprints
+
+Milestone 4.1 introduces the first content-aware backend boundary without storing source text.
+An explicit source-index run consumes the latest usable metadata inventory, rechecks current ignore
+rules, safely reads bounded regular files one at a time, validates UTF-8, and calculates exact-byte
+SHA-256 fingerprints. Source bytes are discarded after each outcome and never enter PostgreSQL,
+logs, API responses, VSCode, or Ollama.
+
+Fingerprints live in a separate current source catalog rather than on `project_files`. Each
+source-index run records the inventory scan it consumed, so a later metadata scan makes the source
+catalog observably stale without deleting it. Successful publication atomically upserts current
+paths and removes absent paths; failed or restart-interrupted runs preserve the previous catalog.
+
+Tree-sitter parsing, graph construction, source chunks, embeddings, semantic retrieval, and VSCode
+index controls remain later gates. The complete design is documented in
+`docs/milestone-4.1-architecture.md`.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

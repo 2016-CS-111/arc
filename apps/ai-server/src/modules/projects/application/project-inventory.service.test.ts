@@ -78,6 +78,7 @@ function createService(
     beginScan,
     completeScan,
     failScan,
+    getCurrentSnapshot: vi.fn(),
     getLatestScan,
     recoverInterruptedScans,
   } satisfies ProjectInventoryRepository;

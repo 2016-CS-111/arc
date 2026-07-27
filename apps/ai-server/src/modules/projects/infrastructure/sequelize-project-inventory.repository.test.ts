@@ -1,4 +1,4 @@
-import { UniqueConstraintError, type Transaction } from "sequelize";
+import { Op, UniqueConstraintError, type Transaction } from "sequelize";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ArcDatabase, ProjectScanAttributes } from "../../../database/database.types.js";
@@ -34,6 +34,7 @@ function createScan(): {
   });
   const scan = {
     get: (): ProjectScanAttributes => attributes,
+    id: scanId,
     save,
     set,
   } as unknown as ProjectScanModel;
@@ -47,12 +48,22 @@ function createDatabase(scan: ProjectScanModel): {
   readonly database: ArcDatabase;
   readonly destroy: ReturnType<typeof vi.fn>;
   readonly findOne: ReturnType<typeof vi.fn>;
+  readonly findAll: ReturnType<typeof vi.fn>;
   readonly transaction: ReturnType<typeof vi.fn>;
   readonly transactionValue: Transaction;
   readonly update: ReturnType<typeof vi.fn>;
 } {
   const create = vi.fn(() => Promise.resolve(scan));
   const findOne = vi.fn(() => Promise.resolve(scan));
+  const findAll = vi.fn(() =>
+    Promise.resolve([
+      {
+        modifiedAt: new Date("2026-07-27T08:00:00.000Z"),
+        relativePath: "src/main.ts",
+        sizeBytes: "12",
+      },
+    ]),
+  );
   const destroy = vi.fn(() => Promise.resolve(2));
   const bulkCreate = vi.fn(() => Promise.resolve([]));
   const update = vi.fn(() => Promise.resolve([0]));
@@ -66,7 +77,7 @@ function createDatabase(scan: ProjectScanModel): {
       models: {
         chatMessages: {} as ArcDatabase["models"]["chatMessages"],
         chatSessions: {} as ArcDatabase["models"]["chatSessions"],
-        projectFiles: { bulkCreate, destroy } as unknown as ArcDatabase["models"]["projectFiles"],
+        projectFiles: { bulkCreate, destroy, findAll } as unknown as ArcDatabase["models"]["projectFiles"],
         projects: {} as ArcDatabase["models"]["projects"],
         projectScans: { create, findOne, update } as unknown as ArcDatabase["models"]["projectScans"],
       },
@@ -74,6 +85,7 @@ function createDatabase(scan: ProjectScanModel): {
     },
     destroy,
     findOne,
+    findAll,
     transaction,
     transactionValue,
     update,
@@ -166,6 +178,37 @@ describe("SequelizeProjectInventoryRepository", () => {
         ["id", "DESC"],
       ],
       where: { projectId },
+    });
+  });
+
+  it("loads the latest usable inventory snapshot in deterministic path order", async () => {
+    const { scan, set } = createScan();
+    set({
+      completedAt: new Date("2026-07-27T09:01:00.000Z"),
+      fileCount: 1,
+      status: "completed",
+      totalBytes: 12,
+    });
+    const { database, findAll, findOne } = createDatabase(scan);
+    const repository = new SequelizeProjectInventoryRepository(database);
+
+    await expect(repository.getCurrentSnapshot(projectId)).resolves.toMatchObject({
+      files: [{ path: "src/main.ts", sizeBytes: 12 }],
+      scan: { id: scanId, status: "completed" },
+    });
+    expect(findOne).toHaveBeenCalledWith({
+      order: [
+        ["completedAt", "DESC"],
+        ["id", "DESC"],
+      ],
+      where: {
+        projectId,
+        status: { [Op.in]: ["completed", "limited"] },
+      },
+    });
+    expect(findAll).toHaveBeenCalledWith({
+      order: [["relativePath", "ASC"]],
+      where: { projectId, scanId },
     });
   });
 

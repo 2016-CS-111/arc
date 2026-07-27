@@ -637,3 +637,79 @@ Acceptance gate:
 
 Milestone 3 is complete. File contents, language parsing, hashing, embeddings, semantic retrieval,
 filesystem watching, and automatic background indexing remain outside this milestone.
+
+## Milestone 4: Source Intelligence
+
+Status: In progress.
+
+Goal: transform the safe repository inventory into structured, freshness-aware source intelligence
+without sending the repository to the model.
+
+Milestone 4 is divided into content safety, symbols, dependency graphs, framework understanding,
+and client-integration gates. The detailed Milestone 4.1 design is in
+`docs/milestone-4.1-architecture.md`.
+
+### Milestone 4.1: Content Safety and Fingerprints
+
+Status: Complete.
+
+Goal: safely fingerprint eligible UTF-8 source files and publish an atomic source catalog without
+persisting source text.
+
+Included:
+
+- Explicit backend source-index request based on the latest usable metadata inventory.
+- Re-evaluation of current ignore rules immediately before every content read.
+- Bounded regular-file reads with containment, symlink, mutation, binary, and UTF-8 checks.
+- Exact-byte SHA-256 fingerprints and deterministic path-based language classification.
+- Durable source-index runs and per-path ready or skipped outcomes in PostgreSQL.
+- Separate source catalog with inventory-scan freshness reporting.
+- Atomic publication and preservation of the previous catalog after failure or restart interruption.
+- Local PostgreSQL acceptance command.
+- Shared contract, source reader, classifier, service, repository, controller, and recovery tests.
+- `pnpm source:index:verify` coverage for stable IDs, changed hashes, freshness, atomic rollback,
+  restart recovery, and cleanup.
+
+Not included:
+
+- Persisted source text.
+- Tree-sitter, syntax trees, symbols, or dependency edges.
+- Embeddings, chunks, semantic search, or chat context.
+- VSCode controls, automatic indexing, filesystem watching, or background workers.
+
+Acceptance gate:
+
+- Only explicitly requested, currently eligible, bounded UTF-8 regular files are fingerprinted.
+- Source text is absent from PostgreSQL, logs, API responses, VSCode, and Ollama.
+- Repeated unchanged indexing preserves source-file identity and hashes.
+- Metadata rescans make the current source catalog observably stale.
+- Successful publication is atomic; failed and interrupted runs preserve the previous catalog.
+- Full workspace and local PostgreSQL verification pass.
+
+Milestone 4.1 is complete. It establishes fingerprints and freshness only; source text parsing and
+symbol persistence begin in Milestone 4.2.
+
+### Milestone 4.2: Symbol Extraction
+
+Status: Planned.
+
+Goal: parse ready source files with Tree-sitter and persist language-neutral symbols.
+
+### Milestone 4.3: Import and Dependency Graph
+
+Status: Planned.
+
+Goal: resolve file and module relationships into a traversable project graph.
+
+### Milestone 4.4: Framework Understanding
+
+Status: Planned.
+
+Goal: add analyzers for NestJS, Express, Next.js, React, Sequelize, and related project structures.
+
+### Milestone 4.5: Source Intelligence Integration and Acceptance
+
+Status: Planned.
+
+Goal: add explicit VSCode indexing controls, progress, durable status, and final Milestone 4
+acceptance.

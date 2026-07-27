@@ -1,12 +1,15 @@
 import {
   CheckProjectPathRequestSchema,
   LatestProjectScanResponseSchema,
+  LatestProjectSourceIndexResponseSchema,
   ProjectIdSchema,
   RegisterProjectRequestSchema,
   type CheckProjectPathRequest,
   type LatestProjectScanResponse,
+  type LatestProjectSourceIndexResponse,
   type ProjectIgnoreDecision,
   type ProjectScan,
+  type ProjectSourceIndex,
   type RegisterProjectRequest,
   type RegisterProjectResponse,
 } from "@arc/contracts";
@@ -27,6 +30,7 @@ import {
 import { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
 import { ProjectInventoryService } from "../application/project-inventory.service.js";
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
+import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -34,6 +38,9 @@ import {
   ProjectNotFoundError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
+  ProjectInventoryRequiredError,
+  ProjectSourceIndexAlreadyRunningError,
+  ProjectSourceIndexFailedError,
 } from "../domain/project.errors.js";
 
 @Controller("projects")
@@ -45,6 +52,8 @@ export class ProjectsController {
     private readonly projectIgnorePolicyService: ProjectIgnorePolicyService,
     @Inject(ProjectInventoryService)
     private readonly projectInventoryService: ProjectInventoryService,
+    @Inject(ProjectSourceIndexService)
+    private readonly projectSourceIndexService: ProjectSourceIndexService,
   ) {}
 
   @Post("register")
@@ -59,6 +68,30 @@ export class ProjectsController {
       }
 
       throw error;
+    }
+  }
+
+  @Post(":projectId/sources/index")
+  public async indexSources(@Param("projectId") projectIdValue: unknown): Promise<ProjectSourceIndex> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return await this.projectSourceIndexService.index(projectId);
+    } catch (error) {
+      this.mapSourceIndexError(error);
+    }
+  }
+
+  @Get(":projectId/sources/index")
+  public async getLatestSourceIndex(
+    @Param("projectId") projectIdValue: unknown,
+  ): Promise<LatestProjectSourceIndexResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return LatestProjectSourceIndexResponseSchema.parse(await this.projectSourceIndexService.getLatest(projectId));
+    } catch (error) {
+      this.mapSourceIndexError(error);
     }
   }
 
@@ -144,6 +177,20 @@ export class ProjectsController {
       throw new ConflictException(error.message);
     }
     if (error instanceof ProjectScanFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
+
+    throw error;
+  }
+
+  private mapSourceIndexError(error: unknown): never {
+    if (error instanceof ProjectNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof ProjectInventoryRequiredError || error instanceof ProjectSourceIndexAlreadyRunningError) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectSourceIndexFailedError) {
       throw new ServiceUnavailableException(error.message);
     }
 

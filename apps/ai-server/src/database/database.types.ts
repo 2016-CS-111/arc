@@ -5,6 +5,11 @@ import type {
   ProjectScanErrorCode,
   ProjectScanLimitReason,
   ProjectScanStatus,
+  ProjectSourceFileSkipReason,
+  ProjectSourceFileStatus,
+  ProjectSourceIndexErrorCode,
+  ProjectSourceIndexLimitReason,
+  ProjectSourceIndexStatus,
 } from "@arc/contracts";
 import type { ModelStatic, Optional, Sequelize } from "sequelize";
 
@@ -13,6 +18,8 @@ import type { ChatSessionModel } from "./models/chat-session.model.js";
 import type { ProjectFileModel } from "./models/project-file.model.js";
 import type { ProjectModel } from "./models/project.model.js";
 import type { ProjectScanModel } from "./models/project-scan.model.js";
+import type { ProjectSourceFileModel } from "./models/project-source-file.model.js";
+import type { ProjectSourceIndexRunModel } from "./models/project-source-index-run.model.js";
 
 export interface ChatSessionAttributes {
   readonly id: string;
@@ -91,12 +98,60 @@ export interface ProjectFileAttributes {
 
 export type ProjectFileCreationAttributes = Optional<ProjectFileAttributes, "id">;
 
+export interface ProjectSourceIndexRunAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly inventoryScanId: string;
+  readonly status: ProjectSourceIndexStatus;
+  readonly readyFileCount: number;
+  readonly skippedFileCount: number;
+  readonly inspectedBytes: number | string;
+  readonly readyBytes: number | string;
+  readonly limitReasons: ProjectSourceIndexLimitReason[];
+  readonly errorCode: ProjectSourceIndexErrorCode | null;
+  readonly startedAt: Date;
+  readonly completedAt: Date | null;
+}
+
+export type ProjectSourceIndexRunCreationAttributes = Optional<
+  ProjectSourceIndexRunAttributes,
+  | "id"
+  | "status"
+  | "readyFileCount"
+  | "skippedFileCount"
+  | "inspectedBytes"
+  | "readyBytes"
+  | "limitReasons"
+  | "errorCode"
+  | "startedAt"
+  | "completedAt"
+>;
+
+export interface ProjectSourceFileAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly sourceIndexRunId: string;
+  readonly inventoryScanId: string;
+  readonly relativePath: string;
+  readonly status: ProjectSourceFileStatus;
+  readonly skipReason: ProjectSourceFileSkipReason | null;
+  readonly contentHash: string | null;
+  readonly language: string | null;
+  readonly sizeBytes: number | string;
+  readonly modifiedAt: Date;
+  readonly indexedAt: Date;
+}
+
+export type ProjectSourceFileCreationAttributes = Optional<ProjectSourceFileAttributes, "id" | "indexedAt">;
+
 export interface ArcDatabaseModels {
   readonly chatSessions: ModelStatic<ChatSessionModel>;
   readonly chatMessages: ModelStatic<ChatMessageModel>;
   readonly projectFiles: ModelStatic<ProjectFileModel>;
   readonly projects: ModelStatic<ProjectModel>;
   readonly projectScans: ModelStatic<ProjectScanModel>;
+  readonly projectSourceFiles: ModelStatic<ProjectSourceFileModel>;
+  readonly projectSourceIndexRuns: ModelStatic<ProjectSourceIndexRunModel>;
 }
 
 export interface ArcDatabase {

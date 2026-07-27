@@ -27,6 +27,7 @@
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" --max-warnings=0",
     "ollama:smoke": "pnpm --filter @arc/ai-server ollama:smoke",
     "project:verify": "pnpm --filter @arc/ai-server project:verify",
+    "source:index:verify": "pnpm --filter @arc/ai-server source:index:verify",
     "test": "vitest run"
   },
   "devDependencies": {

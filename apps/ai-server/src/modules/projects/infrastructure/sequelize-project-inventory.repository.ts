@@ -1,10 +1,14 @@
 import { ProjectScanSchema, type ProjectScan } from "@arc/contracts";
-import { Transaction, UniqueConstraintError } from "sequelize";
+import { Op, Transaction, UniqueConstraintError } from "sequelize";
 
 import type { ProjectScanAttributes, ArcDatabase } from "../../../database/database.types.js";
 import type { ProjectScanModel } from "../../../database/models/project-scan.model.js";
 import type { ProjectInventoryRepository } from "../application/project-inventory.repository.js";
-import type { CompleteProjectScanInput, FailProjectScanInput } from "../domain/project-inventory.types.js";
+import type {
+  CompleteProjectScanInput,
+  FailProjectScanInput,
+  ProjectInventorySnapshot,
+} from "../domain/project-inventory.types.js";
 import { ProjectScanAlreadyRunningError } from "../domain/project.errors.js";
 
 export class SequelizeProjectInventoryRepository implements ProjectInventoryRepository {
@@ -81,6 +85,36 @@ export class SequelizeProjectInventoryRepository implements ProjectInventoryRepo
     });
 
     return scan === null ? null : toProjectScan(scan);
+  }
+
+  public async getCurrentSnapshot(projectId: string): Promise<ProjectInventorySnapshot | null> {
+    const scan = await this.database.models.projectScans.findOne({
+      order: [
+        ["completedAt", "DESC"],
+        ["id", "DESC"],
+      ],
+      where: {
+        projectId,
+        status: { [Op.in]: ["completed", "limited"] },
+      },
+    });
+    if (scan === null) {
+      return null;
+    }
+
+    const files = await this.database.models.projectFiles.findAll({
+      order: [["relativePath", "ASC"]],
+      where: { projectId, scanId: scan.id },
+    });
+
+    return {
+      files: files.map((file) => ({
+        modifiedAt: file.modifiedAt.toISOString(),
+        path: file.relativePath,
+        sizeBytes: toSafeInteger(file.sizeBytes),
+      })),
+      scan: toProjectScan(scan),
+    };
   }
 
   public async recoverInterruptedScans(): Promise<number> {

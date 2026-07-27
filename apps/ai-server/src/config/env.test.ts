@@ -22,6 +22,11 @@ describe("loadConfig", () => {
       maxFiles: 20_000,
       maxTotalBytes: 2_147_483_648,
     });
+    expect(config.projectSource).toEqual({
+      batchSize: 500,
+      maxFileBytes: 1_048_576,
+      maxTotalBytes: 268_435_456,
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -37,6 +42,9 @@ describe("loadConfig", () => {
       ARC_PROJECT_SCAN_MAX_DEPTH: "20",
       ARC_PROJECT_SCAN_MAX_FILES: "5000",
       ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: "104857600",
+      ARC_PROJECT_SOURCE_BATCH_SIZE: "100",
+      ARC_PROJECT_SOURCE_MAX_FILE_BYTES: "524288",
+      ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES: "67108864",
     });
 
     expect(config.ollama).toEqual({
@@ -55,6 +63,11 @@ describe("loadConfig", () => {
       maxDepth: 20,
       maxFiles: 5_000,
       maxTotalBytes: 104_857_600,
+    });
+    expect(config.projectSource).toEqual({
+      batchSize: 100,
+      maxFileBytes: 524_288,
+      maxTotalBytes: 67_108_864,
     });
   });
 

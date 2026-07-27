@@ -39,6 +39,9 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(1_099_511_627_776).default(2_147_483_648),
   ARC_PROJECT_SCAN_MAX_DEPTH: z.coerce.number().int().positive().max(100).default(32),
   ARC_PROJECT_SCAN_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
+  ARC_PROJECT_SOURCE_MAX_FILE_BYTES: z.coerce.number().int().positive().max(52_428_800).default(1_048_576),
+  ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(10_737_418_240).default(268_435_456),
+  ARC_PROJECT_SOURCE_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
 });
 
 export interface AppConfig {
@@ -61,6 +64,11 @@ export interface AppConfig {
     readonly maxFiles: number;
     readonly maxTotalBytes: number;
     readonly maxDepth: number;
+    readonly batchSize: number;
+  };
+  readonly projectSource: {
+    readonly maxFileBytes: number;
+    readonly maxTotalBytes: number;
     readonly batchSize: number;
   };
 }
@@ -93,6 +101,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       maxTotalBytes: parsed.ARC_PROJECT_SCAN_MAX_TOTAL_BYTES,
       maxDepth: parsed.ARC_PROJECT_SCAN_MAX_DEPTH,
       batchSize: parsed.ARC_PROJECT_SCAN_BATCH_SIZE,
+    },
+    projectSource: {
+      batchSize: parsed.ARC_PROJECT_SOURCE_BATCH_SIZE,
+      maxFileBytes: parsed.ARC_PROJECT_SOURCE_MAX_FILE_BYTES,
+      maxTotalBytes: parsed.ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES,
     },
   };
 }

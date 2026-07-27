@@ -1,4 +1,4 @@
-import type { ProjectFileMetadata, ProjectScanErrorCode, ProjectScanLimitReason } from "@arc/contracts";
+import type { ProjectFileMetadata, ProjectScan, ProjectScanErrorCode, ProjectScanLimitReason } from "@arc/contracts";
 
 export interface ProjectScanLimits {
   readonly maxFiles: number;
@@ -24,4 +24,9 @@ export interface FailProjectScanInput {
   readonly scanId: string;
   readonly projectId: string;
   readonly errorCode: ProjectScanErrorCode;
+}
+
+export interface ProjectInventorySnapshot {
+  readonly scan: ProjectScan;
+  readonly files: ProjectFileMetadata[];
 }

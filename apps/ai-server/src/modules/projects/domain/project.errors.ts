@@ -39,3 +39,24 @@ export class ProjectScanFailedError extends Error {
     this.name = "ProjectScanFailedError";
   }
 }
+
+export class ProjectInventoryRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a completed inventory scan before source indexing.`);
+    this.name = "ProjectInventoryRequiredError";
+  }
+}
+
+export class ProjectSourceIndexAlreadyRunningError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} already has a running source index.`);
+    this.name = "ProjectSourceIndexAlreadyRunningError";
+  }
+}
+
+export class ProjectSourceIndexFailedError extends Error {
+  public constructor() {
+    super("Arc could not complete the project source index.");
+    this.name = "ProjectSourceIndexFailedError";
+  }
+}

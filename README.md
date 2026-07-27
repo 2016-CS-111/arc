@@ -31,6 +31,7 @@ pnpm db:create
 pnpm db:migrate
 pnpm db:verify
 pnpm project:verify
+pnpm source:index:verify
 pnpm ollama:smoke
 pnpm chat:socket-smoke
 pnpm chat:cancel-smoke
@@ -166,3 +167,23 @@ notification and Arc status-bar item show progress and terminal state, and the s
 after an extension reload. `pnpm project:verify` runs the repeatable filesystem, PostgreSQL, atomic
 replacement, and restart-recovery acceptance gate. See
 [the Milestone 3 acceptance guide](docs/milestone-3-acceptance.md) for the complete matrix.
+
+## Source Fingerprints
+
+Milestone 4.1 adds explicit source indexing for the latest usable repository inventory:
+
+```txt
+POST /projects/:projectId/sources/index
+GET  /projects/:projectId/sources/index
+```
+
+The backend rechecks ignore rules, safely inspects bounded regular files, rejects symlinks, binary
+data, invalid UTF-8, stale metadata, and concurrent mutations, then stores SHA-256 fingerprints and
+language IDs. Source text is held only transiently while hashing; it is never stored in PostgreSQL,
+returned by these endpoints, sent to VSCode, or sent to Ollama.
+
+Configure source limits with `ARC_PROJECT_SOURCE_MAX_FILE_BYTES`,
+`ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES`, and `ARC_PROJECT_SOURCE_BATCH_SIZE`. Run
+`pnpm source:index:verify` to apply pending migrations and verify source safety, stable identities,
+catalog freshness, atomic rollback, and restart recovery against local PostgreSQL. Milestone 4.1
+does not add a VSCode source-index command; client integration remains Milestone 4.5.
