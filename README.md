@@ -32,6 +32,7 @@ pnpm db:migrate
 pnpm db:verify
 pnpm project:verify
 pnpm source:index:verify
+pnpm tree-sitter:smoke
 pnpm ollama:smoke
 pnpm chat:socket-smoke
 pnpm chat:cancel-smoke
@@ -40,6 +41,9 @@ pnpm extension:run
 ```
 
 The AI server listens on `http://127.0.0.1:7331` by default.
+
+`pnpm tree-sitter:smoke` verifies the pinned native JavaScript, JSX, TypeScript, and TSX parser
+stack. After `pnpm build`, `pnpm tree-sitter:smoke:compiled` verifies the emitted backend path.
 
 ## PostgreSQL
 

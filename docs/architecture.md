@@ -362,6 +362,38 @@ Tree-sitter parsing, graph construction, source chunks, embeddings, semantic ret
 index controls remain later gates. The complete design is documented in
 `docs/milestone-4.1-architecture.md`.
 
+## Language-Neutral Symbol Extraction
+
+Milestone 4.2 consumes only a fresh Milestone 4.1 source catalog. The backend safely re-reads each
+ready file that requires parsing, verifies its SHA-256, and sends transient text through an
+Arc-owned Tree-sitter adapter. Unchanged hashes with the same successful parser identity reuse their
+durable result without another read. The initial grammar registry supports JavaScript, JSX,
+TypeScript, and TSX; parser and query types do not cross the infrastructure boundary.
+
+Symbol indexing stores declaration identifiers, language-neutral kinds, lexical identity keys,
+export flags, and source ranges. It does not store syntax trees, bodies, signatures, comments,
+literals, or arbitrary source slices. Source hashes plus a parser identity allow unchanged
+file-level results to be reused, while grammar or query changes invalidate only affected files.
+
+Changed-file symbols and reused-file ownership are published in one Sequelize transaction. Failed
+or restart-interrupted runs preserve the previous symbol catalog, and a newer source-index run makes
+that catalog observably stale. The complete design and four implementation gates are documented in
+`docs/milestone-4.2-architecture.md`.
+
+Milestone 4.2.1 pins `tree-sitter@0.21.1`, `tree-sitter-javascript@0.23.1`, and
+`tree-sitter-typescript@0.23.2`. The compatibility probe confirms native ESM/CJS loading, all four
+dialects, query execution, malformed trees, repeated parser reset, and both `tsx` and compiled
+execution on Node 24/x64 macOS. This binding reports string-input indices as UTF-16 code units, so
+the infrastructure boundary converts offsets and columns to exclusive UTF-8 byte ranges before
+later extraction contracts can observe them.
+
+Milestone 4.2.2 adds the parser-neutral `SourceSymbolExtractor` port and Tree-sitter implementation.
+Language-specific TypeScript string query packs emit declaration candidates; the adapter owns
+context filtering, lexical hierarchy, direct export state, stable occurrence-based identities,
+qualified names, limits, syntax-error reporting, and deterministic source order. Its parser
+identity includes `arc-symbol-query@1`, so later query changes invalidate reusable file results.
+There are still no symbol tables, API endpoints, source-body writes, or VSCode changes.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

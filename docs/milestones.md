@@ -646,8 +646,8 @@ Goal: transform the safe repository inventory into structured, freshness-aware s
 without sending the repository to the model.
 
 Milestone 4 is divided into content safety, symbols, dependency graphs, framework understanding,
-and client-integration gates. The detailed Milestone 4.1 design is in
-`docs/milestone-4.1-architecture.md`.
+and client-integration gates. Detailed designs are in `docs/milestone-4.1-architecture.md` and
+`docs/milestone-4.2-architecture.md`.
 
 ### Milestone 4.1: Content Safety and Fingerprints
 
@@ -691,9 +691,80 @@ symbol persistence begin in Milestone 4.2.
 
 ### Milestone 4.2: Symbol Extraction
 
-Status: Planned.
+Status: In progress. Architecture approved; Milestones 4.2.1 and 4.2.2 complete.
 
 Goal: parse ready source files with Tree-sitter and persist language-neutral symbols.
+
+Planned:
+
+- Backend-only native Tree-sitter adapter with JavaScript, JSX, TypeScript, and TSX grammars.
+- Mandatory Intel macOS compatibility gate before persistence work.
+- Declarative query packs behind a parser-neutral application port.
+- Durable symbol-index runs, per-file parse states, and language-neutral symbols.
+- Source-hash and parser-version invalidation with unchanged-file reuse.
+- Stable symbol identities, lexical hierarchy, export state, and source ranges.
+- Atomic publication, failure preservation, and backend-restart recovery.
+- No persisted syntax trees, source bodies, signatures, comments, literals, or arbitrary snippets.
+
+#### Milestone 4.2.1: Native Parser Compatibility
+
+Status: Complete.
+
+Goal: prove the pinned native runtime and JS/TS grammar set in development, tests, and compiled
+backend execution before adding schema.
+
+Delivered:
+
+- Pinned `tree-sitter@0.21.1`, `tree-sitter-javascript@0.23.1`, and
+  `tree-sitter-typescript@0.23.2`.
+- Explicit pnpm native-build approval limited to the parser runtime and grammars.
+- Backend-only class-based grammar registry and compatibility probe.
+- JavaScript, JSX, TypeScript, and distinct TSX parsing with query execution.
+- Native UTF-16 range verification and exclusive UTF-8 byte-range normalization.
+- Malformed-input tolerance and repeated parser lifecycle coverage.
+- `pnpm tree-sitter:smoke` development command and compiled backend smoke command.
+- Verified on Node `v24.18.0`, Darwin x64 with the complete test, lint, format, and build gate.
+
+No database migration, Sequelize model, symbol contract, query pack, persistence, API, or VSCode
+change was introduced.
+
+#### Milestone 4.2.2: Extraction Contracts and Query Packs
+
+Status: Complete.
+
+Goal: extract deterministic language-neutral symbols from JavaScript, JSX, TypeScript, and TSX
+fixtures without PostgreSQL.
+
+Delivered:
+
+- Parser-neutral language, kind, range, limit, extracted-symbol, and extraction-result types.
+- `SourceSymbolExtractor` application port with Tree-sitter isolated in infrastructure.
+- JavaScript/JSX and TypeScript/TSX declaration query packs.
+- Class, interface, type alias, enum, module, namespace, function, constructor, method, property,
+  module-level variable, and constant extraction.
+- Nested named functions, lexical parent keys, qualified names, direct export flags, and
+  deterministic source ordering.
+- SHA-256 identities based on language, parent identity, kind, name, and sibling occurrence rather
+  than source offsets.
+- Query-schema-versioned parser identities for future incremental invalidation.
+- Name, qualified-name, and per-file symbol limits with stable omission reasons and no truncation.
+- Golden tests for JavaScript, JSX, TypeScript, TSX, malformed source, Unicode, duplicates,
+  exclusions, zero-symbol files, and limits.
+
+No migration, Sequelize model, PostgreSQL write, API endpoint, or VSCode change was introduced.
+
+#### Milestone 4.2.3: Durable Incremental Symbol Catalog
+
+Status: Planned.
+
+Goal: persist and atomically publish reusable per-file symbol results with status and recovery APIs.
+
+#### Milestone 4.2.4: Symbol Acceptance
+
+Status: Planned.
+
+Goal: prove symbol identity, invalidation, syntax-error tolerance, atomicity, recovery, privacy, and
+cleanup against local PostgreSQL.
 
 ### Milestone 4.3: Import and Dependency Graph
 
