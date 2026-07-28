@@ -95,6 +95,9 @@ importers:
       tree-sitter-typescript:
         specifier: 0.23.2
         version: 0.23.2(tree-sitter@0.21.1)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
       zod:
         specifier: ^3.25.76
         version: 3.25.76

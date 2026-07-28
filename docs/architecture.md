@@ -445,6 +445,14 @@ static dynamic imports. The adapter safely decodes string literals, normalizes e
 ranges, assigns offset-independent dependency and binding identities, and enforces deterministic
 limits without persisting source. Resolution and graph persistence remain later gates.
 
+Milestone 4.3.2 implements the resolution half behind a compiler-neutral `ProjectModuleResolver`.
+The backend pins TypeScript 5.9.3 and resolves against a catalog-only virtual filesystem: code files
+can satisfy existence checks, while only bounded, hash-verified compiler and package metadata can
+be read. The adapter selects the nearest project config, honors catalog-backed relative `extends`,
+uses distinct import/require modes, and classifies local, built-in, external, and unresolved
+relationships without exposing absolute paths or failed lookup locations. Sequelize publication
+and APIs remain Milestone 4.3.3.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

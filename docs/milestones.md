@@ -847,10 +847,28 @@ was introduced.
 
 #### Milestone 4.3.2: Project-Aware Module Resolution
 
-Status: Planned.
+Status: Complete.
 
 Goal: resolve extracted specifiers against an immutable source-catalog view with a proven
 TypeScript compiler API adapter and strict project containment.
+
+Delivered:
+
+- Pinned backend `typescript@5.9.3` runtime with development and compiled compatibility smokes.
+- Compiler-neutral resolver contracts and prepared resolution context.
+- Catalog-only virtual filesystem that exposes file existence but reads only hash-verified compiler
+  and package metadata.
+- Nearest `tsconfig.json`/`jsconfig.json` selection, catalog-backed relative `extends`, safe
+  fallbacks, and stable configuration warnings.
+- TypeScript-compatible relative paths, extension substitution, path aliases, package `imports`,
+  package self-name `exports`, and distinct import/require conditions.
+- Local, built-in, external package, and unresolved classifications without absolute paths or
+  failed-lookup persistence.
+- Deterministic context hashing, strict project containment, metadata limits, and resolver caches.
+- Focused fixtures and complete workspace verification.
+
+No migration, Sequelize model, database write, index service, API, Nest provider, or VSCode change
+was introduced.
 
 #### Milestone 4.3.3: Durable Incremental Dependency Graph
 

@@ -1,6 +1,6 @@
 # Milestone 4.3 Architecture: Import and Dependency Graph
 
-Status: In progress. Milestone 4.3.1 is implemented and verified.
+Status: In progress. Milestones 4.3.1 and 4.3.2 are implemented and verified.
 
 ## Goal
 
@@ -644,9 +644,9 @@ No VSCode extension or webview file changes in Milestone 4.3.
 
 ## Dependency Changes
 
-Milestone 4.3.2 plans one backend runtime dependency:
+Milestone 4.3.2 adds one pinned backend runtime dependency:
 
-- `typescript`, pinned to the exact version proven by the compatibility gate.
+- `typescript@5.9.3`
 
 The existing Tree-sitter dependencies are reused. No enhanced-resolve, webpack, Babel, SWC, Redis,
 pgvector, graph database, ORM, or worker-pool dependency is planned.
@@ -689,7 +689,7 @@ extension change, or webview change was introduced.
 
 ### 4.3.2 Project-Aware Module Resolution
 
-Status: Planned.
+Status: Complete.
 
 - Run a compatibility probe before pinning the TypeScript backend runtime.
 - Add the `ProjectModuleResolver` port and TypeScript adapter.
@@ -698,6 +698,33 @@ Status: Planned.
 - Prove relative resolution, extension substitution, path aliases, package `imports` and
   self-references, import/require context, external packages, root escapes, and compiled execution.
 - No migration, PostgreSQL write, API, or VSCode change.
+
+Implemented:
+
+- Pinned backend runtime dependency `typescript@5.9.3` after proving ESM loading, the compiler API,
+  resolution modes, extension substitution, and virtual-host execution on Node 24/x64 macOS.
+- Compiler-neutral local, external, built-in, and unresolved result contracts with stable warning
+  and unresolved-reason enums.
+- `ProjectModuleResolver` and prepared resolver-context application ports with no TypeScript types.
+- `CatalogModuleResolutionHost`, exposing current catalog paths to `fileExists` while allowing
+  `readFile` only for bounded, hash-verified `tsconfig*.json`, `jsconfig*.json`, and `package.json`.
+- Strict project containment, safe portable-path normalization, duplicate path/ID rejection, and no
+  `node_modules` or outside-project reads.
+- Nearest `tsconfig.json` then `jsconfig.json` selection, official TypeScript config parsing,
+  catalog-backed relative `extends`, deterministic fallback options, and stable warnings for
+  missing, invalid, cyclic, and outside-project configuration.
+- TypeScript `resolveModuleName` with a per-config cache and explicit import/require resolution
+  modes.
+- Relative extension substitution, path aliases, package `imports`, package self-name `exports`,
+  Node built-ins, normalized external package names, and stable unresolved classifications.
+- SHA-256 resolution-context identity over normalized catalog paths, source-file IDs, metadata
+  hashes, and the pinned resolver identity, never source bodies or absolute lookup paths.
+- `pnpm module-resolution:smoke` and `pnpm module-resolution:smoke:compiled`.
+- Eleven focused resolver/probe tests and complete verification with 258 workspace tests, build,
+  lint, formatting, both smoke paths, webview type-check, and production webview build.
+
+No migration, Sequelize model, PostgreSQL write, dependency index service, REST endpoint, Nest
+provider, VSCode extension change, or webview change was introduced.
 
 ### 4.3.3 Durable Incremental Dependency Graph
 

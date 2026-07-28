@@ -33,6 +33,7 @@ pnpm db:verify
 pnpm project:verify
 pnpm source:index:verify
 pnpm symbol:index:verify
+pnpm module-resolution:smoke
 pnpm tree-sitter:smoke
 pnpm ollama:smoke
 pnpm chat:socket-smoke
@@ -45,6 +46,11 @@ The AI server listens on `http://127.0.0.1:7331` by default.
 
 `pnpm tree-sitter:smoke` verifies the pinned native JavaScript, JSX, TypeScript, and TSX parser
 stack. After `pnpm build`, `pnpm tree-sitter:smoke:compiled` verifies the emitted backend path.
+
+`pnpm module-resolution:smoke` verifies the pinned TypeScript resolver, catalog-only virtual
+filesystem, NodeNext import/require conditions, extension substitution, classifications, and
+project containment. After `pnpm build`, `pnpm module-resolution:smoke:compiled` verifies the
+emitted backend path.
 
 ## PostgreSQL
 

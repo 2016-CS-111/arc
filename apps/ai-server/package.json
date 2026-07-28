@@ -16,6 +16,8 @@
     "project:verify": "tsx src/cli/project-inventory-verify.ts",
     "source:index:verify": "tsx src/cli/source-index-verify.ts",
     "symbol:index:verify": "tsx src/cli/symbol-index-verify.ts",
+    "module-resolution:smoke": "tsx src/cli/module-resolution-smoke.ts",
+    "module-resolution:smoke:compiled": "node dist/cli/module-resolution-smoke.js",
     "tree-sitter:smoke": "tsx src/cli/tree-sitter-smoke.ts",
     "tree-sitter:smoke:compiled": "node dist/cli/tree-sitter-smoke.js",
     "start": "node dist/main.js",
@@ -40,6 +42,7 @@
     "tree-sitter": "0.21.1",
     "tree-sitter-javascript": "0.23.1",
     "tree-sitter-typescript": "0.23.2",
+    "typescript": "5.9.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
