@@ -476,6 +476,33 @@ catalog-bounded TypeScript resolution, Sequelize publication, graph traversal, i
 and alias changes, rollback, restart recovery, privacy checks, and cleanup against local
 PostgreSQL.
 
+## Framework Understanding
+
+Milestone 4.4 combines coherent source, symbol, and dependency provenance into a separate durable
+framework catalog. Hash-verified changed files are parsed once through a shared Tree-sitter
+framework adapter; unchanged normalized evidence is reusable, but cross-file relationships are
+relinked on every run.
+
+```mermaid
+flowchart LR
+  Source["Fresh source catalog"] --> Analyze["Framework evidence analyzers"]
+  Symbols["Fresh symbol catalog"] --> Link["Catalog linker"]
+  Dependencies["Fresh dependency catalog"] --> Link
+  Analyze --> Link
+  Link --> Frameworks["Durable framework catalog"]
+  Frameworks --> Query["Bounded fresh catalog query"]
+```
+
+Exact package/import evidence activates NestJS, Express, Next.js, React, and Sequelize analyzers.
+Next.js also uses documented file conventions inside detected package scopes. Arc records static
+evidence and explicit unresolved state; it does not execute decorators, routers, React components,
+Next.js configuration, Sequelize initialization, or any other project code.
+
+The framework catalog stores stable entities and relationships with source, symbol, dependency,
+scope, range, evidence, and certainty provenance. It never stores source bodies, syntax trees,
+absolute paths, diagnostics, or failed lookup paths. The complete architecture and seven small
+implementation gates are documented in `docs/milestone-4.4-architecture.md`.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

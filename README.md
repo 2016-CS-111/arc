@@ -261,3 +261,14 @@ are configured with `ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH`,
 incremental re-resolution, stable edge and binding UUIDs, deterministic cycle-safe traversal,
 limits, stale rejection, atomic rollback, restart recovery, privacy, and cleanup against local
 PostgreSQL. VSCode dependency controls remain Milestone 4.5.
+
+## Framework Understanding
+
+Milestone 4.4 is architected as seven small implementation gates covering a shared evidence
+foundation, NestJS, Express, Next.js and React, Sequelize, durable framework publication, and
+bounded catalog queries with local PostgreSQL acceptance. Framework conclusions will be grounded
+in exact package/import evidence, static syntax, documented file conventions, and current
+symbol/dependency identities without executing project code.
+
+Implementation has not started. The complete design and sub-milestone boundaries are in
+`docs/milestone-4.4-architecture.md`.

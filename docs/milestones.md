@@ -924,9 +924,78 @@ controls remain Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 
+Status: Architecture complete; implementation not started.
+
+Goal: combine fresh source, symbol, and dependency catalogs into an evidence-backed understanding
+of NestJS, Express, Next.js, React, and Sequelize project structures.
+
+Architecture:
+
+- A separate durable framework catalog preserves the language-neutral symbol and dependency
+  boundaries.
+- Exact package/import evidence and documented file conventions activate analyzers.
+- Hash-verified source is parsed transiently once per changed file; no framework package or project
+  code is executed.
+- Unchanged syntax evidence is reusable, while every cross-file relationship is relinked against
+  the exact current symbol and dependency runs.
+- Framework entities and relationships retain static evidence, stable identities, bounded
+  attributes, source provenance, and explicit unresolved state.
+- Atomic Sequelize publication, freshness, limits, recovery, privacy, bounded queries, and local
+  PostgreSQL acceptance follow the established source-intelligence model.
+
+#### Milestone 4.4.1: Framework Evidence Foundation and Scope Detection
+
 Status: Planned.
 
-Goal: add analyzers for NestJS, Express, Next.js, React, Sequelize, and related project structures.
+Goal: add framework-neutral evidence contracts, exact package/import-backed scope detection,
+shared parser/query infrastructure, stable identities, limits, and current symbol/dependency read
+ports without extracting framework-specific entities.
+
+#### Milestone 4.4.2: NestJS Analyzer
+
+Status: Planned.
+
+Goal: detect evidence-backed NestJS modules, controllers, providers, routes, static module
+metadata, and injection relationships.
+
+#### Milestone 4.4.3: Express Analyzer
+
+Status: Planned.
+
+Goal: detect Express applications, routers, routes, middleware, error middleware, and statically
+linked router mounts.
+
+#### Milestone 4.4.4: Next.js and React Analyzers
+
+Status: Planned.
+
+Goal: detect App Router and Pages Router conventions, route handlers, client boundaries,
+evidence-backed React components, and statically linked JSX composition.
+
+#### Milestone 4.4.5: Sequelize Analyzer
+
+Status: Planned.
+
+Goal: detect class-based and factory-style Sequelize models, bounded static attributes/options,
+and standard associations, including the user's legacy `associate(models)` pattern.
+
+#### Milestone 4.4.6: Durable Incremental Framework Catalog
+
+Status: Planned.
+
+Goal: atomically persist fresh framework scopes, file outcomes, entities, relationships,
+provenance, limits, and recovery with incremental evidence reuse and full relinking.
+
+#### Milestone 4.4.7: Framework Catalog Query and Acceptance
+
+Status: Planned.
+
+Goal: expose bounded fresh framework-catalog queries and prove multi-framework behavior,
+incremental relinking, identity, atomicity, privacy, recovery, and cleanup against local
+PostgreSQL.
+
+Each sub-milestone requires explicit approval and must compile and pass independently. The complete
+design is in `docs/milestone-4.4-architecture.md`.
 
 ### Milestone 4.5: Source Intelligence Integration and Acceptance
 
