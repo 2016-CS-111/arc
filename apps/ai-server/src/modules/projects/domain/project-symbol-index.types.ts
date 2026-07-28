@@ -21,14 +21,7 @@ export type SourceSymbolLanguage = (typeof SOURCE_SYMBOL_LANGUAGES)[number];
 export type SourceSymbolKind = (typeof SOURCE_SYMBOL_KINDS)[number];
 export type SourceSymbolLimitReason = (typeof SOURCE_SYMBOL_LIMIT_REASONS)[number];
 
-export interface SourceSymbolRange {
-  readonly endByte: number;
-  readonly endColumnByte: number;
-  readonly endLine: number;
-  readonly startByte: number;
-  readonly startColumnByte: number;
-  readonly startLine: number;
-}
+export type SourceSymbolRange = SourceCodeRange;
 
 export interface ExtractedSourceSymbol {
   readonly exported: boolean;
@@ -112,3 +105,4 @@ import type {
   ProjectSymbolIndexErrorCode,
   ProjectSymbolIndexLimitReason,
 } from "@arc/contracts";
+import type { SourceCodeRange } from "./source-code.types.js";

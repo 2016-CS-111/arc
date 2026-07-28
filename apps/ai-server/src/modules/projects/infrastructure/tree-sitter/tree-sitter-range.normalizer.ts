@@ -1,9 +1,9 @@
 import type Parser from "tree-sitter";
 
-import type { SourceSymbolRange } from "../../domain/project-symbol-index.types.js";
+import type { SourceCodeRange } from "../../domain/source-code.types.js";
 
 export class TreeSitterRangeNormalizer {
-  public normalize(source: string, node: Parser.SyntaxNode): SourceSymbolRange {
+  public normalize(source: string, node: Parser.SyntaxNode): SourceCodeRange {
     return {
       endByte: this.utf8Length(source, 0, node.endIndex),
       endColumnByte: this.utf8Length(source, this.lineStartIndex(source, node.endIndex), node.endIndex),

@@ -806,7 +806,7 @@ VSCode source-intelligence controls remain Milestone 4.5.
 
 ### Milestone 4.3: Import and Dependency Graph
 
-Status: Planned.
+Status: In progress.
 
 Goal: resolve file and module relationships into a traversable project graph.
 
@@ -824,10 +824,26 @@ Architecture:
 
 #### Milestone 4.3.1: Dependency Extraction Contracts and Query Packs
 
-Status: Planned.
+Status: Complete.
 
 Goal: extract deterministic parser-neutral dependency declarations and bindings from JavaScript,
 JSX, TypeScript, and TSX fixtures without resolution or persistence.
+
+Delivered:
+
+- Parser-neutral dependency, binding, range, limit, omission, and extraction-result types.
+- `SourceDependencyExtractor` application port and class-based Tree-sitter adapter.
+- Versioned JavaScript/JSX and TypeScript/TSX dependency query packs.
+- Static ESM imports and re-exports, TypeScript type-only forms and import-equals, direct
+  module-level CommonJS declarations, and static dynamic imports.
+- Safe string-literal decoding, stable offset-independent dependency and binding identities, and
+  exclusive UTF-8 byte ranges.
+- Deterministic dependency, specifier, binding-count, and binding-name limits without truncation.
+- Golden tests for all dialects, malformed syntax, Unicode, duplicates, exclusions, empty files,
+  invalid specifiers, limits, and parser identities.
+
+No module resolver, migration, Sequelize model, database write, API, Nest provider, or VSCode change
+was introduced.
 
 #### Milestone 4.3.2: Project-Aware Module Resolution
 

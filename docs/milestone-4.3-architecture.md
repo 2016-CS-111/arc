@@ -1,6 +1,6 @@
 # Milestone 4.3 Architecture: Import and Dependency Graph
 
-Status: Architecture complete. Implementation has not started.
+Status: In progress. Milestone 4.3.1 is implemented and verified.
 
 ## Goal
 
@@ -655,7 +655,7 @@ pgvector, graph database, ORM, or worker-pool dependency is planned.
 
 ### 4.3.1 Dependency Extraction Contracts and Query Packs
 
-Status: Planned.
+Status: Complete.
 
 - Add parser-neutral dependency, binding, range, limit, and extraction-result types.
 - Add the `SourceDependencyExtractor` application port.
@@ -663,6 +663,29 @@ Status: Planned.
 - Implement static ESM, TypeScript, CommonJS, and dynamic-import extraction.
 - Prove stable keys, UTF-8 ranges, malformed syntax, limits, and exclusions with golden fixtures.
 - No TypeScript resolver dependency, migration, PostgreSQL write, API, or VSCode change.
+
+Implemented:
+
+- Parser-neutral language, dependency-kind, binding-kind, range, limit, omission, and extraction
+  result types.
+- Shared `SourceCodeRange` used by symbol and dependency extraction without exposing Tree-sitter
+  types.
+- `SourceDependencyExtractor` application port and class-based `TreeSitterDependencyExtractor`.
+- Separate JavaScript/JSX and TypeScript/TSX dependency query packs.
+- Static imports, side-effect imports, named and wildcard re-exports, TypeScript type-only forms,
+  import-equals declarations, module-level CommonJS bindings, and static dynamic imports.
+- Safe JavaScript string-literal decoding with NUL and invalid-escape rejection.
+- Offset-independent SHA-256 dependency and binding identities with duplicate occurrence handling.
+- Exclusive UTF-8 byte ranges for declarations, specifiers, and binding identifiers.
+- Deterministic dependency and binding limits with omission counters and no text truncation.
+- Golden coverage for all four dialects, malformed trees, Unicode, duplicate stability, exclusions,
+  empty files, invalid specifiers, limits, and query-versioned identities.
+- Existing Tree-sitter runtime and grammar versions reused with no dependency change.
+- Verified with 247 workspace tests, lint, formatting, TypeScript build, development and compiled
+  native parser smokes, webview type-check, and production webview build.
+
+No resolver, migration, Sequelize model, PostgreSQL write, REST endpoint, Nest provider, VSCode
+extension change, or webview change was introduced.
 
 ### 4.3.2 Project-Aware Module Resolution
 

@@ -438,6 +438,13 @@ trees, absolute target paths, or TypeScript failed-lookup paths. Failed and inte
 preserve the previous graph, and stale graphs cannot be used by the traversal API. The complete
 design and four implementation gates are documented in `docs/milestone-4.3-architecture.md`.
 
+Milestone 4.3.1 implements the extraction half of this boundary. Versioned JavaScript and
+TypeScript Tree-sitter query packs feed a parser-neutral `SourceDependencyExtractor` with static
+imports, re-exports, type-only forms, import-equals, direct module-level CommonJS declarations, and
+static dynamic imports. The adapter safely decodes string literals, normalizes exclusive UTF-8 byte
+ranges, assigns offset-independent dependency and binding identities, and enforces deterministic
+limits without persisting source. Resolution and graph persistence remain later gates.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
