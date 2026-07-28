@@ -411,6 +411,33 @@ project, drives inventory, source, and symbol services through real native parse
 PostgreSQL, proves incremental reuse and invalidation, forces a publication rollback and restart
 recovery, checks source-body privacy, and removes all temporary database and filesystem state.
 
+## Import and Dependency Graph
+
+Milestone 4.3 will reuse Tree-sitter to extract static dependency syntax from fresh JavaScript,
+JSX, TypeScript, and TSX source files. A separate TypeScript compiler API adapter will resolve
+project-local targets against a virtual filesystem built only from Arc's current source catalog,
+including bounded in-project compiler configuration and package metadata. Built-in modules,
+external packages, local files, and unresolved imports remain explicit classifications.
+
+```mermaid
+flowchart LR
+  Catalog["Fresh source catalog"] --> Extract["Tree-sitter extraction"]
+  Extract --> Resolve["Catalog-bounded TypeScript resolution"]
+  Catalog --> Resolve
+  Resolve --> Graph["Sequelize dependency graph"]
+  Graph --> Traverse["Bounded graph traversal"]
+```
+
+Extraction results may be reused when source hashes and query identities match, but every edge is
+re-resolved on every dependency run. This lets an unchanged importer react correctly when a target
+is added, removed, or retargeted by compiler configuration without reparsing its source.
+
+The graph will persist module specifiers, binding identifiers, stable relationship keys, source
+ranges, relative local targets, and run provenance. It will not persist source bodies, syntax
+trees, absolute target paths, or TypeScript failed-lookup paths. Failed and interrupted runs
+preserve the previous graph, and stale graphs cannot be used by the traversal API. The complete
+design and four implementation gates are documented in `docs/milestone-4.3-architecture.md`.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

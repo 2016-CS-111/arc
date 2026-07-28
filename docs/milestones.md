@@ -646,8 +646,8 @@ Goal: transform the safe repository inventory into structured, freshness-aware s
 without sending the repository to the model.
 
 Milestone 4 is divided into content safety, symbols, dependency graphs, framework understanding,
-and client-integration gates. Detailed designs are in `docs/milestone-4.1-architecture.md` and
-`docs/milestone-4.2-architecture.md`.
+and client-integration gates. Detailed designs are in `docs/milestone-4.1-architecture.md`,
+`docs/milestone-4.2-architecture.md`, and `docs/milestone-4.3-architecture.md`.
 
 ### Milestone 4.1: Content Safety and Fingerprints
 
@@ -809,6 +809,49 @@ VSCode source-intelligence controls remain Milestone 4.5.
 Status: Planned.
 
 Goal: resolve file and module relationships into a traversable project graph.
+
+Architecture:
+
+- Tree-sitter extracts static dependency syntax behind a parser-neutral port.
+- A catalog-bounded TypeScript adapter resolves project-local targets with compiler-compatible
+  rules.
+- Node built-ins, external packages, local files, and unresolved imports remain distinct.
+- Extraction is reusable by source hash and query identity, while every edge is re-resolved against
+  each current source catalog.
+- Sequelize persists current file states, edges, bindings, run provenance, and freshness without
+  source bodies or absolute target paths.
+- A bounded, deterministic graph API traverses only fresh local relationships.
+
+#### Milestone 4.3.1: Dependency Extraction Contracts and Query Packs
+
+Status: Planned.
+
+Goal: extract deterministic parser-neutral dependency declarations and bindings from JavaScript,
+JSX, TypeScript, and TSX fixtures without resolution or persistence.
+
+#### Milestone 4.3.2: Project-Aware Module Resolution
+
+Status: Planned.
+
+Goal: resolve extracted specifiers against an immutable source-catalog view with a proven
+TypeScript compiler API adapter and strict project containment.
+
+#### Milestone 4.3.3: Durable Incremental Dependency Graph
+
+Status: Planned.
+
+Goal: atomically persist extraction states, re-resolved edges, bindings, freshness, and restart
+recovery in local PostgreSQL.
+
+#### Milestone 4.3.4: Graph Traversal and Acceptance
+
+Status: Planned.
+
+Goal: expose bounded cycle-safe traversal and prove identity, invalidation, atomicity, privacy,
+recovery, and cleanup against local PostgreSQL.
+
+Implementation requires explicit approval for each sub-milestone. The complete design is in
+`docs/milestone-4.3-architecture.md`.
 
 ### Milestone 4.4: Framework Understanding
 
