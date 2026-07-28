@@ -145,6 +145,24 @@ export interface ReactComponentEntityAttributes {
   readonly wrapper: "forwardRef" | "memo" | null;
 }
 
+export interface SequelizeModelEntityAttributes {
+  readonly kind: "sequelize_model";
+  readonly modelName: string | null;
+  readonly origin: "class_init" | "define";
+  readonly tableName: string | null;
+  readonly timestamps: boolean | null;
+}
+
+export interface SequelizeModelAttributeEntityAttributes {
+  readonly allowNull: boolean | null;
+  readonly field: string | null;
+  readonly kind: "sequelize_model_attribute";
+  readonly modelName: string;
+  readonly primaryKey: boolean | null;
+  readonly typeName: string | null;
+  readonly unique: boolean | null;
+}
+
 export type ProjectFrameworkEntityAttributes =
   | NestModuleEntityAttributes
   | NestControllerEntityAttributes
@@ -158,7 +176,9 @@ export type ProjectFrameworkEntityAttributes =
   | NextLayoutEntityAttributes
   | NextRouteHandlerEntityAttributes
   | NextSpecialFileEntityAttributes
-  | ReactComponentEntityAttributes;
+  | ReactComponentEntityAttributes
+  | SequelizeModelEntityAttributes
+  | SequelizeModelAttributeEntityAttributes;
 
 export interface ProjectFrameworkEntityFact {
   readonly attributes: ProjectFrameworkEntityAttributes;
@@ -223,6 +243,18 @@ export interface ReactComponentWrapperRelationshipAttributes {
   readonly wrapper: ReactComponentEntityAttributes["wrapper"];
 }
 
+export interface SequelizeAssociationRelationshipAttributes {
+  readonly association: "belongsTo" | "belongsToMany" | "hasMany" | "hasOne";
+  readonly foreignKey: string | null;
+  readonly kind: "sequelize_association";
+  readonly targetKey: string | null;
+  readonly through: string | null;
+}
+
+export interface SequelizeAttributeDefinitionRelationshipAttributes {
+  readonly kind: "sequelize_model_attribute";
+}
+
 export type ProjectFrameworkRelationshipAttributes =
   | NestInjectionRelationshipAttributes
   | NestModuleRegistrationRelationshipAttributes
@@ -232,7 +264,9 @@ export type ProjectFrameworkRelationshipAttributes =
   | ExpressRouterMountRelationshipAttributes
   | NextComponentOwnershipRelationshipAttributes
   | ReactComponentRenderRelationshipAttributes
-  | ReactComponentWrapperRelationshipAttributes;
+  | ReactComponentWrapperRelationshipAttributes
+  | SequelizeAssociationRelationshipAttributes
+  | SequelizeAttributeDefinitionRelationshipAttributes;
 
 export interface ProjectFrameworkRelationshipFact {
   readonly attributes: ProjectFrameworkRelationshipAttributes;

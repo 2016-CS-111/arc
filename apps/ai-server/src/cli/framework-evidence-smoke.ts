@@ -14,6 +14,7 @@ import {
   TreeSitterNextFrameworkAnalyzer,
   TreeSitterReactFrameworkAnalyzer,
 } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-next-react-framework.analyzer.js";
+import { TreeSitterSequelizeFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-sequelize-framework.analyzer.js";
 
 interface SmokeFixture {
   readonly expectedKinds: readonly SourceFrameworkEvidenceKind[];
@@ -198,6 +199,33 @@ app.use("/api", router);
     !JSON.stringify(nextResult).includes(nextSource) && !JSON.stringify(reactResult).includes(nextSource),
     "Next.js or React analysis retained its source body.",
   );
+  const sequelizeSource = `import { Model, DataTypes } from "sequelize"; class ArcModel extends Model { static configure() { this.init({ id: { type: DataTypes.INTEGER } }, {}); } }`;
+  const sequelizeDependency: ProjectFrameworkDependency = {
+    bindings: [
+      { bindingKey: "Model", importedName: "Model", kind: "named", localName: "Model", typeOnly: false },
+      { bindingKey: "DataTypes", importedName: "DataTypes", kind: "named", localName: "DataTypes", typeOnly: false },
+    ],
+    externalPackage: "sequelize",
+    id: "sequelize-smoke-edge",
+    sourceFileId: "sequelize-smoke-source",
+    sourceRelativePath: "src/model.ts",
+    specifier: "sequelize",
+    typeOnly: false,
+  };
+  const sequelizeResult = new TreeSitterSequelizeFrameworkAnalyzer().analyze({
+    dependencies: [sequelizeDependency],
+    evidence: extractor.extract({ language: "typescript", limits, source: sequelizeSource }).evidence,
+    importBindings: new ProjectFrameworkImportResolver().resolve([sequelizeDependency]),
+    limits: { maxEntities: 20, maxNameBytes: 128, maxRelationships: 40 },
+    relativePath: "src/model.ts",
+    scopeKey: "d".repeat(64),
+    sourceFileId: "sequelize-smoke-source",
+    symbols: [],
+  });
+  assert(
+    sequelizeResult.entities.some((entity) => entity.attributes.kind === "sequelize_model_attribute"),
+    "Sequelize attribute extraction smoke failed.",
+  );
 
   logger.info("Framework evidence compatibility smoke passed", {
     analyzerIdentities: [
@@ -205,6 +233,7 @@ app.use("/api", router);
       expressResult.analyzerIdentity,
       nextResult.analyzerIdentity,
       reactResult.analyzerIdentity,
+      sequelizeResult.analyzerIdentity,
     ],
     architecture: process.arch,
     evidenceCounts: results.map(({ fixture, result }) => ({

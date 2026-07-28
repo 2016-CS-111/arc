@@ -67,6 +67,7 @@ export interface SourceFrameworkCallEvidence extends SourceFrameworkEvidenceBase
   readonly inlineHandlerParameterCounts: readonly (number | null)[];
   readonly kind: "call_expression";
   readonly memberName: string | null;
+  readonly ownerName: string | null;
   readonly reference: SourceFrameworkReference | null;
   readonly receiverCall: SourceFrameworkCallReceiver | null;
 }

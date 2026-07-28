@@ -79,7 +79,7 @@ export class TreeSitterLanguageRegistry {
 
   public getFrameworkEvidenceExtractorIdentity(languageId: TreeSitterLanguageId): string {
     const definition = this.get(languageId);
-    return `tree-sitter@0.21.1/${definition.grammarPackage}@${definition.grammarVersion}/${definition.grammar.name}/arc-framework-evidence-query@4`;
+    return `tree-sitter@0.21.1/${definition.grammarPackage}@${definition.grammarVersion}/${definition.grammar.name}/arc-framework-evidence-query@5`;
   }
 
   public supports(languageId: string): languageId is TreeSitterLanguageId {

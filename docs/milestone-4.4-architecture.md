@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 through 4.4.4 are complete; Milestone 4.4.5 is next.
+Status: In progress. Milestones 4.4.1 through 4.4.5 are complete; Milestone 4.4.6 is next.
 
 ## Goal
 
@@ -789,7 +789,7 @@ Status: Complete.
 
 ### 4.4.5 Sequelize Analyzer
 
-Status: Planned.
+Status: Complete.
 
 - Implement class-based `Model.init`, static `this.init`, `sequelize.define`, and factory-style
   model detection.

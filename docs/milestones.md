@@ -1030,7 +1030,11 @@ No Sequelize, persistence, migration, endpoint, or VSCode change was added.
 
 #### Milestone 4.4.5: Sequelize Analyzer
 
-Status: Planned.
+Status: Complete.
+
+Delivered: class-based `Model.init`, static `this.init`, legacy `sequelize.define`, bounded static
+attributes/options, standard associations, dynamic omissions, limits, stable identities, and native
+smoke coverage. No persistence, migration, endpoint, or VSCode change was added.
 
 Goal: detect class-based and factory-style Sequelize models, bounded static attributes/options,
 and standard associations, including the user's legacy `associate(models)` pattern.

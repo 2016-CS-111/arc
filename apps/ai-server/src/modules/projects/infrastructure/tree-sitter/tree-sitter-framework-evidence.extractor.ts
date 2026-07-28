@@ -230,6 +230,7 @@ export class TreeSitterFrameworkEvidenceExtractor implements SourceFrameworkEvid
       inlineHandlerParameterCounts: this.readInlineHandlerParameterCounts(node),
       kind: "call_expression",
       memberName: readMemberName(functionNode),
+      ownerName: readDeclarationName(findContainingDeclaration(node, classNodeTypes) ?? node),
       reference: functionNode === null ? null : readTreeSitterReference(functionNode),
       receiverCall:
         receiverCall === null
