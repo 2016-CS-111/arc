@@ -1,6 +1,6 @@
 # Milestone 4.2 Architecture: Symbol Extraction
 
-Status: Architecture approved. Milestones 4.2.1 and 4.2.2 are complete; 4.2.3-4.2.4 remain planned.
+Status: Architecture approved. Milestones 4.2.1-4.2.3 are complete; 4.2.4 remains planned.
 
 ## Goal
 
@@ -289,7 +289,10 @@ A partial unique index permits one `running` symbol index per project.
 - `parsed_at`.
 
 There is one current row per source-file UUID, including files with zero symbols or unsupported
-languages. This row is the incremental reuse boundary.
+languages. This row is the incremental reuse boundary. `source_file_id` intentionally remains an
+opaque UUID rather than a foreign key to `project_source_files`: a newer source publication may
+remove current source rows, but that must make the previous symbol catalog stale instead of
+partially deleting its last usable state.
 
 ### `project_symbols`
 
@@ -541,9 +544,29 @@ Implemented:
 
 ### 4.2.3 Durable Incremental Symbol Catalog
 
+Status: Complete.
+
 - Add migration, class-based Sequelize models, repository, service, API, and restart recovery.
 - Reuse unchanged hashes and parser identities.
 - Atomically replace changed-file symbols and preserve the previous catalog on failure.
+
+Implemented:
+
+- Shared run, catalog, status, limit, and typed-error contracts for the synchronous symbol API.
+- Migration `0005_project_symbols.sql` with one-running-run enforcement, terminal-state checks,
+  stable current symbol-file rows, and indexed language-neutral symbol records.
+- Class-based `ProjectSymbolIndexRunModel`, `ProjectSymbolFileModel`, and `ProjectSymbolModel`
+  registration in the central Sequelize registry.
+- Fresh source-catalog reads containing only ready metadata and fingerprints, never source text.
+- Hash and effective-parser-identity reuse that includes extraction limits, so configuration
+  changes invalidate affected files.
+- Safe changed-file re-reads, exact SHA-256 verification, unsupported and failed file outcomes,
+  syntax-error preservation, total-symbol limits, and periodic event-loop yields.
+- One Sequelize publication transaction that reassigns reusable rows, upserts changed symbols,
+  removes stale outcomes, and preserves stable UUIDs.
+- `POST /projects/:projectId/symbols/index` and `GET /projects/:projectId/symbols/index`.
+- Backend-bootstrap recovery of abandoned runs without changing the previous symbol catalog.
+- Focused contract, service, repository, source-catalog, controller, recovery, and failure tests.
 
 ### 4.2.4 Acceptance
 

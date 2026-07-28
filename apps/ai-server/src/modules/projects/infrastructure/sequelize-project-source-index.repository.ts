@@ -7,6 +7,7 @@ import type { ProjectSourceIndexRepository } from "../application/project-source
 import type {
   CompleteProjectSourceIndexInput,
   FailProjectSourceIndexInput,
+  ProjectSourceCatalogSnapshot,
 } from "../domain/project-source-index.types.js";
 import { ProjectSourceIndexAlreadyRunningError } from "../domain/project.errors.js";
 
@@ -115,6 +116,43 @@ export class SequelizeProjectSourceIndexRepository implements ProjectSourceIndex
       },
     });
     return run === null ? null : toProjectSourceIndex(run);
+  }
+
+  public async getCurrentReadyCatalog(projectId: string): Promise<ProjectSourceCatalogSnapshot | null> {
+    const run = await this.getCurrentCatalogRun(projectId);
+    if (run === null) {
+      return null;
+    }
+
+    const files = await this.database.models.projectSourceFiles.findAll({
+      order: [
+        ["relativePath", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        projectId,
+        sourceIndexRunId: run.id,
+        status: "ready",
+      },
+    });
+
+    return {
+      files: files.map((file) => {
+        const attributes = file.get();
+        if (attributes.contentHash === null || attributes.language === null) {
+          throw new Error("Arc source catalog returned an invalid ready file.");
+        }
+        return {
+          contentHash: attributes.contentHash,
+          id: attributes.id,
+          language: attributes.language,
+          modifiedAt: attributes.modifiedAt.toISOString(),
+          relativePath: attributes.relativePath,
+          sizeBytes: toSafeInteger(attributes.sizeBytes),
+        };
+      }),
+      run,
+    };
   }
 
   public async getLatestRun(projectId: string): Promise<ProjectSourceIndex | null> {

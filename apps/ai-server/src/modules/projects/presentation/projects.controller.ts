@@ -2,14 +2,17 @@ import {
   CheckProjectPathRequestSchema,
   LatestProjectScanResponseSchema,
   LatestProjectSourceIndexResponseSchema,
+  LatestProjectSymbolIndexResponseSchema,
   ProjectIdSchema,
   RegisterProjectRequestSchema,
   type CheckProjectPathRequest,
   type LatestProjectScanResponse,
   type LatestProjectSourceIndexResponse,
+  type LatestProjectSymbolIndexResponse,
   type ProjectIgnoreDecision,
   type ProjectScan,
   type ProjectSourceIndex,
+  type ProjectSymbolIndex,
   type RegisterProjectRequest,
   type RegisterProjectResponse,
 } from "@arc/contracts";
@@ -31,6 +34,7 @@ import { ProjectIgnorePolicyService } from "../application/project-ignore-policy
 import { ProjectInventoryService } from "../application/project-inventory.service.js";
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
 import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
+import { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -41,6 +45,10 @@ import {
   ProjectInventoryRequiredError,
   ProjectSourceIndexAlreadyRunningError,
   ProjectSourceIndexFailedError,
+  ProjectSourceCatalogRequiredError,
+  ProjectSourceCatalogStaleError,
+  ProjectSymbolIndexAlreadyRunningError,
+  ProjectSymbolIndexFailedError,
 } from "../domain/project.errors.js";
 
 @Controller("projects")
@@ -54,6 +62,8 @@ export class ProjectsController {
     private readonly projectInventoryService: ProjectInventoryService,
     @Inject(ProjectSourceIndexService)
     private readonly projectSourceIndexService: ProjectSourceIndexService,
+    @Inject(ProjectSymbolIndexService)
+    private readonly projectSymbolIndexService: ProjectSymbolIndexService,
   ) {}
 
   @Post("register")
@@ -79,6 +89,30 @@ export class ProjectsController {
       return await this.projectSourceIndexService.index(projectId);
     } catch (error) {
       this.mapSourceIndexError(error);
+    }
+  }
+
+  @Post(":projectId/symbols/index")
+  public async indexSymbols(@Param("projectId") projectIdValue: unknown): Promise<ProjectSymbolIndex> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return await this.projectSymbolIndexService.index(projectId);
+    } catch (error) {
+      this.mapSymbolIndexError(error);
+    }
+  }
+
+  @Get(":projectId/symbols/index")
+  public async getLatestSymbolIndex(
+    @Param("projectId") projectIdValue: unknown,
+  ): Promise<LatestProjectSymbolIndexResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return LatestProjectSymbolIndexResponseSchema.parse(await this.projectSymbolIndexService.getLatest(projectId));
+    } catch (error) {
+      this.mapSymbolIndexError(error);
     }
   }
 
@@ -191,6 +225,24 @@ export class ProjectsController {
       throw new ConflictException(error.message);
     }
     if (error instanceof ProjectSourceIndexFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
+
+    throw error;
+  }
+
+  private mapSymbolIndexError(error: unknown): never {
+    if (error instanceof ProjectNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (
+      error instanceof ProjectSourceCatalogRequiredError ||
+      error instanceof ProjectSourceCatalogStaleError ||
+      error instanceof ProjectSymbolIndexAlreadyRunningError
+    ) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectSymbolIndexFailedError) {
       throw new ServiceUnavailableException(error.message);
     }
 

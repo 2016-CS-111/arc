@@ -191,3 +191,26 @@ Configure source limits with `ARC_PROJECT_SOURCE_MAX_FILE_BYTES`,
 `pnpm source:index:verify` to apply pending migrations and verify source safety, stable identities,
 catalog freshness, atomic rollback, and restart recovery against local PostgreSQL. Milestone 4.1
 does not add a VSCode source-index command; client integration remains Milestone 4.5.
+
+## Symbol Catalog
+
+Milestone 4.2.3 adds explicit durable symbol indexing for a fresh source catalog:
+
+```txt
+POST /projects/:projectId/symbols/index
+GET  /projects/:projectId/symbols/index
+```
+
+The backend re-reads only changed supported files, verifies their SHA-256 fingerprints, and parses
+JavaScript, JSX, TypeScript, and TSX through the pinned native Tree-sitter adapter. Unchanged files
+with the same parser and extraction identity reuse their durable symbols without another read.
+Publication is atomic, and a failed or interrupted run preserves the previous catalog.
+
+PostgreSQL stores declaration names, language-neutral kinds, hierarchy keys, export flags, and
+source ranges. It never stores syntax trees, source bodies, signatures, comments, literals, or
+arbitrary snippets. Configure extraction with `ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PER_FILE`,
+`ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS`, `ARC_PROJECT_SYMBOL_MAX_NAME_BYTES`,
+`ARC_PROJECT_SYMBOL_MAX_QUALIFIED_NAME_BYTES`, `ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES`, and
+`ARC_PROJECT_SYMBOL_BATCH_SIZE`. Apply migration `0005_project_symbols.sql` with
+`pnpm db:migrate` before using the endpoints. The local PostgreSQL acceptance command is added in
+Milestone 4.2.4; VSCode controls remain Milestone 4.5.

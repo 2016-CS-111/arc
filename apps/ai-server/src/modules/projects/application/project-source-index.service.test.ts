@@ -138,6 +138,7 @@ function createService(
     }),
   );
   const getCurrentCatalogRun = vi.fn(() => Promise.resolve(completedIndex));
+  const getCurrentReadyCatalog = vi.fn(() => Promise.resolve(null));
   const getLatestRun = vi.fn(() => Promise.resolve(completedIndex));
   const recoverInterruptedIndexes = vi.fn(() => Promise.resolve(0));
   const sourceIndexRepository = {
@@ -145,6 +146,7 @@ function createService(
     completeIndex,
     failIndex,
     getCurrentCatalogRun,
+    getCurrentReadyCatalog,
     getLatestRun,
     recoverInterruptedIndexes,
   } satisfies ProjectSourceIndexRepository;

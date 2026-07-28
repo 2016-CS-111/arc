@@ -1,6 +1,7 @@
 import type {
   ProjectFileMetadata,
   ProjectSourceFileSkipReason,
+  ProjectSourceIndex,
   ProjectSourceIndexErrorCode,
   ProjectSourceIndexLimitReason,
 } from "@arc/contracts";
@@ -39,6 +40,20 @@ export interface ProjectSourceFileOutcome {
   readonly inspectedBytes: number;
   readonly sizeBytes: number;
   readonly modifiedAt: string;
+}
+
+export interface ReadyProjectSourceFile {
+  readonly id: string;
+  readonly contentHash: string;
+  readonly language: string;
+  readonly modifiedAt: string;
+  readonly relativePath: string;
+  readonly sizeBytes: number;
+}
+
+export interface ProjectSourceCatalogSnapshot {
+  readonly files: readonly ReadyProjectSourceFile[];
+  readonly run: ProjectSourceIndex;
 }
 
 export interface CompleteProjectSourceIndexInput {

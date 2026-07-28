@@ -1,4 +1,4 @@
-import type { ProjectScan, ProjectSourceIndex, RegisterProjectResponse } from "@arc/contracts";
+import type { ProjectScan, ProjectSourceIndex, ProjectSymbolIndex, RegisterProjectResponse } from "@arc/contracts";
 import {
   BadRequestException,
   ConflictException,
@@ -12,6 +12,7 @@ import type { ProjectIgnorePolicyService } from "../application/project-ignore-p
 import type { ProjectInventoryService } from "../application/project-inventory.service.js";
 import type { ProjectRegistrationService } from "../application/project-registration.service.js";
 import type { ProjectSourceIndexService } from "../application/project-source-index.service.js";
+import type { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -22,6 +23,10 @@ import {
   ProjectScanFailedError,
   ProjectSourceIndexAlreadyRunningError,
   ProjectSourceIndexFailedError,
+  ProjectSourceCatalogRequiredError,
+  ProjectSourceCatalogStaleError,
+  ProjectSymbolIndexAlreadyRunningError,
+  ProjectSymbolIndexFailedError,
 } from "../domain/project.errors.js";
 import { ProjectsController } from "./projects.controller.js";
 
@@ -63,6 +68,23 @@ const completedSourceIndex: ProjectSourceIndex = {
   skippedFileCount: 2,
   startedAt: "2026-07-27T10:00:00.000Z",
   status: "completed",
+};
+
+const completedSymbolIndex: ProjectSymbolIndex = {
+  completedAt: "2026-07-27T11:01:00.000Z",
+  errorCode: null,
+  failedFileCount: 0,
+  id: "bfcd6c71-f627-45cb-b133-65cf2e129f13",
+  limitReasons: [],
+  omittedSymbolCount: 0,
+  parsedFileCount: 8,
+  projectId: registration.project.id,
+  reusedFileCount: 2,
+  sourceIndexRunId: completedSourceIndex.id,
+  startedAt: "2026-07-27T11:00:00.000Z",
+  status: "completed",
+  symbolCount: 42,
+  unsupportedFileCount: 1,
 };
 
 describe("ProjectsController", () => {
@@ -215,6 +237,70 @@ describe("ProjectsController", () => {
     await expect(controller.indexSources("invalid")).rejects.toBeInstanceOf(BadRequestException);
     await expect(controller.getLatestSourceIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it("starts symbol indexing and returns current symbol-catalog freshness", async () => {
+    const indexSymbols = vi.fn(() => Promise.resolve(completedSymbolIndex));
+    const getLatestSymbols = vi.fn(() =>
+      Promise.resolve({
+        currentCatalog: {
+          completedAt: completedSymbolIndex.completedAt,
+          failedFileCount: completedSymbolIndex.failedFileCount,
+          omittedSymbolCount: completedSymbolIndex.omittedSymbolCount,
+          parsedFileCount: completedSymbolIndex.parsedFileCount,
+          reusedFileCount: completedSymbolIndex.reusedFileCount,
+          sourceIndexRunId: completedSymbolIndex.sourceIndexRunId,
+          stale: false,
+          symbolCount: completedSymbolIndex.symbolCount,
+          symbolIndexId: completedSymbolIndex.id,
+          unsupportedFileCount: completedSymbolIndex.unsupportedFileCount,
+        },
+        latestRun: completedSymbolIndex,
+      }),
+    );
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      indexSymbols,
+      getLatestSymbols,
+    );
+
+    await expect(controller.indexSymbols(registration.project.id)).resolves.toEqual(completedSymbolIndex);
+    await expect(controller.getLatestSymbolIndex(registration.project.id)).resolves.toMatchObject({
+      currentCatalog: { stale: false },
+      latestRun: completedSymbolIndex,
+    });
+  });
+
+  it.each([
+    [new ProjectNotFoundError(registration.project.id), NotFoundException],
+    [new ProjectSourceCatalogRequiredError(registration.project.id), ConflictException],
+    [new ProjectSourceCatalogStaleError(registration.project.id), ConflictException],
+    [new ProjectSymbolIndexAlreadyRunningError(registration.project.id), ConflictException],
+    [new ProjectSymbolIndexFailedError(), ServiceUnavailableException],
+  ])("maps symbol-index errors to stable HTTP responses", async (error, expectedError) => {
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(() => Promise.reject(error)),
+    );
+
+    await expect(controller.indexSymbols(registration.project.id)).rejects.toBeInstanceOf(expectedError);
+  });
+
+  it("rejects malformed symbol-index project identifiers", async () => {
+    const controller = createController(vi.fn());
+
+    await expect(controller.indexSymbols("invalid")).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getLatestSymbolIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
+  });
 });
 
 function createController(
@@ -224,11 +310,14 @@ function createController(
   getLatestScan: ReturnType<typeof vi.fn> = vi.fn(),
   index: ReturnType<typeof vi.fn> = vi.fn(),
   getLatest: ReturnType<typeof vi.fn> = vi.fn(),
+  indexSymbols: ReturnType<typeof vi.fn> = vi.fn(),
+  getLatestSymbols: ReturnType<typeof vi.fn> = vi.fn(),
 ): ProjectsController {
   return new ProjectsController(
     { register } as unknown as ProjectRegistrationService,
     { check } as unknown as ProjectIgnorePolicyService,
     { getLatestScan, scan } as unknown as ProjectInventoryService,
     { getLatest, index } as unknown as ProjectSourceIndexService,
+    { getLatest: getLatestSymbols, index: indexSymbols } as unknown as ProjectSymbolIndexService,
   );
 }

@@ -60,3 +60,31 @@ export class ProjectSourceIndexFailedError extends Error {
     this.name = "ProjectSourceIndexFailedError";
   }
 }
+
+export class ProjectSourceCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a completed source index before symbol indexing.`);
+    this.name = "ProjectSourceCatalogRequiredError";
+  }
+}
+
+export class ProjectSourceCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a fresh source index before symbol indexing.`);
+    this.name = "ProjectSourceCatalogStaleError";
+  }
+}
+
+export class ProjectSymbolIndexAlreadyRunningError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} already has a running symbol index.`);
+    this.name = "ProjectSymbolIndexAlreadyRunningError";
+  }
+}
+
+export class ProjectSymbolIndexFailedError extends Error {
+  public constructor() {
+    super("Arc could not complete the project symbol index.");
+    this.name = "ProjectSymbolIndexFailedError";
+  }
+}

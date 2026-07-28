@@ -10,9 +10,15 @@ import type {
   ProjectSourceIndexErrorCode,
   ProjectSourceIndexLimitReason,
   ProjectSourceIndexStatus,
+  ProjectSymbolFileErrorCode,
+  ProjectSymbolFileStatus,
+  ProjectSymbolIndexErrorCode,
+  ProjectSymbolIndexLimitReason,
+  ProjectSymbolIndexStatus,
 } from "@arc/contracts";
 import type { ModelStatic, Optional, Sequelize } from "sequelize";
 
+import type { SourceSymbolKind } from "../modules/projects/domain/project-symbol-index.types.js";
 import type { ChatMessageModel } from "./models/chat-message.model.js";
 import type { ChatSessionModel } from "./models/chat-session.model.js";
 import type { ProjectFileModel } from "./models/project-file.model.js";
@@ -20,6 +26,9 @@ import type { ProjectModel } from "./models/project.model.js";
 import type { ProjectScanModel } from "./models/project-scan.model.js";
 import type { ProjectSourceFileModel } from "./models/project-source-file.model.js";
 import type { ProjectSourceIndexRunModel } from "./models/project-source-index-run.model.js";
+import type { ProjectSymbolFileModel } from "./models/project-symbol-file.model.js";
+import type { ProjectSymbolIndexRunModel } from "./models/project-symbol-index-run.model.js";
+import type { ProjectSymbolModel } from "./models/project-symbol.model.js";
 
 export interface ChatSessionAttributes {
   readonly id: string;
@@ -144,6 +153,83 @@ export interface ProjectSourceFileAttributes {
 
 export type ProjectSourceFileCreationAttributes = Optional<ProjectSourceFileAttributes, "id" | "indexedAt">;
 
+export interface ProjectSymbolIndexRunAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly sourceIndexRunId: string;
+  readonly status: ProjectSymbolIndexStatus;
+  readonly parsedFileCount: number;
+  readonly reusedFileCount: number;
+  readonly unsupportedFileCount: number;
+  readonly failedFileCount: number;
+  readonly symbolCount: number;
+  readonly omittedSymbolCount: number;
+  readonly limitReasons: ProjectSymbolIndexLimitReason[];
+  readonly errorCode: ProjectSymbolIndexErrorCode | null;
+  readonly startedAt: Date;
+  readonly completedAt: Date | null;
+}
+
+export type ProjectSymbolIndexRunCreationAttributes = Optional<
+  ProjectSymbolIndexRunAttributes,
+  | "id"
+  | "status"
+  | "parsedFileCount"
+  | "reusedFileCount"
+  | "unsupportedFileCount"
+  | "failedFileCount"
+  | "symbolCount"
+  | "omittedSymbolCount"
+  | "limitReasons"
+  | "errorCode"
+  | "startedAt"
+  | "completedAt"
+>;
+
+export interface ProjectSymbolFileAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly symbolIndexRunId: string;
+  readonly sourceFileId: string;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly language: string;
+  readonly parserIdentity: string;
+  readonly status: ProjectSymbolFileStatus;
+  readonly hasSyntaxErrors: boolean;
+  readonly symbolCount: number;
+  readonly omittedSymbolCount: number;
+  readonly errorCode: ProjectSymbolFileErrorCode | null;
+  readonly parsedAt: Date;
+}
+
+export type ProjectSymbolFileCreationAttributes = Optional<
+  ProjectSymbolFileAttributes,
+  "id" | "hasSyntaxErrors" | "symbolCount" | "omittedSymbolCount" | "errorCode" | "parsedAt"
+>;
+
+export interface ProjectSymbolAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly symbolIndexRunId: string;
+  readonly symbolFileId: string;
+  readonly sourceFileId: string;
+  readonly identityKey: string;
+  readonly parentIdentityKey: string | null;
+  readonly kind: SourceSymbolKind;
+  readonly name: string;
+  readonly qualifiedName: string;
+  readonly exported: boolean;
+  readonly startByte: number;
+  readonly endByte: number;
+  readonly startLine: number;
+  readonly startColumnByte: number;
+  readonly endLine: number;
+  readonly endColumnByte: number;
+}
+
+export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, "id" | "exported">;
+
 export interface ArcDatabaseModels {
   readonly chatSessions: ModelStatic<ChatSessionModel>;
   readonly chatMessages: ModelStatic<ChatMessageModel>;
@@ -152,6 +238,9 @@ export interface ArcDatabaseModels {
   readonly projectScans: ModelStatic<ProjectScanModel>;
   readonly projectSourceFiles: ModelStatic<ProjectSourceFileModel>;
   readonly projectSourceIndexRuns: ModelStatic<ProjectSourceIndexRunModel>;
+  readonly projectSymbolFiles: ModelStatic<ProjectSymbolFileModel>;
+  readonly projectSymbolIndexRuns: ModelStatic<ProjectSymbolIndexRunModel>;
+  readonly projectSymbols: ModelStatic<ProjectSymbolModel>;
 }
 
 export interface ArcDatabase {

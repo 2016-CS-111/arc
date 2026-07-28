@@ -392,7 +392,19 @@ Language-specific TypeScript string query packs emit declaration candidates; the
 context filtering, lexical hierarchy, direct export state, stable occurrence-based identities,
 qualified names, limits, syntax-error reporting, and deterministic source order. Its parser
 identity includes `arc-symbol-query@1`, so later query changes invalidate reusable file results.
-There are still no symbol tables, API endpoints, source-body writes, or VSCode changes.
+
+Milestone 4.2.3 adds the durable catalog behind that port. `project_symbol_index_runs` records
+source-catalog provenance and terminal counters, `project_symbol_files` owns the current
+incremental file state, and `project_symbols` stores only declaration identifiers, kinds, hierarchy,
+export state, and normalized ranges. Source-file UUIDs are correlation values rather than foreign
+keys, preserving the previous symbol catalog when a newer source index removes a path.
+
+The symbol service accepts only a fresh source catalog, safely re-reads and hash-verifies changed
+supported files, and reuses files only when their hash and effective parser identity match.
+Publication reassigns reusable symbols, upserts changed outcomes, removes stale rows, and completes
+the run in one Sequelize transaction. `POST /projects/:projectId/symbols/index` starts explicit
+work, while `GET /projects/:projectId/symbols/index` reports the latest run and current-catalog
+freshness. Backend recovery fails abandoned runs without modifying the last published catalog.
 
 ## Local Infrastructure
 

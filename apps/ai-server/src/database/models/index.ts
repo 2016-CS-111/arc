@@ -8,6 +8,9 @@ import { ProjectModel } from "./project.model.js";
 import { ProjectScanModel } from "./project-scan.model.js";
 import { ProjectSourceFileModel } from "./project-source-file.model.js";
 import { ProjectSourceIndexRunModel } from "./project-source-index-run.model.js";
+import { ProjectSymbolFileModel } from "./project-symbol-file.model.js";
+import { ProjectSymbolIndexRunModel } from "./project-symbol-index-run.model.js";
+import { ProjectSymbolModel } from "./project-symbol.model.js";
 
 export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
@@ -18,6 +21,9 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
     projectScans: ProjectScanModel.initialize(sequelize),
     projectSourceFiles: ProjectSourceFileModel.initialize(sequelize),
     projectSourceIndexRuns: ProjectSourceIndexRunModel.initialize(sequelize),
+    projectSymbolFiles: ProjectSymbolFileModel.initialize(sequelize),
+    projectSymbolIndexRuns: ProjectSymbolIndexRunModel.initialize(sequelize),
+    projectSymbols: ProjectSymbolModel.initialize(sequelize),
   };
 
   models.chatSessions.hasMany(models.chatMessages, {
@@ -100,6 +106,69 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.projectSourceFiles.belongsTo(models.projectScans, {
     as: "inventoryScan",
     foreignKey: "inventoryScanId",
+  });
+  models.projects.hasMany(models.projectSymbolIndexRuns, {
+    as: "symbolIndexRuns",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbolIndexRuns.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectSourceIndexRuns.hasMany(models.projectSymbolIndexRuns, {
+    as: "symbolIndexRuns",
+    foreignKey: "sourceIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbolIndexRuns.belongsTo(models.projectSourceIndexRuns, {
+    as: "sourceIndexRun",
+    foreignKey: "sourceIndexRunId",
+  });
+  models.projects.hasMany(models.projectSymbolFiles, {
+    as: "symbolFiles",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbolFiles.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectSymbolIndexRuns.hasMany(models.projectSymbolFiles, {
+    as: "symbolFiles",
+    foreignKey: "symbolIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbolFiles.belongsTo(models.projectSymbolIndexRuns, {
+    as: "symbolIndexRun",
+    foreignKey: "symbolIndexRunId",
+  });
+  models.projectSymbolFiles.hasMany(models.projectSymbols, {
+    as: "symbols",
+    foreignKey: "symbolFileId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbols.belongsTo(models.projectSymbolFiles, {
+    as: "symbolFile",
+    foreignKey: "symbolFileId",
+  });
+  models.projects.hasMany(models.projectSymbols, {
+    as: "symbols",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbols.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectSymbolIndexRuns.hasMany(models.projectSymbols, {
+    as: "symbols",
+    foreignKey: "symbolIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectSymbols.belongsTo(models.projectSymbolIndexRuns, {
+    as: "symbolIndexRun",
+    foreignKey: "symbolIndexRunId",
   });
 
   return models;

@@ -59,3 +59,56 @@ export interface SourceSymbolExtractionResult {
   readonly parserIdentity: string;
   readonly symbols: readonly ExtractedSourceSymbol[];
 }
+
+export interface CurrentProjectSymbolFile {
+  readonly hasSyntaxErrors: boolean;
+  readonly omittedSymbolCount: number;
+  readonly sourceFileId: string;
+  readonly sourceContentHash: string;
+  readonly language: string;
+  readonly parserIdentity: string;
+  readonly status: ProjectSymbolFileStatus;
+  readonly symbolCount: number;
+}
+
+export interface ProjectSymbolFileOutcome {
+  readonly sourceFileId: string;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly language: string;
+  readonly parserIdentity: string;
+  readonly status: ProjectSymbolFileStatus;
+  readonly hasSyntaxErrors: boolean;
+  readonly symbolCount: number;
+  readonly omittedSymbolCount: number;
+  readonly errorCode: ProjectSymbolFileErrorCode | null;
+  readonly symbols: readonly ExtractedSourceSymbol[];
+}
+
+export interface PublishProjectSymbolIndexInput {
+  readonly batchSize: number;
+  readonly failedFileCount: number;
+  readonly files: readonly ProjectSymbolFileOutcome[];
+  readonly limitReasons: readonly ProjectSymbolIndexLimitReason[];
+  readonly omittedSymbolCount: number;
+  readonly parsedFileCount: number;
+  readonly projectId: string;
+  readonly reusedSourceFileIds: readonly string[];
+  readonly reusedFileCount: number;
+  readonly sourceIndexRunId: string;
+  readonly symbolCount: number;
+  readonly symbolIndexId: string;
+  readonly unsupportedFileCount: number;
+}
+
+export interface FailProjectSymbolIndexInput {
+  readonly errorCode: ProjectSymbolIndexErrorCode;
+  readonly projectId: string;
+  readonly symbolIndexId: string;
+}
+import type {
+  ProjectSymbolFileErrorCode,
+  ProjectSymbolFileStatus,
+  ProjectSymbolIndexErrorCode,
+  ProjectSymbolIndexLimitReason,
+} from "@arc/contracts";

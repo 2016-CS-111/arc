@@ -4,6 +4,7 @@ export * from "./api/health.contract.js";
 export * from "./api/project-ignore.contract.js";
 export * from "./api/project-inventory.contract.js";
 export * from "./api/project-source-index.contract.js";
+export * from "./api/project-symbol-index.contract.js";
 export * from "./api/project.contract.js";
 export * from "./api/provider-status.contract.js";
 export * from "./realtime/chat-events.contract.js";

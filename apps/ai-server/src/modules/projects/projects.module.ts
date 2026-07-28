@@ -12,9 +12,12 @@ import { ProjectRegistrationService } from "./application/project-registration.s
 import type { ProjectRepository } from "./application/project.repository.js";
 import type { ProjectSourceIndexRepository } from "./application/project-source-index.repository.js";
 import { ProjectSourceIndexService } from "./application/project-source-index.service.js";
+import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
+import { ProjectSymbolIndexService } from "./application/project-symbol-index.service.js";
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
 import { SourceLanguageClassifier } from "./application/source-language.classifier.js";
 import type { SourceTextReader } from "./application/source-text.reader.js";
+import type { SourceSymbolExtractor } from "./application/source-symbol.extractor.js";
 import type { WorkspaceRootResolver } from "./application/workspace-root-resolver.js";
 import { NodeIgnoreRulesFileReader } from "./infrastructure/node-ignore-rules-file.reader.js";
 import { NodeRepositoryInventoryWalker } from "./infrastructure/node-repository-inventory.walker.js";
@@ -23,13 +26,17 @@ import { NodeWorkspaceRootResolver } from "./infrastructure/node-workspace-root.
 import { SequelizeProjectInventoryRepository } from "./infrastructure/sequelize-project-inventory.repository.js";
 import { SequelizeProjectRepository } from "./infrastructure/sequelize-project.repository.js";
 import { SequelizeProjectSourceIndexRepository } from "./infrastructure/sequelize-project-source-index.repository.js";
+import { SequelizeProjectSymbolIndexRepository } from "./infrastructure/sequelize-project-symbol-index.repository.js";
+import { TreeSitterSymbolExtractor } from "./infrastructure/tree-sitter/tree-sitter-symbol.extractor.js";
 import {
   IGNORE_RULES_FILE_READER,
   PROJECT_INVENTORY_REPOSITORY,
   PROJECT_REPOSITORY,
   PROJECT_SOURCE_INDEX_REPOSITORY,
+  PROJECT_SYMBOL_INDEX_REPOSITORY,
   REPOSITORY_INVENTORY_WALKER,
   SOURCE_TEXT_READER,
+  SOURCE_SYMBOL_EXTRACTOR,
   WORKSPACE_ROOT_RESOLVER,
 } from "./projects.constants.js";
 import { ProjectsController } from "./presentation/projects.controller.js";
@@ -73,6 +80,18 @@ const sourceTextReaderProvider: Provider<SourceTextReader> = {
   useClass: NodeSourceTextReader,
 };
 
+const projectSymbolIndexRepositoryProvider: Provider<ProjectSymbolIndexRepository> = {
+  provide: PROJECT_SYMBOL_INDEX_REPOSITORY,
+  inject: [DATABASE],
+  useFactory: (database: ArcDatabase): ProjectSymbolIndexRepository =>
+    new SequelizeProjectSymbolIndexRepository(database),
+};
+
+const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
+  provide: SOURCE_SYMBOL_EXTRACTOR,
+  useClass: TreeSitterSymbolExtractor,
+};
+
 @Module({
   imports: [DatabaseModule],
   controllers: [ProjectsController],
@@ -80,15 +99,18 @@ const sourceTextReaderProvider: Provider<SourceTextReader> = {
     projectRepositoryProvider,
     projectInventoryRepositoryProvider,
     projectSourceIndexRepositoryProvider,
+    projectSymbolIndexRepositoryProvider,
     workspaceRootResolverProvider,
     ignoreRulesFileReaderProvider,
     repositoryInventoryWalkerProvider,
     sourceTextReaderProvider,
+    sourceSymbolExtractorProvider,
     ProjectPathNormalizer,
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,
     ProjectSourceIndexService,
+    ProjectSymbolIndexService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -97,6 +119,7 @@ const sourceTextReaderProvider: Provider<SourceTextReader> = {
     ProjectIgnorePolicyService,
     ProjectInventoryService,
     ProjectSourceIndexService,
+    ProjectSymbolIndexService,
   ],
 })
 export class ProjectsModule {}

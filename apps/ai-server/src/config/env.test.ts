@@ -27,6 +27,14 @@ describe("loadConfig", () => {
       maxFileBytes: 1_048_576,
       maxTotalBytes: 268_435_456,
     });
+    expect(config.projectSymbol).toEqual({
+      batchSize: 500,
+      maxNameBytes: 512,
+      maxQualifiedNameBytes: 2_048,
+      maxSymbolsPerFile: 5_000,
+      maxTotalSymbols: 100_000,
+      yieldEveryFiles: 25,
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -45,6 +53,12 @@ describe("loadConfig", () => {
       ARC_PROJECT_SOURCE_BATCH_SIZE: "100",
       ARC_PROJECT_SOURCE_MAX_FILE_BYTES: "524288",
       ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES: "67108864",
+      ARC_PROJECT_SYMBOL_BATCH_SIZE: "200",
+      ARC_PROJECT_SYMBOL_MAX_NAME_BYTES: "256",
+      ARC_PROJECT_SYMBOL_MAX_QUALIFIED_NAME_BYTES: "1024",
+      ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PER_FILE: "2500",
+      ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS: "50000",
+      ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES: "10",
     });
 
     expect(config.ollama).toEqual({
@@ -68,6 +82,14 @@ describe("loadConfig", () => {
       batchSize: 100,
       maxFileBytes: 524_288,
       maxTotalBytes: 67_108_864,
+    });
+    expect(config.projectSymbol).toEqual({
+      batchSize: 200,
+      maxNameBytes: 256,
+      maxQualifiedNameBytes: 1_024,
+      maxSymbolsPerFile: 2_500,
+      maxTotalSymbols: 50_000,
+      yieldEveryFiles: 10,
     });
   });
 

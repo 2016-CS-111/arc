@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ArcDatabase, ProjectSourceIndexRunAttributes } from "../../../database/database.types.js";
 import type { ProjectSourceIndexRunModel } from "../../../database/models/project-source-index-run.model.js";
+import type { ProjectSourceFileModel } from "../../../database/models/project-source-file.model.js";
 import { ProjectSourceIndexAlreadyRunningError } from "../domain/project.errors.js";
 import { SequelizeProjectSourceIndexRepository } from "./sequelize-project-source-index.repository.js";
 
@@ -43,6 +44,20 @@ function createDatabase(run: ProjectSourceIndexRunModel) {
   const update = vi.fn(() => Promise.resolve([0]));
   const bulkCreate = vi.fn(() => Promise.resolve([]));
   const destroy = vi.fn(() => Promise.resolve(1));
+  const findFiles = vi.fn(() =>
+    Promise.resolve([
+      {
+        get: () => ({
+          contentHash: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          id: "ac871053-d9f1-4f28-b022-1a18079927bb",
+          language: "typescript",
+          modifiedAt: new Date("2026-07-27T08:30:00.000Z"),
+          relativePath: "src/main.ts",
+          sizeBytes: "5",
+        }),
+      } as unknown as ProjectSourceFileModel,
+    ]),
+  );
   const transactionValue = { id: "transaction" } as unknown as Transaction;
   const transaction = vi.fn((operation: (transaction: Transaction) => Promise<unknown>) => operation(transactionValue));
   const database = {
@@ -52,13 +67,20 @@ function createDatabase(run: ProjectSourceIndexRunModel) {
       projectFiles: {} as ArcDatabase["models"]["projectFiles"],
       projects: {} as ArcDatabase["models"]["projects"],
       projectScans: {} as ArcDatabase["models"]["projectScans"],
-      projectSourceFiles: { bulkCreate, destroy } as unknown as ArcDatabase["models"]["projectSourceFiles"],
+      projectSourceFiles: {
+        bulkCreate,
+        destroy,
+        findAll: findFiles,
+      } as unknown as ArcDatabase["models"]["projectSourceFiles"],
       projectSourceIndexRuns: { create, findOne, update } as unknown as ArcDatabase["models"]["projectSourceIndexRuns"],
+      projectSymbolFiles: {} as ArcDatabase["models"]["projectSymbolFiles"],
+      projectSymbolIndexRuns: {} as ArcDatabase["models"]["projectSymbolIndexRuns"],
+      projectSymbols: {} as ArcDatabase["models"]["projectSymbols"],
     },
     sequelize: { transaction } as unknown as ArcDatabase["sequelize"],
   } satisfies ArcDatabase;
 
-  return { bulkCreate, create, database, destroy, findOne, transaction, transactionValue, update };
+  return { bulkCreate, create, database, destroy, findFiles, findOne, transaction, transactionValue, update };
 }
 
 describe("SequelizeProjectSourceIndexRepository", () => {
@@ -158,6 +180,38 @@ describe("SequelizeProjectSourceIndexRepository", () => {
     await expect(repository.getLatestRun(projectId)).resolves.toMatchObject({ id: sourceIndexId });
     await expect(repository.getCurrentCatalogRun(projectId)).resolves.toMatchObject({ id: sourceIndexId });
     expect(findOne).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns the deterministic ready source catalog without source content", async () => {
+    const { run } = createRun();
+    const { database, findFiles } = createDatabase(run);
+    const repository = new SequelizeProjectSourceIndexRepository(database);
+
+    const catalog = await repository.getCurrentReadyCatalog(projectId);
+    expect(catalog?.run.id).toBe(sourceIndexId);
+    expect(catalog?.files).toEqual([
+      {
+        contentHash: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        id: "ac871053-d9f1-4f28-b022-1a18079927bb",
+        language: "typescript",
+        modifiedAt: "2026-07-27T08:30:00.000Z",
+        relativePath: "src/main.ts",
+        sizeBytes: 5,
+      },
+    ]);
+    expect(findFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        order: [
+          ["relativePath", "ASC"],
+          ["id", "ASC"],
+        ],
+        where: {
+          projectId,
+          sourceIndexRunId: sourceIndexId,
+          status: "ready",
+        },
+      }),
+    );
   });
 
   it("recovers running indexes after backend restart", async () => {

@@ -691,7 +691,7 @@ symbol persistence begin in Milestone 4.2.
 
 ### Milestone 4.2: Symbol Extraction
 
-Status: In progress. Architecture approved; Milestones 4.2.1 and 4.2.2 complete.
+Status: In progress. Architecture approved; Milestones 4.2.1-4.2.3 complete.
 
 Goal: parse ready source files with Tree-sitter and persist language-neutral symbols.
 
@@ -755,9 +755,28 @@ No migration, Sequelize model, PostgreSQL write, API endpoint, or VSCode change 
 
 #### Milestone 4.2.3: Durable Incremental Symbol Catalog
 
-Status: Planned.
+Status: Complete.
 
 Goal: persist and atomically publish reusable per-file symbol results with status and recovery APIs.
+
+Delivered:
+
+- Shared symbol-index run and freshness contracts with bounded typed statuses and errors.
+- Migration and class-based Sequelize models for runs, file outcomes, and language-neutral symbols.
+- Current ready source-catalog reads without source content.
+- Hash and parser-identity reuse, including extraction-limit invalidation.
+- Safe re-read and SHA-256 verification for every changed supported source file.
+- Durable unsupported, source-changed, read-failed, parse-failed, syntax-error, and limited outcomes.
+- Configurable per-file and total symbol limits with periodic event-loop yields.
+- One-transaction publication preserving stable file and symbol UUIDs and removing stale results.
+- Failure preservation and backend-start recovery for abandoned running indexes.
+- Explicit symbol-index and status REST endpoints with stable `400`, `404`, `409`, and `503`
+  behavior.
+- Focused contract, orchestration, Sequelize repository, source-catalog, controller, and recovery
+  tests.
+
+No local PostgreSQL acceptance command or VSCode symbol-index controls were introduced; those
+remain Milestones 4.2.4 and 4.5 respectively.
 
 #### Milestone 4.2.4: Symbol Acceptance
 
