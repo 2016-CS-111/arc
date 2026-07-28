@@ -186,6 +186,7 @@ function createFixture(
     ),
     getCurrentFiles: vi.fn(() => Promise.resolve(options.currentFiles ?? [])),
     getLatestRun: vi.fn(() => Promise.resolve(runningSymbolIndex)),
+    listCatalogSymbols: vi.fn(),
     publishIndex,
     recoverInterruptedIndexes: vi.fn(() => Promise.resolve(0)),
   } satisfies ProjectSymbolIndexRepository;

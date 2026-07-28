@@ -206,3 +206,17 @@ export interface ProjectDependencyGraphEdgePage {
   readonly edges: readonly ProjectDependencyGraphEdgeRecord[];
   readonly hasMore: boolean;
 }
+
+export interface ListProjectDependencyCatalogInput {
+  readonly dependencyIndexId: string;
+  readonly includeBindings: boolean;
+  readonly limit: number;
+  readonly offset: number;
+  readonly projectId: string;
+  readonly sourceFileIds?: readonly string[];
+}
+
+export interface ProjectDependencyCatalogPage {
+  readonly dependencies: readonly ProjectDependencyGraphEdgeRecord[];
+  readonly hasMore: boolean;
+}

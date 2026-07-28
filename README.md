@@ -34,6 +34,7 @@ pnpm project:verify
 pnpm source:index:verify
 pnpm symbol:index:verify
 pnpm dependency:index:verify
+pnpm framework-evidence:smoke
 pnpm module-resolution:smoke
 pnpm tree-sitter:smoke
 pnpm ollama:smoke
@@ -51,6 +52,11 @@ stack. After `pnpm build`, `pnpm tree-sitter:smoke:compiled` verifies the emitte
 `pnpm module-resolution:smoke` verifies the pinned TypeScript resolver, catalog-only virtual
 filesystem, NodeNext import/require conditions, extension substitution, classifications, and
 project containment. After `pnpm build`, `pnpm module-resolution:smoke:compiled` verifies the
+emitted backend path.
+
+`pnpm framework-evidence:smoke` verifies the framework-neutral decorator, call, class-heritage,
+JSX, directive, static-value, identity, and range extraction layer across JavaScript, JSX,
+TypeScript, and TSX. After `pnpm build`, `pnpm framework-evidence:smoke:compiled` verifies the
 emitted backend path.
 
 ## PostgreSQL
@@ -264,11 +270,13 @@ PostgreSQL. VSCode dependency controls remain Milestone 4.5.
 
 ## Framework Understanding
 
-Milestone 4.4 is architected as seven small implementation gates covering a shared evidence
-foundation, NestJS, Express, Next.js and React, Sequelize, durable framework publication, and
-bounded catalog queries with local PostgreSQL acceptance. Framework conclusions will be grounded
-in exact package/import evidence, static syntax, documented file conventions, and current
-symbol/dependency identities without executing project code.
+Milestone 4.4 is split into seven small implementation gates covering a shared evidence foundation,
+NestJS, Express, Next.js and React, Sequelize, durable framework publication, and bounded catalog
+queries with local PostgreSQL acceptance. Milestone 4.4.1 now provides hash-verified nearest-package
+scope detection, exact framework import alias resolution, bounded Tree-sitter evidence extraction
+for all four supported dialects, stable evidence identities, and immutable run-scoped symbol and
+dependency readers.
 
-Implementation has not started. The complete design and sub-milestone boundaries are in
+No framework-specific entity inference, persistence, endpoint, or VSCode control exists yet.
+NestJS analysis is the next gate. The complete design and sub-milestone boundaries are in
 `docs/milestone-4.4-architecture.md`.

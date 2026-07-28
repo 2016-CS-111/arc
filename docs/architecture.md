@@ -503,6 +503,17 @@ scope, range, evidence, and certainty provenance. It never stores source bodies,
 absolute paths, diagnostics, or failed lookup paths. The complete architecture and seven small
 implementation gates are documented in `docs/milestone-4.4-architecture.md`.
 
+Milestone 4.4.1 implements the framework-neutral front of this pipeline. A class-based scope
+detector verifies package metadata hashes, selects the nearest package in monorepos, and activates
+framework scopes only from exact package or dependency evidence. A binding resolver preserves ESM
+and supported CommonJS aliases while excluding local, unrelated, and type-only bindings.
+
+The shared Tree-sitter adapter emits bounded decorators, calls, class heritage, JSX tags,
+directives, and static values with exclusive UTF-8 ranges and offset-independent identities. It
+does not interpret those facts as framework entities. Paged repository ports expose symbol records
+and dependency edges/bindings from one explicit immutable run, preparing later analyzers without
+coupling application code to Sequelize.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

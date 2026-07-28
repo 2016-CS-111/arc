@@ -1,13 +1,20 @@
 import { ProjectSymbolIndexSchema, type ProjectSymbolIndex } from "@arc/contracts";
-import { Op, Transaction, UniqueConstraintError } from "sequelize";
+import { Op, Transaction, UniqueConstraintError, type WhereOptions } from "sequelize";
 
-import type { ArcDatabase, ProjectSymbolIndexRunAttributes } from "../../../database/database.types.js";
+import type {
+  ArcDatabase,
+  ProjectSymbolAttributes,
+  ProjectSymbolIndexRunAttributes,
+} from "../../../database/database.types.js";
 import type { ProjectSymbolIndexRunModel } from "../../../database/models/project-symbol-index-run.model.js";
 import type { ProjectSymbolIndexRepository } from "../application/project-symbol-index.repository.js";
 import type {
   CurrentProjectSymbolFile,
   FailProjectSymbolIndexInput,
+  ListProjectSymbolCatalogInput,
+  ProjectSymbolCatalogPage,
   ProjectSymbolFileOutcome,
+  ProjectSymbolCatalogRecord,
   PublishProjectSymbolIndexInput,
 } from "../domain/project-symbol-index.types.js";
 import { ProjectSymbolIndexAlreadyRunningError } from "../domain/project.errors.js";
@@ -132,6 +139,55 @@ export class SequelizeProjectSymbolIndexRepository implements ProjectSymbolIndex
       where: { projectId },
     });
     return run === null ? null : toProjectSymbolIndex(run);
+  }
+
+  public async listCatalogSymbols(input: ListProjectSymbolCatalogInput): Promise<ProjectSymbolCatalogPage> {
+    validateCatalogPage(input.offset, input.limit);
+    if (input.sourceFileIds?.length === 0) {
+      return { hasMore: false, symbols: [] };
+    }
+
+    const where: WhereOptions<ProjectSymbolAttributes> = {
+      projectId: input.projectId,
+      ...(input.sourceFileIds === undefined ? {} : { sourceFileId: { [Op.in]: [...input.sourceFileIds] } }),
+      symbolIndexRunId: input.symbolIndexId,
+    };
+    const candidates = await this.database.models.projectSymbols.findAll({
+      limit: input.limit + 1,
+      offset: input.offset,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["identityKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where,
+    });
+    const hasMore = candidates.length > input.limit;
+    const selected = candidates.slice(0, input.limit);
+    if (selected.length === 0) {
+      return { hasMore, symbols: [] };
+    }
+
+    const sourceFileIds = [...new Set(selected.map((symbol) => symbol.sourceFileId))];
+    const files = await this.database.models.projectSymbolFiles.findAll({
+      where: {
+        projectId: input.projectId,
+        sourceFileId: { [Op.in]: sourceFileIds },
+        symbolIndexRunId: input.symbolIndexId,
+      },
+    });
+    const sourcePaths = new Map(files.map((file) => [file.sourceFileId, file.relativePath]));
+    if (sourcePaths.size !== sourceFileIds.length) {
+      throw new Error("Arc symbol catalog contains a symbol without a current source file.");
+    }
+
+    return {
+      hasMore,
+      symbols: selected.map((symbol) =>
+        toCatalogSymbol(symbol.get(), requireSourcePath(sourcePaths, symbol.sourceFileId)),
+      ),
+    };
   }
 
   public async recoverInterruptedIndexes(): Promise<number> {
@@ -304,6 +360,42 @@ export class SequelizeProjectSymbolIndexRepository implements ProjectSymbolIndex
       throw new Error("Arc project symbol index is no longer running.");
     }
     return run;
+  }
+}
+
+function toCatalogSymbol(symbol: ProjectSymbolAttributes, relativePath: string): ProjectSymbolCatalogRecord {
+  return {
+    exported: symbol.exported,
+    id: symbol.id,
+    identityKey: symbol.identityKey,
+    kind: symbol.kind,
+    name: symbol.name,
+    parentIdentityKey: symbol.parentIdentityKey,
+    qualifiedName: symbol.qualifiedName,
+    range: {
+      endByte: symbol.endByte,
+      endColumnByte: symbol.endColumnByte,
+      endLine: symbol.endLine,
+      startByte: symbol.startByte,
+      startColumnByte: symbol.startColumnByte,
+      startLine: symbol.startLine,
+    },
+    relativePath,
+    sourceFileId: symbol.sourceFileId,
+  };
+}
+
+function requireSourcePath(paths: ReadonlyMap<string, string>, sourceFileId: string): string {
+  const relativePath = paths.get(sourceFileId);
+  if (relativePath === undefined) {
+    throw new Error("Arc symbol catalog contains a symbol without a current source path.");
+  }
+  return relativePath;
+}
+
+function validateCatalogPage(offset: number, limit: number): void {
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1) {
+    throw new RangeError("Symbol catalog pagination must use a non-negative offset and positive limit.");
   }
 }
 

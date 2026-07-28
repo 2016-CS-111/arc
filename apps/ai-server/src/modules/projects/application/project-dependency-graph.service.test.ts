@@ -262,6 +262,7 @@ function createFixture(options: FixtureOptions = {}) {
     }),
     getCurrentFiles: vi.fn(),
     getLatestRun: vi.fn(),
+    listCatalogDependencies: vi.fn(),
     publishIndex: vi.fn(),
     recoverInterruptedIndexes: vi.fn(),
   } satisfies ProjectDependencyIndexRepository;

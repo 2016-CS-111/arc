@@ -214,6 +214,7 @@ function createFixture(options: FixtureOptions = {}) {
     ),
     getCurrentFiles: vi.fn(() => Promise.resolve(options.currentFiles ?? [])),
     getLatestRun: vi.fn(() => Promise.resolve(runningDependencyIndex)),
+    listCatalogDependencies: vi.fn(),
     publishIndex,
     recoverInterruptedIndexes: vi.fn(() => Promise.resolve(0)),
   } satisfies ProjectDependencyIndexRepository;

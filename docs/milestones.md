@@ -924,7 +924,7 @@ controls remain Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 
-Status: Architecture complete; implementation not started.
+Status: In progress. Milestone 4.4.1 is complete.
 
 Goal: combine fresh source, symbol, and dependency catalogs into an evidence-backed understanding
 of NestJS, Express, Next.js, React, and Sequelize project structures.
@@ -945,11 +945,26 @@ Architecture:
 
 #### Milestone 4.4.1: Framework Evidence Foundation and Scope Detection
 
-Status: Planned.
+Status: Complete.
 
 Goal: add framework-neutral evidence contracts, exact package/import-backed scope detection,
 shared parser/query infrastructure, stable identities, limits, and current symbol/dependency read
 ports without extracting framework-specific entities.
+
+Delivered:
+
+- Hash-verified nearest-package framework scopes for root projects and monorepos.
+- Exact package and import-binding activation for NestJS, Express, Next.js, React, and Sequelize,
+  including alias preservation and type-only/local/unrelated rejection.
+- A parser-neutral evidence port and class-based Tree-sitter implementation for bounded
+  decorators, calls, class heritage, JSX, directives, and static values.
+- Versioned dialect-specific query identities, stable offset-independent evidence keys, exclusive
+  UTF-8 ranges, malformed syntax tolerance, deterministic limits, and source-body privacy.
+- Paged immutable-run readers for current symbol records and dependency edges/bindings.
+- Development and compiled native compatibility smokes.
+- Complete repository verification with 70 test files and 316 passing tests.
+
+No framework-specific entity extraction, migration, persistence, API, or VSCode change was added.
 
 #### Milestone 4.4.2: NestJS Analyzer
 

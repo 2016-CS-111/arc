@@ -53,6 +53,25 @@ export interface SourceSymbolExtractionResult {
   readonly symbols: readonly ExtractedSourceSymbol[];
 }
 
+export interface ProjectSymbolCatalogRecord extends ExtractedSourceSymbol {
+  readonly id: string;
+  readonly relativePath: string;
+  readonly sourceFileId: string;
+}
+
+export interface ListProjectSymbolCatalogInput {
+  readonly limit: number;
+  readonly offset: number;
+  readonly projectId: string;
+  readonly sourceFileIds?: readonly string[];
+  readonly symbolIndexId: string;
+}
+
+export interface ProjectSymbolCatalogPage {
+  readonly hasMore: boolean;
+  readonly symbols: readonly ProjectSymbolCatalogRecord[];
+}
+
 export interface CurrentProjectSymbolFile {
   readonly hasSyntaxErrors: boolean;
   readonly omittedSymbolCount: number;

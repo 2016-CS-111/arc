@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: Architecture complete. Implementation has not started.
+Status: In progress. Milestone 4.4.1 is complete; Milestone 4.4.2 is next.
 
 ## Goal
 
@@ -716,17 +716,28 @@ Framework packages remain fixture text only and are never installed into Arc.
 
 ### 4.4.1 Framework Evidence Foundation and Scope Detection
 
-Status: Planned.
+Status: Complete.
 
-- Add framework, evidence, certainty, entity, relationship, limit, and omission domain contracts.
-- Add package/import-backed framework scope detection with monorepo fixtures.
-- Add the parser-neutral evidence extractor port, analyzer registry, shared identities, normalized
-  ranges, and bounded static-value utilities.
-- Add run-scoped read ports for current symbol records and dependency edges/bindings.
-- Prove exact import aliasing, false-positive rejection, malformed syntax tolerance, limits,
-  deterministic identities, and development/compiled parser compatibility.
-- No framework-specific entity extraction, migration, database write, REST endpoint, or VSCode
-  change.
+Delivered:
+
+- Framework-neutral scope, import-binding, syntax-evidence, static-value, limit, and omission
+  contracts.
+- Hash-verified package metadata detection with nearest-package monorepo scopes and import-only
+  activation.
+- Exact ESM and supported CommonJS framework binding resolution with alias preservation and
+  type-only, local, and unrelated dependency rejection.
+- A parser-neutral evidence port and shared Tree-sitter adapter for decorators, calls, class
+  heritage, JSX tags, directives, and bounded static values.
+- Versioned JavaScript, JSX, TypeScript, and TSX query identities, stable offset-independent
+  evidence keys, malformed-tree tolerance, and exclusive UTF-8 ranges.
+- Paged, deterministic, immutable-run symbol and dependency catalog readers with optional binding
+  loading.
+- Development and compiled framework-evidence smoke commands.
+- Unit coverage for monorepo scoping, aliases, false-positive rejection, syntax errors, Unicode,
+  privacy, limits, deterministic identities, and repository run isolation.
+
+No framework-specific entity extraction, migration, database write, REST endpoint, or VSCode
+change was added.
 
 ### 4.4.2 NestJS Analyzer
 

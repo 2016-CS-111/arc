@@ -16,6 +16,8 @@ import type {
   FailProjectDependencyIndexInput,
   FindProjectDependencyGraphEdgesInput,
   FindProjectDependencyGraphFileInput,
+  ListProjectDependencyCatalogInput,
+  ProjectDependencyCatalogPage,
   ProjectDependencyGraphBindingRecord,
   ProjectDependencyGraphEdgePage,
   ProjectDependencyGraphEdgeRecord,
@@ -269,6 +271,68 @@ export class SequelizeProjectDependencyIndexRepository implements ProjectDepende
       where: { projectId },
     });
     return run === null ? null : toProjectDependencyIndex(run);
+  }
+
+  public async listCatalogDependencies(
+    input: ListProjectDependencyCatalogInput,
+  ): Promise<ProjectDependencyCatalogPage> {
+    validateCatalogPage(input.offset, input.limit);
+    if (input.sourceFileIds?.length === 0) {
+      return { dependencies: [], hasMore: false };
+    }
+
+    const where: WhereOptions<ProjectDependencyEdgeAttributes> = {
+      dependencyIndexRunId: input.dependencyIndexId,
+      projectId: input.projectId,
+      ...(input.sourceFileIds === undefined ? {} : { sourceFileId: { [Op.in]: [...input.sourceFileIds] } }),
+    };
+    const candidates = await this.database.models.projectDependencyEdges.findAll({
+      limit: input.limit + 1,
+      offset: input.offset,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["extractionKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where,
+    });
+    const hasMore = candidates.length > input.limit;
+    const selected = candidates.slice(0, input.limit);
+    if (selected.length === 0) {
+      return { dependencies: [], hasMore };
+    }
+
+    const sourceFileIds = [...new Set(selected.map((edge) => edge.sourceFileId))];
+    const sourceFiles = await this.database.models.projectDependencyFiles.findAll({
+      where: {
+        dependencyIndexRunId: input.dependencyIndexId,
+        projectId: input.projectId,
+        sourceFileId: { [Op.in]: sourceFileIds },
+      },
+    });
+    const sourcePaths = new Map(sourceFiles.map((file) => [file.sourceFileId, file.relativePath]));
+    if (sourcePaths.size !== sourceFileIds.length) {
+      throw new Error("Arc dependency catalog contains an edge without a current source file.");
+    }
+    const bindingsByEdge = input.includeBindings
+      ? await this.getGraphBindings(
+          input.projectId,
+          input.dependencyIndexId,
+          selected.map((edge) => edge.id),
+        )
+      : new Map<string, readonly ProjectDependencyGraphBindingRecord[]>();
+
+    return {
+      dependencies: selected.map((edge) => {
+        const sourceRelativePath = sourcePaths.get(edge.sourceFileId);
+        if (sourceRelativePath === undefined) {
+          throw new Error("Arc dependency catalog contains an edge without a current source path.");
+        }
+        return toGraphEdgeRecord(edge.get(), sourceRelativePath, bindingsByEdge.get(edge.id) ?? []);
+      }),
+      hasMore,
+    };
   }
 
   public async recoverInterruptedIndexes(): Promise<number> {
@@ -786,4 +850,10 @@ function requireNumber(value: number | null): number {
     throw new Error("Arc dependency binding has an incomplete source range.");
   }
   return value;
+}
+
+function validateCatalogPage(offset: number, limit: number): void {
+  if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1) {
+    throw new RangeError("Dependency catalog pagination must use a non-negative offset and positive limit.");
+  }
 }

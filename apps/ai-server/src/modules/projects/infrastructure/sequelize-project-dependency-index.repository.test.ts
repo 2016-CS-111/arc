@@ -489,6 +489,65 @@ describe("SequelizeProjectDependencyIndexRepository", () => {
     );
   });
 
+  it("reads paged dependency evidence from one immutable run with optional bindings", async () => {
+    const { run } = createRun();
+    const { database, findBindings, findEdges, findFiles } = createDatabase(run);
+    const repository = new SequelizeProjectDependencyIndexRepository(database);
+
+    await expect(
+      repository.listCatalogDependencies({
+        dependencyIndexId,
+        includeBindings: true,
+        limit: 10,
+        offset: 3,
+        projectId,
+        sourceFileIds: [sourceFileId],
+      }),
+    ).resolves.toEqual({
+      dependencies: [
+        expect.objectContaining({
+          bindings: [expect.objectContaining({ bindingKey, localName: "target" })],
+          id: dependencyEdgeId,
+          sourceRelativePath: "src/main.ts",
+        }),
+      ],
+      hasMore: false,
+    });
+    expect(findEdges).toHaveBeenCalledWith({
+      limit: 11,
+      offset: 3,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["extractionKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+        sourceFileId: { [Op.in]: [sourceFileId] },
+      },
+    });
+    expect(findFiles).toHaveBeenCalledWith({
+      where: {
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+        sourceFileId: { [Op.in]: [sourceFileId] },
+      },
+    });
+    expect(findBindings).toHaveBeenCalled();
+    await expect(
+      repository.listCatalogDependencies({
+        dependencyIndexId,
+        includeBindings: false,
+        limit: 10,
+        offset: 0,
+        projectId,
+        sourceFileIds: [],
+      }),
+    ).resolves.toEqual({ dependencies: [], hasMore: false });
+  });
+
   it("aborts publication when current file identities cannot be recovered", async () => {
     const { run } = createRun();
     const { database, findFiles } = createDatabase(run);

@@ -5,6 +5,8 @@ import type {
   FailProjectDependencyIndexInput,
   FindProjectDependencyGraphEdgesInput,
   FindProjectDependencyGraphFileInput,
+  ListProjectDependencyCatalogInput,
+  ProjectDependencyCatalogPage,
   ProjectDependencyGraphEdgePage,
   ProjectDependencyGraphFileRecord,
   PublishProjectDependencyIndexInput,
@@ -17,6 +19,7 @@ export interface ProjectDependencyIndexRepository {
   getCurrentFiles(projectId: string): Promise<readonly CurrentProjectDependencyFile[]>;
   getCurrentCatalogRun(projectId: string): Promise<ProjectDependencyIndex | null>;
   getLatestRun(projectId: string): Promise<ProjectDependencyIndex | null>;
+  listCatalogDependencies(input: ListProjectDependencyCatalogInput): Promise<ProjectDependencyCatalogPage>;
   recoverInterruptedIndexes(): Promise<number>;
   findGraphFile(input: FindProjectDependencyGraphFileInput): Promise<ProjectDependencyGraphFileRecord | null>;
   findGraphEdges(input: FindProjectDependencyGraphEdgesInput): Promise<ProjectDependencyGraphEdgePage>;

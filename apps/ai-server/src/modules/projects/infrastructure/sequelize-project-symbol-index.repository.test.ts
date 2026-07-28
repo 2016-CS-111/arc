@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import type {
   ArcDatabase,
   ProjectSymbolFileAttributes,
+  ProjectSymbolAttributes,
   ProjectSymbolIndexRunAttributes,
 } from "../../../database/database.types.js";
 import type { ProjectSymbolFileModel } from "../../../database/models/project-symbol-file.model.js";
 import type { ProjectSymbolIndexRunModel } from "../../../database/models/project-symbol-index-run.model.js";
+import type { ProjectSymbolModel } from "../../../database/models/project-symbol.model.js";
 import { ProjectSymbolIndexAlreadyRunningError } from "../domain/project.errors.js";
 import { SequelizeProjectSymbolIndexRepository } from "./sequelize-project-symbol-index.repository.js";
 
@@ -66,8 +68,36 @@ function createSymbolFile(): ProjectSymbolFileModel {
   return {
     get: () => attributes,
     id: symbolFileId,
+    relativePath: attributes.relativePath,
     sourceFileId,
   } as unknown as ProjectSymbolFileModel;
+}
+
+function createSymbol(): ProjectSymbolModel {
+  const attributes: ProjectSymbolAttributes = {
+    endByte: 26,
+    endColumnByte: 26,
+    endLine: 0,
+    exported: true,
+    id: "6953baac-b65a-44a6-91dd-881c2bf8f334",
+    identityKey: "a".repeat(64),
+    kind: "class",
+    name: "ArcService",
+    parentIdentityKey: null,
+    projectId,
+    qualifiedName: "ArcService",
+    sourceFileId,
+    startByte: 0,
+    startColumnByte: 0,
+    startLine: 0,
+    symbolFileId,
+    symbolIndexRunId: symbolIndexId,
+  };
+  return {
+    get: () => attributes,
+    id: attributes.id,
+    sourceFileId,
+  } as unknown as ProjectSymbolModel;
 }
 
 function createDatabase(run: ProjectSymbolIndexRunModel) {
@@ -79,6 +109,7 @@ function createDatabase(run: ProjectSymbolIndexRunModel) {
   const destroyFiles = vi.fn(() => Promise.resolve(1));
   const findFiles = vi.fn(() => Promise.resolve([createSymbolFile()]));
   const bulkCreateSymbols = vi.fn(() => Promise.resolve([]));
+  const findSymbols = vi.fn(() => Promise.resolve([createSymbol()]));
   const updateSymbols = vi.fn(() => Promise.resolve([1]));
   const destroySymbols = vi.fn(() => Promise.resolve(1));
   const transactionValue = { id: "transaction" } as unknown as Transaction;
@@ -110,6 +141,7 @@ function createDatabase(run: ProjectSymbolIndexRunModel) {
       projectSymbols: {
         bulkCreate: bulkCreateSymbols,
         destroy: destroySymbols,
+        findAll: findSymbols,
         update: updateSymbols,
       } as unknown as ArcDatabase["models"]["projectSymbols"],
     },
@@ -125,6 +157,7 @@ function createDatabase(run: ProjectSymbolIndexRunModel) {
     destroySymbols,
     findFiles,
     findRun,
+    findSymbols,
     transactionValue,
     updateFiles,
     updateRuns,
@@ -321,5 +354,62 @@ describe("SequelizeProjectSymbolIndexRepository", () => {
       }),
       { where: { status: "running" } },
     );
+  });
+
+  it("reads a paged symbol catalog from one immutable run", async () => {
+    const { run } = createRun();
+    const { database, findFiles, findSymbols } = createDatabase(run);
+    const repository = new SequelizeProjectSymbolIndexRepository(database);
+
+    await expect(
+      repository.listCatalogSymbols({
+        limit: 10,
+        offset: 5,
+        projectId,
+        sourceFileIds: [sourceFileId],
+        symbolIndexId,
+      }),
+    ).resolves.toEqual({
+      hasMore: false,
+      symbols: [
+        expect.objectContaining({
+          id: "6953baac-b65a-44a6-91dd-881c2bf8f334",
+          identityKey: "a".repeat(64),
+          relativePath: "src/main.ts",
+          sourceFileId,
+        }),
+      ],
+    });
+    expect(findSymbols).toHaveBeenCalledWith({
+      limit: 11,
+      offset: 5,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["identityKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        projectId,
+        sourceFileId: { [Op.in]: [sourceFileId] },
+        symbolIndexRunId: symbolIndexId,
+      },
+    });
+    expect(findFiles).toHaveBeenCalledWith({
+      where: {
+        projectId,
+        sourceFileId: { [Op.in]: [sourceFileId] },
+        symbolIndexRunId: symbolIndexId,
+      },
+    });
+    await expect(
+      repository.listCatalogSymbols({
+        limit: 10,
+        offset: 0,
+        projectId,
+        sourceFileIds: [],
+        symbolIndexId,
+      }),
+    ).resolves.toEqual({ hasMore: false, symbols: [] });
   });
 });
