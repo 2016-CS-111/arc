@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestone 4.4.1 is complete; Milestone 4.4.2 is next.
+Status: In progress. Milestones 4.4.1 and 4.4.2 are complete; Milestone 4.4.3 is next.
 
 ## Goal
 
@@ -741,13 +741,30 @@ change was added.
 
 ### 4.4.2 NestJS Analyzer
 
-Status: Planned.
+Status: Complete.
 
-- Implement imported-decorator-aware modules, controllers, providers, routes, static module
-  metadata, and injection facts.
-- Prove aliased imports, route prefix composition, static arrays, unresolved dynamic values,
-  malformed files, stable identities, and false-positive rejection.
-- No Express, Next.js, React, Sequelize, migration, database write, API, or VSCode change.
+Delivered:
+
+- Framework-neutral entity, relationship, certainty, omission, analyzer-limit, and transient
+  analysis-result contracts.
+- Shared offset-independent entity and relationship identity generation.
+- A class-based NestJS analyzer that accepts decorators only through exact runtime
+  `@nestjs/common` bindings, including named aliases and namespace imports.
+- Transient module, controller, provider, and HTTP route facts for `Get`, `Post`, `Put`, `Patch`,
+  `Delete`, `Options`, `Head`, and `All`.
+- Static controller and method string/array paths with deterministic normalization and Cartesian
+  route composition.
+- Static module imports, controllers, providers, custom provider tokens, and exports with
+  same-file linking and dependency-edge provenance.
+- Explicit `@Inject` string/identifier tokens and ordinary typed constructor injection, with
+  parameter ownership and explicit-token precedence.
+- Conservative unresolved facts and omissions for dynamic paths, calls, spreads, computed
+  metadata, and runtime tokens.
+- Coverage for aliases, namespace decorators, type-only and unrelated false positives, malformed
+  syntax, limits, source privacy, stable identities after source movement, and native development
+  smoke compatibility.
+
+No Express, Next.js, React, Sequelize, migration, database write, API, or VSCode change was added.
 
 ### 4.4.3 Express Analyzer
 

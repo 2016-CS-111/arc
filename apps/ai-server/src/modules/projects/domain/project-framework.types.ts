@@ -8,6 +8,7 @@ export const SOURCE_FRAMEWORK_EVIDENCE_KINDS = [
   "class_heritage",
   "jsx",
   "directive",
+  "constructor_parameter",
 ] as const;
 
 export const SOURCE_FRAMEWORK_EVIDENCE_OMISSION_REASONS = [
@@ -52,6 +53,9 @@ export interface SourceFrameworkEvidenceBase {
 export interface SourceFrameworkDecoratorEvidence extends SourceFrameworkEvidenceBase {
   readonly arguments: readonly SourceFrameworkStaticValue[];
   readonly kind: "decorator";
+  readonly memberName: string | null;
+  readonly ownerName: string | null;
+  readonly parameterIndex: number | null;
   readonly reference: SourceFrameworkReference | null;
   readonly targetKind: "class" | "method" | "property" | "parameter" | "unknown";
   readonly targetName: string | null;
@@ -80,10 +84,19 @@ export interface SourceFrameworkDirectiveEvidence extends SourceFrameworkEvidenc
   readonly value: string;
 }
 
+export interface SourceFrameworkConstructorParameterEvidence extends SourceFrameworkEvidenceBase {
+  readonly kind: "constructor_parameter";
+  readonly ownerName: string;
+  readonly parameterIndex: number;
+  readonly parameterName: string | null;
+  readonly typeReference: SourceFrameworkReference | null;
+}
+
 export type SourceFrameworkEvidence =
   | SourceFrameworkDecoratorEvidence
   | SourceFrameworkCallEvidence
   | SourceFrameworkClassHeritageEvidence
+  | SourceFrameworkConstructorParameterEvidence
   | SourceFrameworkJsxEvidence
   | SourceFrameworkDirectiveEvidence;
 

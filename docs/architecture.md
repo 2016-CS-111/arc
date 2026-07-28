@@ -514,6 +514,18 @@ does not interpret those facts as framework entities. Paged repository ports exp
 and dependency edges/bindings from one explicit immutable run, preparing later analyzers without
 coupling application code to Sequelize.
 
+Milestone 4.4.2 adds a class-based NestJS analyzer behind a framework-neutral analyzer port.
+Decorator names alone remain insufficient: local and namespace aliases must resolve to exact
+runtime bindings from `@nestjs/common`. The analyzer emits transient module, controller, provider,
+and route facts plus module registration, route ownership, and constructor injection relationships.
+Controller and method path arrays are normalized and combined statically.
+
+Typed constructor parameters and explicit `@Inject` tokens retain parameter ownership and
+dependency-edge provenance. Static same-file targets link immediately; imported and string tokens
+remain named facts for the later catalog linker. Dynamic paths, module factories, computed values,
+and spread metadata are preserved as unresolved facts and omissions without executing project
+code. Stable fact keys exclude byte offsets, and no NestJS fact is durable before Milestone 4.4.6.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

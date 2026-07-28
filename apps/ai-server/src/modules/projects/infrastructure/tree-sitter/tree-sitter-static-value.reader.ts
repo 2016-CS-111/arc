@@ -104,6 +104,9 @@ export class TreeSitterStaticValueReader {
   }
 
   private readObject(node: Parser.SyntaxNode, depth: number, state: StaticReadState): SourceFrameworkStaticValue {
+    if (node.namedChildren.some((child) => child.type !== "pair" && child.type !== "shorthand_property_identifier")) {
+      return { kind: "unknown" };
+    }
     const entries = node.namedChildren.filter(
       (child) => child.type === "pair" || child.type === "shorthand_property_identifier",
     );
@@ -127,7 +130,7 @@ export class TreeSitterStaticValueReader {
       const valueNode = entry.childForFieldName("value");
       const key = keyNode === null ? null : this.readPropertyKey(keyNode);
       if (key === null || valueNode === null) {
-        continue;
+        return { kind: "unknown" };
       }
       if (exceedsByteLimit(key, this.limits.maxNameBytes)) {
         state.omissionReasons.add("name_text_limit");
@@ -181,7 +184,11 @@ export function readTreeSitterReference(node: Parser.SyntaxNode): SourceFramewor
   if (node.type === "this") {
     return { segments: ["this"] };
   }
-  if (node.type !== "member_expression" && node.type !== "nested_identifier") {
+  if (
+    node.type !== "member_expression" &&
+    node.type !== "nested_identifier" &&
+    node.type !== "nested_type_identifier"
+  ) {
     return null;
   }
 

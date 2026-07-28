@@ -1,11 +1,14 @@
 import { createConsoleLogger } from "@arc/shared";
 
+import { ProjectFrameworkImportResolver } from "../modules/projects/application/project-framework-import.resolver.js";
 import type {
+  ProjectFrameworkDependency,
   SourceFrameworkEvidenceKind,
   SourceFrameworkEvidenceLimits,
   SourceFrameworkLanguage,
 } from "../modules/projects/domain/project-framework.types.js";
 import { TreeSitterFrameworkEvidenceExtractor } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-framework-evidence.extractor.js";
+import { TreeSitterNestFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-nest-framework.analyzer.js";
 
 interface SmokeFixture {
   readonly expectedKinds: readonly SourceFrameworkEvidenceKind[];
@@ -66,7 +69,64 @@ function main(): void {
     assert(!JSON.stringify(result).includes(fixture.source), `${fixture.language} retained its source body.`);
   }
 
+  const nestSource = `import { Controller, Get, Injectable, Module } from "@nestjs/common";
+@Injectable() class ArcService {}
+@Controller("arc") class ArcController {
+  constructor(private readonly service: ArcService) {}
+  @Get(":id") read() {}
+}
+@Module({ controllers: [ArcController], providers: [ArcService] }) class ArcModule {}
+`;
+  const nestDependency: ProjectFrameworkDependency = {
+    bindings: ["Controller", "Get", "Injectable", "Module"].map((name) => ({
+      bindingKey: name,
+      importedName: name,
+      kind: "named",
+      localName: name,
+      typeOnly: false,
+    })),
+    externalPackage: "@nestjs/common",
+    id: "nest-smoke-edge",
+    sourceFileId: "nest-smoke-source",
+    sourceRelativePath: "src/arc.module.ts",
+    specifier: "@nestjs/common",
+    typeOnly: false,
+  };
+  const nestEvidence = extractor.extract({
+    language: "typescript",
+    limits,
+    source: nestSource,
+  });
+  const nestResult = new TreeSitterNestFrameworkAnalyzer().analyze({
+    dependencies: [nestDependency],
+    evidence: nestEvidence.evidence,
+    importBindings: new ProjectFrameworkImportResolver().resolve([nestDependency]),
+    limits: {
+      maxEntities: 20,
+      maxNameBytes: 128,
+      maxRelationships: 40,
+    },
+    relativePath: "src/arc.module.ts",
+    scopeKey: "a".repeat(64),
+    sourceFileId: "nest-smoke-source",
+    symbols: [],
+  });
+  assert(
+    nestResult.entities.some(
+      (entity) => entity.attributes.kind === "nest_route" && entity.attributes.fullPaths.includes("/arc/:id"),
+    ),
+    "NestJS route composition smoke failed.",
+  );
+  assert(
+    nestResult.relationships.some(
+      (relationship) => relationship.relationshipKind === "injects" && relationship.targetName === "ArcService",
+    ),
+    "NestJS constructor injection smoke failed.",
+  );
+  assert(!JSON.stringify(nestResult).includes(nestSource), "NestJS analysis retained its source body.");
+
   logger.info("Framework evidence compatibility smoke passed", {
+    analyzerIdentities: [nestResult.analyzerIdentity],
     architecture: process.arch,
     evidenceCounts: results.map(({ fixture, result }) => ({
       count: result.evidence.length,

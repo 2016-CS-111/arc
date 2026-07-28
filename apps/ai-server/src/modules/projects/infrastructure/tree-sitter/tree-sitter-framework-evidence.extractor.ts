@@ -42,11 +42,13 @@ interface EvidenceBuildState {
 const captureKinds: Readonly<Record<string, SourceFrameworkEvidence["kind"]>> = {
   "framework.call": "call_expression",
   "framework.class": "class_heritage",
+  "framework.constructor_parameter": "constructor_parameter",
   "framework.decorator": "decorator",
   "framework.directive": "directive",
   "framework.jsx": "jsx",
 };
 
+const classNodeTypes = new Set(["abstract_class_declaration", "class_declaration"]);
 const methodNodeTypes = new Set(["method_definition", "method_signature"]);
 const parameterNodeTypes = new Set(["optional_parameter", "required_parameter"]);
 const propertyNodeTypes = new Set([
@@ -183,6 +185,9 @@ export class TreeSitterFrameworkEvidenceExtractor implements SourceFrameworkEvid
     if (candidate.kind === "jsx") {
       return this.buildJsx(candidate.node);
     }
+    if (candidate.kind === "constructor_parameter") {
+      return this.buildConstructorParameter(candidate.node);
+    }
     return this.buildDirective(input, candidate.node, state);
   }
 
@@ -198,9 +203,14 @@ export class TreeSitterFrameworkEvidenceExtractor implements SourceFrameworkEvid
     const call = expression.type === "call_expression" ? expression : null;
     const referenceNode = call?.childForFieldName("function") ?? expression;
     const target = resolveDecoratorTarget(node);
+    const owner = target === null ? null : findContainingDeclaration(target, classNodeTypes);
+    const member = target === null ? null : findContainingDeclaration(target, methodNodeTypes);
     return {
       arguments: call === null ? [] : this.readArguments(input, call, state),
       kind: "decorator",
+      memberName: member === null ? null : readDeclarationName(member),
+      ownerName: owner === null ? null : readDeclarationName(owner),
+      parameterIndex: target === null ? null : readParameterIndex(target),
       reference: readTreeSitterReference(referenceNode),
       targetKind: target === null ? "unknown" : decoratorTargetKind(target),
       targetName: target === null ? null : readDeclarationName(target),
@@ -243,6 +253,23 @@ export class TreeSitterFrameworkEvidenceExtractor implements SourceFrameworkEvid
     return {
       kind: "jsx",
       tag: nameNode === null ? null : readTreeSitterReference(nameNode),
+    };
+  }
+
+  private buildConstructorParameter(node: Parser.SyntaxNode): FrameworkEvidenceDraft | null {
+    const member = findContainingDeclaration(node, methodNodeTypes);
+    const owner = findContainingDeclaration(node, classNodeTypes);
+    const parameterIndex = readParameterIndex(node);
+    if (readDeclarationName(member ?? node) !== "constructor" || owner === null || parameterIndex === null) {
+      return null;
+    }
+    const typeNode = node.childForFieldName("type")?.namedChildren[0] ?? null;
+    return {
+      kind: "constructor_parameter",
+      ownerName: readDeclarationName(owner) ?? "",
+      parameterIndex,
+      parameterName: readDeclarationName(node),
+      typeReference: typeNode === null ? null : readTypeReference(typeNode),
     };
   }
 
@@ -314,7 +341,7 @@ function isDirectiveStatement(node: Parser.SyntaxNode): boolean {
 }
 
 function decoratorTargetKind(node: Parser.SyntaxNode): "class" | "method" | "property" | "parameter" | "unknown" {
-  if (node.type === "class_declaration" || node.type === "abstract_class_declaration") {
+  if (classNodeTypes.has(node.type)) {
     return "class";
   }
   if (methodNodeTypes.has(node.type)) {
@@ -327,6 +354,29 @@ function decoratorTargetKind(node: Parser.SyntaxNode): "class" | "method" | "pro
     return "property";
   }
   return "unknown";
+}
+
+function findContainingDeclaration(
+  node: Parser.SyntaxNode,
+  declarationTypes: ReadonlySet<string>,
+): Parser.SyntaxNode | null {
+  let current: Parser.SyntaxNode | null = node;
+  while (current !== null) {
+    if (declarationTypes.has(current.type)) {
+      return current;
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
+function readParameterIndex(node: Parser.SyntaxNode): number | null {
+  if (!parameterNodeTypes.has(node.type) || node.parent?.type !== "formal_parameters") {
+    return null;
+  }
+  const parameters = node.parent.namedChildren.filter((child) => parameterNodeTypes.has(child.type));
+  const index = parameters.findIndex((candidate) => candidate.id === node.id);
+  return index < 0 ? null : index;
 }
 
 function resolveDecoratorTarget(decorator: Parser.SyntaxNode): Parser.SyntaxNode | null {
@@ -367,6 +417,18 @@ function readReferenceText(node: Parser.SyntaxNode | null): string | null {
   return reference?.segments.join(".") ?? null;
 }
 
+function readTypeReference(node: Parser.SyntaxNode): SourceFrameworkReference | null {
+  const direct = readTreeSitterReference(node);
+  if (direct !== null) {
+    return direct;
+  }
+  if (node.type === "generic_type") {
+    const nameNode = node.childForFieldName("name") ?? node.namedChildren[0] ?? null;
+    return nameNode === null ? null : readTypeReference(nameNode);
+  }
+  return null;
+}
+
 function evidenceNames(draft: FrameworkEvidenceDraft): readonly string[] {
   if (draft.kind === "decorator") {
     return [...referenceNames(draft.reference), ...(draft.targetName === null ? [] : [draft.targetName])];
@@ -379,6 +441,13 @@ function evidenceNames(draft: FrameworkEvidenceDraft): readonly string[] {
   }
   if (draft.kind === "jsx") {
     return referenceNames(draft.tag);
+  }
+  if (draft.kind === "constructor_parameter") {
+    return [
+      draft.ownerName,
+      ...(draft.parameterName === null ? [] : [draft.parameterName]),
+      ...referenceNames(draft.typeReference),
+    ];
   }
   return [];
 }

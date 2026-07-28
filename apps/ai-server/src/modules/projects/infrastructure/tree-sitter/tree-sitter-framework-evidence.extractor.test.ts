@@ -26,10 +26,10 @@ describe("TreeSitterFrameworkEvidenceExtractor", () => {
     ).toBe(true);
     expect(extractor.supports("python")).toBe(false);
     expect(extractor.getExtractorIdentity("javascript")).toBe(
-      "tree-sitter@0.21.1/tree-sitter-javascript@0.23.1/javascript/arc-framework-evidence-query@1",
+      "tree-sitter@0.21.1/tree-sitter-javascript@0.23.1/javascript/arc-framework-evidence-query@3",
     );
     expect(extractor.getExtractorIdentity("typescriptreact")).toBe(
-      "tree-sitter@0.21.1/tree-sitter-typescript@0.23.2/tsx/arc-framework-evidence-query@1",
+      "tree-sitter@0.21.1/tree-sitter-typescript@0.23.2/tsx/arc-framework-evidence-query@3",
     );
   });
 
@@ -63,6 +63,9 @@ const User = sequelize.define("User", { active: true });
         expect.objectContaining({
           arguments: [{ kind: "string", value: "/cats" }],
           kind: "decorator",
+          memberName: null,
+          ownerName: "CatsController",
+          parameterIndex: null,
           reference: { segments: ["Controller"] },
           targetKind: "class",
           targetName: "CatsController",
@@ -75,6 +78,9 @@ const User = sequelize.define("User", { active: true });
         expect.objectContaining({
           arguments: [{ kind: "identifier", reference: { segments: ["ROUTES", "list"] } }],
           kind: "decorator",
+          memberName: "find",
+          ownerName: "CatsController",
+          parameterIndex: null,
           reference: { segments: ["Get"] },
           targetKind: "method",
           targetName: "find",
@@ -238,7 +244,39 @@ app.use(router);
     );
 
     expect(decorator).toMatchObject({ targetKind: "method", targetName: "run" });
+    expect(decorator).toMatchObject({
+      memberName: "run",
+      ownerName: "Service",
+      parameterIndex: null,
+    });
     expect(JSON.stringify(result)).not.toContain("body must not survive");
+  });
+
+  it("extracts typed constructor parameters without treating ordinary method parameters as injection evidence", () => {
+    const result = extract(
+      extractor,
+      "typescript",
+      `class Service {
+  constructor(private readonly dependency: Dependencies.Service, optional?: Other) {}
+  run(value: string): void {}
+}
+`,
+    );
+
+    expect(result.evidence.filter((item) => item.kind === "constructor_parameter")).toEqual([
+      expect.objectContaining({
+        ownerName: "Service",
+        parameterIndex: 0,
+        parameterName: "dependency",
+        typeReference: { segments: ["Dependencies", "Service"] },
+      }),
+      expect.objectContaining({
+        ownerName: "Service",
+        parameterIndex: 1,
+        parameterName: "optional",
+        typeReference: { segments: ["Other"] },
+      }),
+    ]);
   });
 
   it("rejects non-positive extraction limits", () => {

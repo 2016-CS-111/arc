@@ -55,8 +55,9 @@ project containment. After `pnpm build`, `pnpm module-resolution:smoke:compiled`
 emitted backend path.
 
 `pnpm framework-evidence:smoke` verifies the framework-neutral decorator, call, class-heritage,
-JSX, directive, static-value, identity, and range extraction layer across JavaScript, JSX,
-TypeScript, and TSX. After `pnpm build`, `pnpm framework-evidence:smoke:compiled` verifies the
+constructor-parameter, JSX, directive, static-value, identity, and range extraction layer across
+JavaScript, JSX, TypeScript, and TSX. It also verifies import-bound NestJS route composition and
+constructor injection. After `pnpm build`, `pnpm framework-evidence:smoke:compiled` verifies the
 emitted backend path.
 
 ## PostgreSQL
@@ -277,6 +278,11 @@ scope detection, exact framework import alias resolution, bounded Tree-sitter ev
 for all four supported dialects, stable evidence identities, and immutable run-scoped symbol and
 dependency readers.
 
-No framework-specific entity inference, persistence, endpoint, or VSCode control exists yet.
-NestJS analysis is the next gate. The complete design and sub-milestone boundaries are in
-`docs/milestone-4.4-architecture.md`.
+Milestone 4.4.2 adds the first framework analyzer. NestJS modules, controllers, providers, HTTP
+routes, static module registrations, explicit injection tokens, and typed constructor injection
+become transient Arc facts only when their decorators resolve through exact `@nestjs/common`
+bindings. Static paths are normalized and combined; dynamic metadata remains explicitly
+unresolved.
+
+No framework persistence, endpoint, or VSCode control exists yet. Express analysis is the next
+gate. The complete design and sub-milestone boundaries are in `docs/milestone-4.4-architecture.md`.

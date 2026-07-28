@@ -924,7 +924,7 @@ controls remain Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 
-Status: In progress. Milestone 4.4.1 is complete.
+Status: In progress. Milestones 4.4.1 and 4.4.2 are complete.
 
 Goal: combine fresh source, symbol, and dependency catalogs into an evidence-backed understanding
 of NestJS, Express, Next.js, React, and Sequelize project structures.
@@ -968,10 +968,29 @@ No framework-specific entity extraction, migration, persistence, API, or VSCode 
 
 #### Milestone 4.4.2: NestJS Analyzer
 
-Status: Planned.
+Status: Complete.
 
 Goal: detect evidence-backed NestJS modules, controllers, providers, routes, static module
 metadata, and injection relationships.
+
+Delivered:
+
+- Framework-neutral transient entity/relationship facts, certainty and omission contracts,
+  analyzer limits, and stable identity generation.
+- Exact `@nestjs/common` named-alias and namespace binding resolution without decorator-name
+  heuristics.
+- NestJS modules, controllers, injectable and registered providers, all standard HTTP route
+  decorators, static path arrays, and normalized controller/method route composition.
+- Static module imports, controllers, providers, custom provider tokens, and exports with
+  same-file links and dependency-edge provenance.
+- Explicit `@Inject` tokens and typed constructor injection with owner, parameter, symbol, and
+  import provenance.
+- Explicit unresolved output for dynamic paths, module factories, spread/computed metadata, and
+  runtime tokens.
+- Complete repository verification with 71 test files and 324 passing tests.
+
+No persistence, migration, endpoint, Express, Next.js, React, Sequelize, or VSCode change was
+added.
 
 #### Milestone 4.4.3: Express Analyzer
 
