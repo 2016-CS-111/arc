@@ -1,6 +1,6 @@
 # Milestone 4.2 Architecture: Symbol Extraction
 
-Status: Architecture approved. Milestones 4.2.1-4.2.3 are complete; 4.2.4 remains planned.
+Status: Complete. Milestones 4.2.1-4.2.4 are implemented and verified.
 
 ## Goal
 
@@ -570,11 +570,30 @@ Implemented:
 
 ### 4.2.4 Acceptance
 
+Status: Complete.
+
 - Add `pnpm symbol:index:verify`.
 - Verify initial parse, unchanged reuse, changed-file replacement, deleted symbols, syntax errors,
   unsupported languages, source changes, limit behavior, atomic rollback, restart recovery, no
   source-body persistence, and cleanup against local PostgreSQL.
 - Run the complete workspace gate.
+
+Implemented:
+
+- Repeatable temporary-project verification against the configured local PostgreSQL database.
+- Real native Tree-sitter extraction for JavaScript, TypeScript, malformed TypeScript, and an
+  unsupported Markdown outcome.
+- Counting adapters proving unchanged indexes perform zero source reads and zero parser calls.
+- Changed-file-only reparse with stable class and unchanged-file symbol UUIDs.
+- Removed-symbol deletion and new-symbol publication in the same durable replacement.
+- Parser-identity invalidation and same-metadata post-fingerprint source-drift rejection before
+  parsing.
+- Recovery of a failed source file after a fresh fingerprint.
+- Total-symbol limit enforcement and complete-catalog restoration after normal limits return.
+- PostgreSQL constraint failure proving publication rollback preserves file and symbol UUIDs.
+- Backend-restart recovery proving an abandoned run does not mutate the current catalog.
+- Schema and persisted-row privacy checks proving source bodies and syntax trees remain absent.
+- Cascading project cleanup for every verification run.
 
 Every gate must compile and pass independently before the next gate starts.
 

@@ -691,11 +691,11 @@ symbol persistence begin in Milestone 4.2.
 
 ### Milestone 4.2: Symbol Extraction
 
-Status: In progress. Architecture approved; Milestones 4.2.1-4.2.3 complete.
+Status: Complete.
 
 Goal: parse ready source files with Tree-sitter and persist language-neutral symbols.
 
-Planned:
+Delivered:
 
 - Backend-only native Tree-sitter adapter with JavaScript, JSX, TypeScript, and TSX grammars.
 - Mandatory Intel macOS compatibility gate before persistence work.
@@ -780,10 +780,29 @@ remain Milestones 4.2.4 and 4.5 respectively.
 
 #### Milestone 4.2.4: Symbol Acceptance
 
-Status: Planned.
+Status: Complete.
 
 Goal: prove symbol identity, invalidation, syntax-error tolerance, atomicity, recovery, privacy, and
 cleanup against local PostgreSQL.
+
+Delivered:
+
+- `pnpm symbol:index:verify` using a temporary project and the configured local PostgreSQL database.
+- Initial JavaScript and TypeScript extraction with malformed-source tolerance and unsupported
+  language state.
+- Zero-read, zero-parse unchanged reuse.
+- Changed-file-only parsing, deleted-symbol cleanup, and stable symbol UUID verification.
+- Parser-revision invalidation and post-fingerprint source-change rejection before Tree-sitter.
+- Failed-file recovery after a fresh source fingerprint.
+- Total-symbol limit enforcement and restoration under normal limits.
+- Transaction rollback and restart recovery preserving the previous complete catalog.
+- Source-body and syntax-tree privacy checks across schema and persisted rows.
+- Automatic cleanup of the temporary project and filesystem fixture.
+- Complete tests, lint, format, TypeScript build, webview type-check, and webview production build.
+
+Milestone 4.2 is complete. Symbol names, kinds, hierarchy, ranges, freshness, and incremental
+publication are now durable backend capabilities. Import resolution begins in Milestone 4.3;
+VSCode source-intelligence controls remain Milestone 4.5.
 
 ### Milestone 4.3: Import and Dependency Graph
 

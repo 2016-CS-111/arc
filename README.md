@@ -32,6 +32,7 @@ pnpm db:migrate
 pnpm db:verify
 pnpm project:verify
 pnpm source:index:verify
+pnpm symbol:index:verify
 pnpm tree-sitter:smoke
 pnpm ollama:smoke
 pnpm chat:socket-smoke
@@ -212,5 +213,10 @@ arbitrary snippets. Configure extraction with `ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PE
 `ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS`, `ARC_PROJECT_SYMBOL_MAX_NAME_BYTES`,
 `ARC_PROJECT_SYMBOL_MAX_QUALIFIED_NAME_BYTES`, `ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES`, and
 `ARC_PROJECT_SYMBOL_BATCH_SIZE`. Apply migration `0005_project_symbols.sql` with
-`pnpm db:migrate` before using the endpoints. The local PostgreSQL acceptance command is added in
-Milestone 4.2.4; VSCode controls remain Milestone 4.5.
+`pnpm db:migrate` before using the endpoints.
+
+`pnpm symbol:index:verify` creates a temporary local project and verifies initial extraction,
+unchanged reuse without source reads, changed-file replacement, stable symbol UUIDs, parser-version
+invalidation, syntax-error and unsupported-file outcomes, source-drift rejection, total limits,
+atomic rollback, restart recovery, privacy, and cleanup against local PostgreSQL. VSCode controls
+remain Milestone 4.5.

@@ -15,6 +15,7 @@
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
     "project:verify": "tsx src/cli/project-inventory-verify.ts",
     "source:index:verify": "tsx src/cli/source-index-verify.ts",
+    "symbol:index:verify": "tsx src/cli/symbol-index-verify.ts",
     "tree-sitter:smoke": "tsx src/cli/tree-sitter-smoke.ts",
     "tree-sitter:smoke:compiled": "node dist/cli/tree-sitter-smoke.js",
     "start": "node dist/main.js",

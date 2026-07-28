@@ -406,6 +406,11 @@ the run in one Sequelize transaction. `POST /projects/:projectId/symbols/index` 
 work, while `GET /projects/:projectId/symbols/index` reports the latest run and current-catalog
 freshness. Backend recovery fails abandoned runs without modifying the last published catalog.
 
+Milestone 4.2.4 locks this boundary with `pnpm symbol:index:verify`. The command builds a temporary
+project, drives inventory, source, and symbol services through real native parsers and local
+PostgreSQL, proves incremental reuse and invalidation, forces a publication rollback and restart
+recovery, checks source-body privacy, and removes all temporary database and filesystem state.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
