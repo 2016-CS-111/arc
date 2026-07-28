@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 through 4.4.3 are complete; Milestone 4.4.4 is next.
+Status: In progress. Milestones 4.4.1 through 4.4.4 are complete; Milestone 4.4.5 is next.
 
 ## Goal
 
@@ -778,13 +778,13 @@ Status: Complete.
 
 ### 4.4.4 Next.js and React Analyzers
 
-Status: Planned.
+Status: Complete.
 
-- Implement App Router and Pages Router conventions, route handlers, dynamic segments, route
-  groups, special files, and client boundaries.
-- Implement evidence-backed React components, direct wrappers, and JSX composition links.
-- Prove root and `src` layouts, page/API routes, intrinsic-element exclusion, imported component
-  linking, unresolved advanced conventions, stable identities, and false-positive rejection.
+- Implements App Router and Pages Router conventions, route handlers, dynamic segments, route
+  groups, special files, private exclusions, and client boundaries.
+- Implements exported JSX-backed React components, direct wrappers, and local/imported JSX links.
+- Proves `src` roots, page/API routes, intrinsic-element exclusion, imported component linking,
+  unresolved intercepting routes, stable identities, and false-positive rejection.
 - No Sequelize, migration, database write, API, or VSCode change.
 
 ### 4.4.5 Sequelize Analyzer

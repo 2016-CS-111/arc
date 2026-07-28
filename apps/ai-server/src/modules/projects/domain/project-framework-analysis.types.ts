@@ -113,6 +113,38 @@ export interface ExpressMiddlewareEntityAttributes {
   readonly paths: readonly string[];
 }
 
+export interface NextPageEntityAttributes {
+  readonly clientBoundary: boolean;
+  readonly kind: "next_page";
+  readonly routePattern: string | null;
+  readonly router: "app" | "pages";
+}
+
+export interface NextLayoutEntityAttributes {
+  readonly clientBoundary: boolean;
+  readonly kind: "next_layout";
+  readonly role: "default" | "error" | "global-error" | "layout" | "loading" | "not-found" | "template";
+  readonly routePattern: string | null;
+}
+
+export interface NextRouteHandlerEntityAttributes {
+  readonly httpMethod: "DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT" | null;
+  readonly kind: "next_route_handler";
+  readonly routePattern: string | null;
+  readonly router: "app" | "pages";
+}
+
+export interface NextSpecialFileEntityAttributes {
+  readonly kind: "next_special_file";
+  readonly role: "_app" | "_document" | "_error";
+}
+
+export interface ReactComponentEntityAttributes {
+  readonly clientBoundary: boolean;
+  readonly kind: "react_component";
+  readonly wrapper: "forwardRef" | "memo" | null;
+}
+
 export type ProjectFrameworkEntityAttributes =
   | NestModuleEntityAttributes
   | NestControllerEntityAttributes
@@ -121,7 +153,12 @@ export type ProjectFrameworkEntityAttributes =
   | ExpressApplicationEntityAttributes
   | ExpressRouterEntityAttributes
   | ExpressRouteEntityAttributes
-  | ExpressMiddlewareEntityAttributes;
+  | ExpressMiddlewareEntityAttributes
+  | NextPageEntityAttributes
+  | NextLayoutEntityAttributes
+  | NextRouteHandlerEntityAttributes
+  | NextSpecialFileEntityAttributes
+  | ReactComponentEntityAttributes;
 
 export interface ProjectFrameworkEntityFact {
   readonly attributes: ProjectFrameworkEntityAttributes;
@@ -173,13 +210,29 @@ export interface ExpressRouterMountRelationshipAttributes {
   readonly paths: readonly string[];
 }
 
+export interface NextComponentOwnershipRelationshipAttributes {
+  readonly kind: "next_component_ownership";
+}
+
+export interface ReactComponentRenderRelationshipAttributes {
+  readonly kind: "react_component_render";
+}
+
+export interface ReactComponentWrapperRelationshipAttributes {
+  readonly kind: "react_component_wrapper";
+  readonly wrapper: ReactComponentEntityAttributes["wrapper"];
+}
+
 export type ProjectFrameworkRelationshipAttributes =
   | NestInjectionRelationshipAttributes
   | NestModuleRegistrationRelationshipAttributes
   | NestRouteOwnershipRelationshipAttributes
   | ExpressRouteOwnershipRelationshipAttributes
   | ExpressMiddlewareRegistrationRelationshipAttributes
-  | ExpressRouterMountRelationshipAttributes;
+  | ExpressRouterMountRelationshipAttributes
+  | NextComponentOwnershipRelationshipAttributes
+  | ReactComponentRenderRelationshipAttributes
+  | ReactComponentWrapperRelationshipAttributes;
 
 export interface ProjectFrameworkRelationshipFact {
   readonly attributes: ProjectFrameworkRelationshipAttributes;

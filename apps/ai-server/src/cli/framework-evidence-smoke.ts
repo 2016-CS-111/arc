@@ -10,6 +10,10 @@ import type {
 import { TreeSitterFrameworkEvidenceExtractor } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-framework-evidence.extractor.js";
 import { TreeSitterExpressFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-express-framework.analyzer.js";
 import { TreeSitterNestFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-nest-framework.analyzer.js";
+import {
+  TreeSitterNextFrameworkAnalyzer,
+  TreeSitterReactFrameworkAnalyzer,
+} from "../modules/projects/infrastructure/tree-sitter/tree-sitter-next-react-framework.analyzer.js";
 
 interface SmokeFixture {
   readonly expectedKinds: readonly SourceFrameworkEvidenceKind[];
@@ -168,8 +172,40 @@ app.use("/api", router);
   );
   assert(!JSON.stringify(expressResult).includes(expressSource), "Express analysis retained its source body.");
 
+  const nextSource = `"use client"; export default function Home() { return <Card />; }`;
+  const nextInput = {
+    dependencies: [],
+    evidence: extractor.extract({ language: "typescriptreact" as const, limits, source: nextSource }).evidence,
+    importBindings: [],
+    limits: { maxEntities: 20, maxNameBytes: 128, maxRelationships: 40 },
+    relativePath: "src/app/page.tsx",
+    scopeKey: "c".repeat(64),
+    sourceFileId: "next-smoke-source",
+    symbols: [],
+  };
+  const nextResult = new TreeSitterNextFrameworkAnalyzer().analyze(nextInput);
+  const reactResult = new TreeSitterReactFrameworkAnalyzer().analyze({
+    ...nextInput,
+    relativePath: "src/components/home.tsx",
+  });
+  assert(
+    nextResult.entities.some(
+      (entity) => entity.attributes.kind === "next_page" && entity.attributes.routePattern === "/",
+    ),
+    "Next.js page convention smoke failed.",
+  );
+  assert(
+    !JSON.stringify(nextResult).includes(nextSource) && !JSON.stringify(reactResult).includes(nextSource),
+    "Next.js or React analysis retained its source body.",
+  );
+
   logger.info("Framework evidence compatibility smoke passed", {
-    analyzerIdentities: [nestResult.analyzerIdentity, expressResult.analyzerIdentity],
+    analyzerIdentities: [
+      nestResult.analyzerIdentity,
+      expressResult.analyzerIdentity,
+      nextResult.analyzerIdentity,
+      reactResult.analyzerIdentity,
+    ],
     architecture: process.arch,
     evidenceCounts: results.map(({ fixture, result }) => ({
       count: result.evidence.length,

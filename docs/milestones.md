@@ -1013,10 +1013,20 @@ No persistence, migration, endpoint, Next.js, React, Sequelize, or VSCode change
 
 #### Milestone 4.4.4: Next.js and React Analyzers
 
-Status: Planned.
+Status: Complete.
 
 Goal: detect App Router and Pages Router conventions, route handlers, client boundaries,
 evidence-backed React components, and statically linked JSX composition.
+
+Delivered:
+
+- App Router and Pages Router file conventions, including `src` roots, nested/index routes,
+  route groups, dynamic/catch-all segments, special pages, API routes, and static route handlers.
+- Explicit unresolved intercepting routes plus private-folder exclusion and client-boundary facts.
+- Exported JSX-backed React components, direct `memo`/`forwardRef` wrappers, local render links,
+  and dependency-backed imported render links; lowercase intrinsic tags remain excluded.
+
+No Sequelize, persistence, migration, endpoint, or VSCode change was added.
 
 #### Milestone 4.4.5: Sequelize Analyzer
 
