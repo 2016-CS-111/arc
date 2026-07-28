@@ -1,6 +1,6 @@
 # Milestone 4.3 Architecture: Import and Dependency Graph
 
-Status: In progress. Milestones 4.3.1 and 4.3.2 are implemented and verified.
+Status: In progress. Milestones 4.3.1 through 4.3.3 are implemented and verified.
 
 ## Goal
 
@@ -728,7 +728,7 @@ provider, VSCode extension change, or webview change was introduced.
 
 ### 4.3.3 Durable Incremental Dependency Graph
 
-Status: Planned.
+Status: Complete.
 
 - Add migration, class-based Sequelize models, repository, index service, status API, and recovery.
 - Reuse unchanged extraction while re-resolving every current edge.
@@ -736,6 +736,33 @@ Status: Planned.
 - Preserve stable edge and binding UUIDs through movement and resolution changes.
 - Prove limits, stale cleanup, rollback, privacy, and restart recovery.
 - No public graph traversal or VSCode change.
+
+Implemented:
+
+- Dependency-index API contracts with bounded statuses, counters, resolver warning codes, limit
+  reasons, file errors, publication provenance, and independent current-catalog freshness.
+- Migration `0006_project_dependency_graph.sql` and four class-based Sequelize models for runs,
+  file extraction states, resolved edges, and bindings.
+- Stable file, edge, and binding identities through unique source-file, extraction-key, and
+  binding-key constraints.
+- Current declaration reconstruction for reuse without source bodies, syntax trees, resolution
+  diagnostics, or absolute paths.
+- Safe reads and SHA-256 verification for changed supported source files and bounded resolver
+  metadata.
+- Hash and effective-extractor-identity reuse, including extraction-limit invalidation.
+- Full local, external, built-in, and unresolved edge re-resolution for both reused and newly
+  extracted declarations.
+- Deterministic per-file and total edge/binding limits with periodic event-loop yields.
+- One-transaction file, edge, binding, classification, stale-row cleanup, and run publication.
+- Failed-publication preservation and backend-start recovery for abandoned running indexes.
+- Explicit `POST` and `GET /projects/:projectId/dependencies/index` endpoints with stable `400`,
+  `404`, `409`, and `503` behavior.
+- Focused contract, orchestration, Sequelize repository, controller, configuration, rollback,
+  privacy, and recovery coverage.
+- Complete verification with 279 tests, TypeScript build, strict lint, and formatting.
+
+No public graph traversal, local PostgreSQL acceptance command, automatic indexing, VSCode
+extension change, or webview change was introduced. These remain Milestones 4.3.4 and 4.5.
 
 ### 4.3.4 Graph Traversal and Acceptance
 

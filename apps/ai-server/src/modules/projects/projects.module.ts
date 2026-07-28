@@ -4,9 +4,12 @@ import { DATABASE } from "../../database/database.constants.js";
 import { DatabaseModule } from "../../database/database.module.js";
 import type { ArcDatabase } from "../../database/database.types.js";
 import type { IgnoreRulesFileReader } from "./application/ignore-rules-file.reader.js";
+import type { ProjectDependencyIndexRepository } from "./application/project-dependency-index.repository.js";
+import { ProjectDependencyIndexService } from "./application/project-dependency-index.service.js";
 import { ProjectIgnorePolicyService } from "./application/project-ignore-policy.service.js";
 import { ProjectInventoryService } from "./application/project-inventory.service.js";
 import type { ProjectInventoryRepository } from "./application/project-inventory.repository.js";
+import type { ProjectModuleResolver } from "./application/project-module.resolver.js";
 import { ProjectPathNormalizer } from "./application/project-path.normalizer.js";
 import { ProjectRegistrationService } from "./application/project-registration.service.js";
 import type { ProjectRepository } from "./application/project.repository.js";
@@ -17,6 +20,7 @@ import { ProjectSymbolIndexService } from "./application/project-symbol-index.se
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
 import { SourceLanguageClassifier } from "./application/source-language.classifier.js";
 import type { SourceTextReader } from "./application/source-text.reader.js";
+import type { SourceDependencyExtractor } from "./application/source-dependency.extractor.js";
 import type { SourceSymbolExtractor } from "./application/source-symbol.extractor.js";
 import type { WorkspaceRootResolver } from "./application/workspace-root-resolver.js";
 import { NodeIgnoreRulesFileReader } from "./infrastructure/node-ignore-rules-file.reader.js";
@@ -24,18 +28,24 @@ import { NodeRepositoryInventoryWalker } from "./infrastructure/node-repository-
 import { NodeSourceTextReader } from "./infrastructure/node-source-text.reader.js";
 import { NodeWorkspaceRootResolver } from "./infrastructure/node-workspace-root.resolver.js";
 import { SequelizeProjectInventoryRepository } from "./infrastructure/sequelize-project-inventory.repository.js";
+import { SequelizeProjectDependencyIndexRepository } from "./infrastructure/sequelize-project-dependency-index.repository.js";
 import { SequelizeProjectRepository } from "./infrastructure/sequelize-project.repository.js";
 import { SequelizeProjectSourceIndexRepository } from "./infrastructure/sequelize-project-source-index.repository.js";
 import { SequelizeProjectSymbolIndexRepository } from "./infrastructure/sequelize-project-symbol-index.repository.js";
 import { TreeSitterSymbolExtractor } from "./infrastructure/tree-sitter/tree-sitter-symbol.extractor.js";
+import { TreeSitterDependencyExtractor } from "./infrastructure/tree-sitter/tree-sitter-dependency.extractor.js";
+import { TypeScriptProjectModuleResolver } from "./infrastructure/typescript/typescript-project-module.resolver.js";
 import {
   IGNORE_RULES_FILE_READER,
+  PROJECT_DEPENDENCY_INDEX_REPOSITORY,
   PROJECT_INVENTORY_REPOSITORY,
+  PROJECT_MODULE_RESOLVER,
   PROJECT_REPOSITORY,
   PROJECT_SOURCE_INDEX_REPOSITORY,
   PROJECT_SYMBOL_INDEX_REPOSITORY,
   REPOSITORY_INVENTORY_WALKER,
   SOURCE_TEXT_READER,
+  SOURCE_DEPENDENCY_EXTRACTOR,
   SOURCE_SYMBOL_EXTRACTOR,
   WORKSPACE_ROOT_RESOLVER,
 } from "./projects.constants.js";
@@ -61,6 +71,13 @@ const projectInventoryRepositoryProvider: Provider<ProjectInventoryRepository> =
   provide: PROJECT_INVENTORY_REPOSITORY,
   inject: [DATABASE],
   useFactory: (database: ArcDatabase): ProjectInventoryRepository => new SequelizeProjectInventoryRepository(database),
+};
+
+const projectDependencyIndexRepositoryProvider: Provider<ProjectDependencyIndexRepository> = {
+  provide: PROJECT_DEPENDENCY_INDEX_REPOSITORY,
+  inject: [DATABASE],
+  useFactory: (database: ArcDatabase): ProjectDependencyIndexRepository =>
+    new SequelizeProjectDependencyIndexRepository(database),
 };
 
 const repositoryInventoryWalkerProvider: Provider<RepositoryInventoryWalker> = {
@@ -92,12 +109,23 @@ const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
   useClass: TreeSitterSymbolExtractor,
 };
 
+const sourceDependencyExtractorProvider: Provider<SourceDependencyExtractor> = {
+  provide: SOURCE_DEPENDENCY_EXTRACTOR,
+  useClass: TreeSitterDependencyExtractor,
+};
+
+const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
+  provide: PROJECT_MODULE_RESOLVER,
+  useClass: TypeScriptProjectModuleResolver,
+};
+
 @Module({
   imports: [DatabaseModule],
   controllers: [ProjectsController],
   providers: [
     projectRepositoryProvider,
     projectInventoryRepositoryProvider,
+    projectDependencyIndexRepositoryProvider,
     projectSourceIndexRepositoryProvider,
     projectSymbolIndexRepositoryProvider,
     workspaceRootResolverProvider,
@@ -105,10 +133,13 @@ const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
     repositoryInventoryWalkerProvider,
     sourceTextReaderProvider,
     sourceSymbolExtractorProvider,
+    sourceDependencyExtractorProvider,
+    projectModuleResolverProvider,
     ProjectPathNormalizer,
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,
+    ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
     SourceLanguageClassifier,
@@ -118,6 +149,7 @@ const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,
+    ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
   ],

@@ -3,6 +3,10 @@ import type { Sequelize } from "sequelize";
 import type { ArcDatabaseModels } from "../database.types.js";
 import { ChatMessageModel } from "./chat-message.model.js";
 import { ChatSessionModel } from "./chat-session.model.js";
+import { ProjectDependencyBindingModel } from "./project-dependency-binding.model.js";
+import { ProjectDependencyEdgeModel } from "./project-dependency-edge.model.js";
+import { ProjectDependencyFileModel } from "./project-dependency-file.model.js";
+import { ProjectDependencyIndexRunModel } from "./project-dependency-index-run.model.js";
 import { ProjectFileModel } from "./project-file.model.js";
 import { ProjectModel } from "./project.model.js";
 import { ProjectScanModel } from "./project-scan.model.js";
@@ -16,6 +20,10 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
     chatSessions: ChatSessionModel.initialize(sequelize),
     chatMessages: ChatMessageModel.initialize(sequelize),
+    projectDependencyBindings: ProjectDependencyBindingModel.initialize(sequelize),
+    projectDependencyEdges: ProjectDependencyEdgeModel.initialize(sequelize),
+    projectDependencyFiles: ProjectDependencyFileModel.initialize(sequelize),
+    projectDependencyIndexRuns: ProjectDependencyIndexRunModel.initialize(sequelize),
     projectFiles: ProjectFileModel.initialize(sequelize),
     projects: ProjectModel.initialize(sequelize),
     projectScans: ProjectScanModel.initialize(sequelize),
@@ -169,6 +177,96 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.projectSymbols.belongsTo(models.projectSymbolIndexRuns, {
     as: "symbolIndexRun",
     foreignKey: "symbolIndexRunId",
+  });
+  models.projects.hasMany(models.projectDependencyIndexRuns, {
+    as: "dependencyIndexRuns",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyIndexRuns.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectSourceIndexRuns.hasMany(models.projectDependencyIndexRuns, {
+    as: "dependencyIndexRuns",
+    foreignKey: "sourceIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyIndexRuns.belongsTo(models.projectSourceIndexRuns, {
+    as: "sourceIndexRun",
+    foreignKey: "sourceIndexRunId",
+  });
+  models.projects.hasMany(models.projectDependencyFiles, {
+    as: "dependencyFiles",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyFiles.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectDependencyIndexRuns.hasMany(models.projectDependencyFiles, {
+    as: "dependencyFiles",
+    foreignKey: "dependencyIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyFiles.belongsTo(models.projectDependencyIndexRuns, {
+    as: "dependencyIndexRun",
+    foreignKey: "dependencyIndexRunId",
+  });
+  models.projectDependencyFiles.hasMany(models.projectDependencyEdges, {
+    as: "edges",
+    foreignKey: "dependencyFileId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyEdges.belongsTo(models.projectDependencyFiles, {
+    as: "dependencyFile",
+    foreignKey: "dependencyFileId",
+  });
+  models.projects.hasMany(models.projectDependencyEdges, {
+    as: "dependencyEdges",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyEdges.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectDependencyIndexRuns.hasMany(models.projectDependencyEdges, {
+    as: "dependencyEdges",
+    foreignKey: "dependencyIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyEdges.belongsTo(models.projectDependencyIndexRuns, {
+    as: "dependencyIndexRun",
+    foreignKey: "dependencyIndexRunId",
+  });
+  models.projectDependencyEdges.hasMany(models.projectDependencyBindings, {
+    as: "bindings",
+    foreignKey: "dependencyEdgeId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyBindings.belongsTo(models.projectDependencyEdges, {
+    as: "dependencyEdge",
+    foreignKey: "dependencyEdgeId",
+  });
+  models.projects.hasMany(models.projectDependencyBindings, {
+    as: "dependencyBindings",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyBindings.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectDependencyIndexRuns.hasMany(models.projectDependencyBindings, {
+    as: "dependencyBindings",
+    foreignKey: "dependencyIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectDependencyBindings.belongsTo(models.projectDependencyIndexRuns, {
+    as: "dependencyIndexRun",
+    foreignKey: "dependencyIndexRunId",
   });
 
   return models;

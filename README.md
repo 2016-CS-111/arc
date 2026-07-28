@@ -226,3 +226,28 @@ unchanged reuse without source reads, changed-file replacement, stable symbol UU
 invalidation, syntax-error and unsupported-file outcomes, source-drift rejection, total limits,
 atomic rollback, restart recovery, privacy, and cleanup against local PostgreSQL. VSCode controls
 remain Milestone 4.5.
+
+## Dependency Graph
+
+Milestone 4.3.3 adds explicit durable dependency indexing for a fresh source catalog:
+
+```txt
+POST /projects/:projectId/dependencies/index
+GET  /projects/:projectId/dependencies/index
+```
+
+The backend reuses unchanged JavaScript, JSX, TypeScript, and TSX dependency declarations without
+reading or parsing those code files, while re-resolving every current edge through the
+catalog-bounded TypeScript adapter. PostgreSQL stores stable edge and binding keys, module
+specifiers, classifications, normalized ranges, and relative local targets. It never stores source
+bodies, syntax trees, absolute target paths, TypeScript diagnostics, or failed lookup locations.
+
+Configure indexing with `ARC_PROJECT_DEPENDENCY_MAX_EDGES_PER_FILE`,
+`ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES`, `ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE`,
+`ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS`, `ARC_PROJECT_DEPENDENCY_MAX_SPECIFIER_BYTES`,
+`ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES`, `ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES`,
+`ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES`, and `ARC_PROJECT_DEPENDENCY_BATCH_SIZE`. Apply migration
+`0006_project_dependency_graph.sql` with `pnpm db:migrate` before using the endpoints.
+
+Public graph traversal and the local PostgreSQL dependency acceptance command remain Milestone
+4.3.4. VSCode dependency controls remain Milestone 4.5.

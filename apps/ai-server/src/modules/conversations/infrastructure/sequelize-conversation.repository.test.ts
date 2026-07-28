@@ -85,6 +85,10 @@ function createDatabase(): {
       models: {
         chatSessions: { findByPk, findOrCreate } as unknown as ArcDatabase["models"]["chatSessions"],
         chatMessages: { findAll, update } as unknown as ArcDatabase["models"]["chatMessages"],
+        projectDependencyBindings: {} as ArcDatabase["models"]["projectDependencyBindings"],
+        projectDependencyEdges: {} as ArcDatabase["models"]["projectDependencyEdges"],
+        projectDependencyFiles: {} as ArcDatabase["models"]["projectDependencyFiles"],
+        projectDependencyIndexRuns: {} as ArcDatabase["models"]["projectDependencyIndexRuns"],
         projectFiles: {} as ArcDatabase["models"]["projectFiles"],
         projects: {} as ArcDatabase["models"]["projects"],
         projectScans: {} as ArcDatabase["models"]["projectScans"],

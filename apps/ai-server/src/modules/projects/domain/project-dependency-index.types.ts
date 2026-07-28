@@ -1,3 +1,12 @@
+import type {
+  ProjectDependencyFileErrorCode,
+  ProjectDependencyFileStatus,
+  ProjectDependencyIndexErrorCode,
+  ProjectDependencyIndexLimitReason,
+  ProjectDependencyResolverWarningCode,
+} from "@arc/contracts";
+
+import type { ProjectModuleResolution } from "./project-module-resolution.types.js";
 import type { SourceCodeRange } from "./source-code.types.js";
 
 export const SOURCE_DEPENDENCY_LANGUAGES = ["javascript", "javascriptreact", "typescript", "typescriptreact"] as const;
@@ -70,4 +79,73 @@ export interface SourceDependencyExtractionResult {
   readonly omissionReasons: readonly SourceDependencyOmissionReason[];
   readonly omittedBindingCount: number;
   readonly omittedDependencyCount: number;
+}
+
+export interface CurrentProjectDependencyFile {
+  readonly dependencies: readonly ExtractedSourceDependency[];
+  readonly edgeCount: number;
+  readonly bindingCount: number;
+  readonly errorCode: ProjectDependencyFileErrorCode | null;
+  readonly extractedAt: string;
+  readonly extractorIdentity: string;
+  readonly hasSyntaxErrors: boolean;
+  readonly language: string;
+  readonly omittedBindingCount: number;
+  readonly omittedEdgeCount: number;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly sourceFileId: string;
+  readonly status: ProjectDependencyFileStatus;
+}
+
+export interface ResolvedProjectDependency extends ExtractedSourceDependency {
+  readonly resolution: ProjectModuleResolution;
+}
+
+export interface ProjectDependencyFileOutcome {
+  readonly bindingCount: number;
+  readonly dependencies: readonly ResolvedProjectDependency[];
+  readonly edgeCount: number;
+  readonly errorCode: ProjectDependencyFileErrorCode | null;
+  readonly extractedAt: string;
+  readonly extractorIdentity: string;
+  readonly hasSyntaxErrors: boolean;
+  readonly language: string;
+  readonly omittedBindingCount: number;
+  readonly omittedEdgeCount: number;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly sourceFileId: string;
+  readonly status: ProjectDependencyFileStatus;
+}
+
+export interface PublishProjectDependencyIndexInput {
+  readonly batchSize: number;
+  readonly bindingCount: number;
+  readonly builtinEdgeCount: number;
+  readonly dependencyIndexId: string;
+  readonly edgeCount: number;
+  readonly externalEdgeCount: number;
+  readonly failedFileCount: number;
+  readonly files: readonly ProjectDependencyFileOutcome[];
+  readonly limitReasons: readonly ProjectDependencyIndexLimitReason[];
+  readonly localEdgeCount: number;
+  readonly omittedBindingCount: number;
+  readonly omittedEdgeCount: number;
+  readonly parsedFileCount: number;
+  readonly projectId: string;
+  readonly resolutionContextHash: string;
+  readonly resolverWarnings: readonly ProjectDependencyResolverWarningCode[];
+  readonly reusedFileCount: number;
+  readonly sourceIndexRunId: string;
+  readonly unresolvedEdgeCount: number;
+  readonly unsupportedFileCount: number;
+}
+
+export interface FailProjectDependencyIndexInput {
+  readonly dependencyIndexId: string;
+  readonly errorCode: ProjectDependencyIndexErrorCode;
+  readonly projectId: string;
+  readonly resolutionContextHash?: string;
+  readonly resolverWarnings?: readonly ProjectDependencyResolverWarningCode[];
 }

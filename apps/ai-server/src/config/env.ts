@@ -48,6 +48,15 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_SYMBOL_MAX_QUALIFIED_NAME_BYTES: z.coerce.number().int().positive().max(16_384).default(2_048),
   ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES: z.coerce.number().int().positive().max(1_000).default(25),
   ARC_PROJECT_SYMBOL_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
+  ARC_PROJECT_DEPENDENCY_MAX_EDGES_PER_FILE: z.coerce.number().int().positive().max(100_000).default(1_000),
+  ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES: z.coerce.number().int().positive().max(1_000_000).default(100_000),
+  ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE: z.coerce.number().int().positive().max(10_000).default(100),
+  ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS: z.coerce.number().int().positive().max(2_500_000).default(250_000),
+  ARC_PROJECT_DEPENDENCY_MAX_SPECIFIER_BYTES: z.coerce.number().int().positive().max(1_024).default(1_024),
+  ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES: z.coerce.number().int().positive().max(512).default(512),
+  ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES: z.coerce.number().int().positive().max(16_777_216).default(1_048_576),
+  ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES: z.coerce.number().int().positive().max(1_000).default(25),
+  ARC_PROJECT_DEPENDENCY_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
 });
 
 export interface AppConfig {
@@ -82,6 +91,17 @@ export interface AppConfig {
     readonly maxTotalSymbols: number;
     readonly maxNameBytes: number;
     readonly maxQualifiedNameBytes: number;
+    readonly yieldEveryFiles: number;
+    readonly batchSize: number;
+  };
+  readonly projectDependency: {
+    readonly maxEdgesPerFile: number;
+    readonly maxTotalEdges: number;
+    readonly maxBindingsPerEdge: number;
+    readonly maxTotalBindings: number;
+    readonly maxSpecifierBytes: number;
+    readonly maxBindingNameBytes: number;
+    readonly maxConfigBytes: number;
     readonly yieldEveryFiles: number;
     readonly batchSize: number;
   };
@@ -128,6 +148,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       maxSymbolsPerFile: parsed.ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PER_FILE,
       maxTotalSymbols: parsed.ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS,
       yieldEveryFiles: parsed.ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES,
+    },
+    projectDependency: {
+      batchSize: parsed.ARC_PROJECT_DEPENDENCY_BATCH_SIZE,
+      maxBindingNameBytes: parsed.ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES,
+      maxBindingsPerEdge: parsed.ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE,
+      maxConfigBytes: parsed.ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES,
+      maxEdgesPerFile: parsed.ARC_PROJECT_DEPENDENCY_MAX_EDGES_PER_FILE,
+      maxSpecifierBytes: parsed.ARC_PROJECT_DEPENDENCY_MAX_SPECIFIER_BYTES,
+      maxTotalBindings: parsed.ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS,
+      maxTotalEdges: parsed.ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES,
+      yieldEveryFiles: parsed.ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES,
     },
   };
 }

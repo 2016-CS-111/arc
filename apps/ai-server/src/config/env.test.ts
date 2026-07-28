@@ -35,6 +35,17 @@ describe("loadConfig", () => {
       maxTotalSymbols: 100_000,
       yieldEveryFiles: 25,
     });
+    expect(config.projectDependency).toEqual({
+      batchSize: 500,
+      maxBindingNameBytes: 512,
+      maxBindingsPerEdge: 100,
+      maxConfigBytes: 1_048_576,
+      maxEdgesPerFile: 1_000,
+      maxSpecifierBytes: 1_024,
+      maxTotalBindings: 250_000,
+      maxTotalEdges: 100_000,
+      yieldEveryFiles: 25,
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -59,6 +70,15 @@ describe("loadConfig", () => {
       ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PER_FILE: "2500",
       ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS: "50000",
       ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES: "10",
+      ARC_PROJECT_DEPENDENCY_BATCH_SIZE: "125",
+      ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES: "128",
+      ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE: "25",
+      ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES: "262144",
+      ARC_PROJECT_DEPENDENCY_MAX_EDGES_PER_FILE: "250",
+      ARC_PROJECT_DEPENDENCY_MAX_SPECIFIER_BYTES: "256",
+      ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS: "12500",
+      ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES: "5000",
+      ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES: "5",
     });
 
     expect(config.ollama).toEqual({
@@ -90,6 +110,17 @@ describe("loadConfig", () => {
       maxSymbolsPerFile: 2_500,
       maxTotalSymbols: 50_000,
       yieldEveryFiles: 10,
+    });
+    expect(config.projectDependency).toEqual({
+      batchSize: 125,
+      maxBindingNameBytes: 128,
+      maxBindingsPerEdge: 25,
+      maxConfigBytes: 262_144,
+      maxEdgesPerFile: 250,
+      maxSpecifierBytes: 256,
+      maxTotalBindings: 12_500,
+      maxTotalEdges: 5_000,
+      yieldEveryFiles: 5,
     });
   });
 

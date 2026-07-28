@@ -413,7 +413,7 @@ recovery, checks source-body privacy, and removes all temporary database and fil
 
 ## Import and Dependency Graph
 
-Milestone 4.3 will reuse Tree-sitter to extract static dependency syntax from fresh JavaScript,
+Milestone 4.3 reuses Tree-sitter to extract static dependency syntax from fresh JavaScript,
 JSX, TypeScript, and TSX source files. A separate TypeScript compiler API adapter will resolve
 project-local targets against a virtual filesystem built only from Arc's current source catalog,
 including bounded in-project compiler configuration and package metadata. Built-in modules,
@@ -432,10 +432,10 @@ Extraction results may be reused when source hashes and query identities match, 
 re-resolved on every dependency run. This lets an unchanged importer react correctly when a target
 is added, removed, or retargeted by compiler configuration without reparsing its source.
 
-The graph will persist module specifiers, binding identifiers, stable relationship keys, source
-ranges, relative local targets, and run provenance. It will not persist source bodies, syntax
-trees, absolute target paths, or TypeScript failed-lookup paths. Failed and interrupted runs
-preserve the previous graph, and stale graphs cannot be used by the traversal API. The complete
+The graph persists module specifiers, binding identifiers, stable relationship keys, source ranges,
+relative local targets, and run provenance. It does not persist source bodies, syntax trees,
+absolute target paths, or TypeScript failed-lookup paths. Failed and interrupted runs preserve the
+previous graph, and Milestone 4.3.4 traversal will reject stale graphs. The complete
 design and four implementation gates are documented in `docs/milestone-4.3-architecture.md`.
 
 Milestone 4.3.1 implements the extraction half of this boundary. Versioned JavaScript and
@@ -450,8 +450,21 @@ The backend pins TypeScript 5.9.3 and resolves against a catalog-only virtual fi
 can satisfy existence checks, while only bounded, hash-verified compiler and package metadata can
 be read. The adapter selects the nearest project config, honors catalog-backed relative `extends`,
 uses distinct import/require modes, and classifies local, built-in, external, and unresolved
-relationships without exposing absolute paths or failed lookup locations. Sequelize publication
-and APIs remain Milestone 4.3.3.
+relationships without exposing absolute paths or failed lookup locations.
+
+Milestone 4.3.3 adds durable incremental publication. `project_dependency_index_runs` records source
+provenance, resolution context, warnings, limits, and terminal counters;
+`project_dependency_files` owns reusable extraction state; and `project_dependency_edges` plus
+`project_dependency_bindings` store only normalized declarations, classifications, identifiers,
+ranges, and relative local targets. Source-file and target UUIDs are opaque correlation values, so
+a replacement source catalog cannot partially destroy the previous graph.
+
+The dependency service safely reads changed code and resolver metadata, reuses unchanged
+declarations by source hash and effective extractor identity, and re-resolves every current edge.
+One Sequelize transaction upserts all current rows, removes stale run-owned rows, and completes the
+run. Failed or interrupted work leaves the previous graph intact. Explicit dependency index and
+status endpoints are available; bounded traversal and local PostgreSQL acceptance remain Milestone
+4.3.4.
 
 ## Local Infrastructure
 

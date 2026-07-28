@@ -872,10 +872,30 @@ was introduced.
 
 #### Milestone 4.3.3: Durable Incremental Dependency Graph
 
-Status: Planned.
+Status: Complete.
 
 Goal: atomically persist extraction states, re-resolved edges, bindings, freshness, and restart
 recovery in local PostgreSQL.
+
+Delivered:
+
+- Dependency index/status contracts with stable run, file, warning, limit, and error vocabularies.
+- Migration and class-based Sequelize models for dependency runs, file states, edges, and bindings.
+- Fresh source-catalog reads with bounded, hash-verified compiler and package metadata.
+- Changed-file safe reads and hash verification before Tree-sitter extraction.
+- Hash and effective-extractor-identity reuse with zero code reads and parses for unchanged files.
+- Full edge re-resolution against every current source catalog, including reused declarations.
+- Deterministic per-file and total edge/binding limits with periodic event-loop yields.
+- Stable file, edge, and binding UUIDs through atomic upserts and run-identity cleanup.
+- One-transaction graph publication preserving the previous graph after rollback or interruption.
+- Restart recovery for abandoned running dependency indexes.
+- Explicit dependency index and status REST endpoints with stable `400`, `404`, `409`, and `503`
+  behavior.
+- Focused contracts, service, Sequelize repository, controller, configuration, privacy, rollback,
+  and recovery tests.
+
+No public graph traversal, local PostgreSQL acceptance command, automatic indexing, or VSCode
+dependency controls were introduced; those remain Milestones 4.3.4 and 4.5.
 
 #### Milestone 4.3.4: Graph Traversal and Acceptance
 

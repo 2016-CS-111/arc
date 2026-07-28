@@ -87,6 +87,10 @@ function createDatabase(run: ProjectSymbolIndexRunModel) {
     models: {
       chatMessages: {} as ArcDatabase["models"]["chatMessages"],
       chatSessions: {} as ArcDatabase["models"]["chatSessions"],
+      projectDependencyBindings: {} as ArcDatabase["models"]["projectDependencyBindings"],
+      projectDependencyEdges: {} as ArcDatabase["models"]["projectDependencyEdges"],
+      projectDependencyFiles: {} as ArcDatabase["models"]["projectDependencyFiles"],
+      projectDependencyIndexRuns: {} as ArcDatabase["models"]["projectDependencyIndexRuns"],
       projectFiles: {} as ArcDatabase["models"]["projectFiles"],
       projects: {} as ArcDatabase["models"]["projects"],
       projectScans: {} as ArcDatabase["models"]["projectScans"],

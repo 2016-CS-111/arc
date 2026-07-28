@@ -1,4 +1,10 @@
-import type { ProjectScan, ProjectSourceIndex, ProjectSymbolIndex, RegisterProjectResponse } from "@arc/contracts";
+import type {
+  ProjectDependencyIndex,
+  ProjectScan,
+  ProjectSourceIndex,
+  ProjectSymbolIndex,
+  RegisterProjectResponse,
+} from "@arc/contracts";
 import {
   BadRequestException,
   ConflictException,
@@ -9,6 +15,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
+import type { ProjectDependencyIndexService } from "../application/project-dependency-index.service.js";
 import type { ProjectInventoryService } from "../application/project-inventory.service.js";
 import type { ProjectRegistrationService } from "../application/project-registration.service.js";
 import type { ProjectSourceIndexService } from "../application/project-source-index.service.js";
@@ -18,6 +25,8 @@ import {
   InvalidProjectPathError,
   InvalidProjectRootError,
   ProjectNotFoundError,
+  ProjectDependencyIndexAlreadyRunningError,
+  ProjectDependencyIndexFailedError,
   ProjectInventoryRequiredError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
@@ -84,6 +93,31 @@ const completedSymbolIndex: ProjectSymbolIndex = {
   startedAt: "2026-07-27T11:00:00.000Z",
   status: "completed",
   symbolCount: 42,
+  unsupportedFileCount: 1,
+};
+
+const completedDependencyIndex: ProjectDependencyIndex = {
+  bindingCount: 3,
+  builtinEdgeCount: 1,
+  completedAt: "2026-07-28T12:01:00.000Z",
+  edgeCount: 4,
+  errorCode: null,
+  externalEdgeCount: 1,
+  failedFileCount: 0,
+  id: "76e5ee0b-608d-4792-91c5-fd46579e74e4",
+  limitReasons: [],
+  localEdgeCount: 1,
+  omittedBindingCount: 0,
+  omittedEdgeCount: 0,
+  parsedFileCount: 8,
+  projectId: registration.project.id,
+  resolutionContextHash: "d".repeat(64),
+  resolverWarnings: ["config_missing"],
+  reusedFileCount: 2,
+  sourceIndexRunId: completedSourceIndex.id,
+  startedAt: "2026-07-28T12:00:00.000Z",
+  status: "completed",
+  unresolvedEdgeCount: 1,
   unsupportedFileCount: 1,
 };
 
@@ -301,6 +335,83 @@ describe("ProjectsController", () => {
     await expect(controller.indexSymbols("invalid")).rejects.toBeInstanceOf(BadRequestException);
     await expect(controller.getLatestSymbolIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it("starts dependency indexing and returns current graph-catalog freshness", async () => {
+    const indexDependencies = vi.fn(() => Promise.resolve(completedDependencyIndex));
+    const getLatestDependencies = vi.fn(() =>
+      Promise.resolve({
+        currentCatalog: {
+          bindingCount: completedDependencyIndex.bindingCount,
+          builtinEdgeCount: completedDependencyIndex.builtinEdgeCount,
+          completedAt: completedDependencyIndex.completedAt,
+          dependencyIndexId: completedDependencyIndex.id,
+          edgeCount: completedDependencyIndex.edgeCount,
+          externalEdgeCount: completedDependencyIndex.externalEdgeCount,
+          failedFileCount: completedDependencyIndex.failedFileCount,
+          localEdgeCount: completedDependencyIndex.localEdgeCount,
+          limitReasons: completedDependencyIndex.limitReasons,
+          omittedBindingCount: completedDependencyIndex.omittedBindingCount,
+          omittedEdgeCount: completedDependencyIndex.omittedEdgeCount,
+          parsedFileCount: completedDependencyIndex.parsedFileCount,
+          resolutionContextHash: "d".repeat(64),
+          resolverWarnings: completedDependencyIndex.resolverWarnings,
+          reusedFileCount: completedDependencyIndex.reusedFileCount,
+          sourceIndexRunId: completedDependencyIndex.sourceIndexRunId,
+          stale: false,
+          unresolvedEdgeCount: completedDependencyIndex.unresolvedEdgeCount,
+          unsupportedFileCount: completedDependencyIndex.unsupportedFileCount,
+        },
+        latestRun: completedDependencyIndex,
+      }),
+    );
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      indexDependencies,
+      getLatestDependencies,
+    );
+
+    await expect(controller.indexDependencies(registration.project.id)).resolves.toEqual(completedDependencyIndex);
+    await expect(controller.getLatestDependencyIndex(registration.project.id)).resolves.toMatchObject({
+      currentCatalog: { stale: false },
+      latestRun: completedDependencyIndex,
+    });
+  });
+
+  it.each([
+    [new ProjectNotFoundError(registration.project.id), NotFoundException],
+    [new ProjectSourceCatalogRequiredError(registration.project.id), ConflictException],
+    [new ProjectSourceCatalogStaleError(registration.project.id), ConflictException],
+    [new ProjectDependencyIndexAlreadyRunningError(registration.project.id), ConflictException],
+    [new ProjectDependencyIndexFailedError(), ServiceUnavailableException],
+  ])("maps dependency-index errors to stable HTTP responses", async (error, expectedError) => {
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(() => Promise.reject(error)),
+    );
+
+    await expect(controller.indexDependencies(registration.project.id)).rejects.toBeInstanceOf(expectedError);
+  });
+
+  it("rejects malformed dependency-index project identifiers", async () => {
+    const controller = createController(vi.fn());
+
+    await expect(controller.indexDependencies("invalid")).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.getLatestDependencyIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
+  });
 });
 
 function createController(
@@ -312,6 +423,8 @@ function createController(
   getLatest: ReturnType<typeof vi.fn> = vi.fn(),
   indexSymbols: ReturnType<typeof vi.fn> = vi.fn(),
   getLatestSymbols: ReturnType<typeof vi.fn> = vi.fn(),
+  indexDependencies: ReturnType<typeof vi.fn> = vi.fn(),
+  getLatestDependencies: ReturnType<typeof vi.fn> = vi.fn(),
 ): ProjectsController {
   return new ProjectsController(
     { register } as unknown as ProjectRegistrationService,
@@ -319,5 +432,9 @@ function createController(
     { getLatestScan, scan } as unknown as ProjectInventoryService,
     { getLatest, index } as unknown as ProjectSourceIndexService,
     { getLatest: getLatestSymbols, index: indexSymbols } as unknown as ProjectSymbolIndexService,
+    {
+      getLatest: getLatestDependencies,
+      index: indexDependencies,
+    } as unknown as ProjectDependencyIndexService,
   );
 }

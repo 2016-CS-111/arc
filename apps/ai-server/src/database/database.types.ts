@@ -2,6 +2,13 @@ import type {
   ChatError,
   ConversationMessageRole,
   ConversationMessageStatus,
+  ProjectDependencyFileErrorCode,
+  ProjectDependencyFileStatus,
+  ProjectDependencyIndexErrorCode,
+  ProjectDependencyIndexLimitReason,
+  ProjectDependencyIndexStatus,
+  ProjectDependencyResolutionKind,
+  ProjectDependencyResolverWarningCode,
   ProjectScanErrorCode,
   ProjectScanLimitReason,
   ProjectScanStatus,
@@ -19,8 +26,17 @@ import type {
 import type { ModelStatic, Optional, Sequelize } from "sequelize";
 
 import type { SourceSymbolKind } from "../modules/projects/domain/project-symbol-index.types.js";
+import type {
+  SourceDependencyBindingKind,
+  SourceDependencyKind,
+} from "../modules/projects/domain/project-dependency-index.types.js";
+import type { ProjectModuleUnresolvedReason } from "../modules/projects/domain/project-module-resolution.types.js";
 import type { ChatMessageModel } from "./models/chat-message.model.js";
 import type { ChatSessionModel } from "./models/chat-session.model.js";
+import type { ProjectDependencyBindingModel } from "./models/project-dependency-binding.model.js";
+import type { ProjectDependencyEdgeModel } from "./models/project-dependency-edge.model.js";
+import type { ProjectDependencyFileModel } from "./models/project-dependency-file.model.js";
+import type { ProjectDependencyIndexRunModel } from "./models/project-dependency-index-run.model.js";
 import type { ProjectFileModel } from "./models/project-file.model.js";
 import type { ProjectModel } from "./models/project.model.js";
 import type { ProjectScanModel } from "./models/project-scan.model.js";
@@ -153,6 +169,142 @@ export interface ProjectSourceFileAttributes {
 
 export type ProjectSourceFileCreationAttributes = Optional<ProjectSourceFileAttributes, "id" | "indexedAt">;
 
+export interface ProjectDependencyIndexRunAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly sourceIndexRunId: string;
+  readonly status: ProjectDependencyIndexStatus;
+  readonly resolutionContextHash: string | null;
+  readonly parsedFileCount: number;
+  readonly reusedFileCount: number;
+  readonly unsupportedFileCount: number;
+  readonly failedFileCount: number;
+  readonly edgeCount: number;
+  readonly bindingCount: number;
+  readonly omittedEdgeCount: number;
+  readonly omittedBindingCount: number;
+  readonly localEdgeCount: number;
+  readonly externalEdgeCount: number;
+  readonly builtinEdgeCount: number;
+  readonly unresolvedEdgeCount: number;
+  readonly limitReasons: ProjectDependencyIndexLimitReason[];
+  readonly resolverWarnings: ProjectDependencyResolverWarningCode[];
+  readonly errorCode: ProjectDependencyIndexErrorCode | null;
+  readonly startedAt: Date;
+  readonly completedAt: Date | null;
+}
+
+export type ProjectDependencyIndexRunCreationAttributes = Optional<
+  ProjectDependencyIndexRunAttributes,
+  | "id"
+  | "status"
+  | "resolutionContextHash"
+  | "parsedFileCount"
+  | "reusedFileCount"
+  | "unsupportedFileCount"
+  | "failedFileCount"
+  | "edgeCount"
+  | "bindingCount"
+  | "omittedEdgeCount"
+  | "omittedBindingCount"
+  | "localEdgeCount"
+  | "externalEdgeCount"
+  | "builtinEdgeCount"
+  | "unresolvedEdgeCount"
+  | "limitReasons"
+  | "resolverWarnings"
+  | "errorCode"
+  | "startedAt"
+  | "completedAt"
+>;
+
+export interface ProjectDependencyFileAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly dependencyIndexRunId: string;
+  readonly sourceFileId: string;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly language: string;
+  readonly extractorIdentity: string;
+  readonly status: ProjectDependencyFileStatus;
+  readonly hasSyntaxErrors: boolean;
+  readonly edgeCount: number;
+  readonly bindingCount: number;
+  readonly omittedEdgeCount: number;
+  readonly omittedBindingCount: number;
+  readonly errorCode: ProjectDependencyFileErrorCode | null;
+  readonly extractedAt: Date;
+}
+
+export type ProjectDependencyFileCreationAttributes = Optional<
+  ProjectDependencyFileAttributes,
+  | "id"
+  | "hasSyntaxErrors"
+  | "edgeCount"
+  | "bindingCount"
+  | "omittedEdgeCount"
+  | "omittedBindingCount"
+  | "errorCode"
+  | "extractedAt"
+>;
+
+export interface ProjectDependencyEdgeAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly dependencyIndexRunId: string;
+  readonly dependencyFileId: string;
+  readonly sourceFileId: string;
+  readonly extractionKey: string;
+  readonly kind: SourceDependencyKind;
+  readonly specifier: string;
+  readonly typeOnly: boolean;
+  readonly resolutionKind: ProjectDependencyResolutionKind;
+  readonly targetSourceFileId: string | null;
+  readonly targetRelativePath: string | null;
+  readonly externalPackage: string | null;
+  readonly unresolvedReason: ProjectModuleUnresolvedReason | null;
+  readonly startByte: number;
+  readonly endByte: number;
+  readonly startLine: number;
+  readonly startColumnByte: number;
+  readonly endLine: number;
+  readonly endColumnByte: number;
+  readonly specifierStartByte: number;
+  readonly specifierEndByte: number;
+  readonly specifierStartLine: number;
+  readonly specifierStartColumnByte: number;
+  readonly specifierEndLine: number;
+  readonly specifierEndColumnByte: number;
+}
+
+export type ProjectDependencyEdgeCreationAttributes = Optional<ProjectDependencyEdgeAttributes, "id" | "typeOnly">;
+
+export interface ProjectDependencyBindingAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly dependencyIndexRunId: string;
+  readonly dependencyEdgeId: string;
+  readonly sourceFileId: string;
+  readonly bindingKey: string;
+  readonly kind: SourceDependencyBindingKind;
+  readonly importedName: string | null;
+  readonly localName: string | null;
+  readonly exportedName: string | null;
+  readonly typeOnly: boolean;
+  readonly startByte: number | null;
+  readonly endByte: number | null;
+  readonly startLine: number | null;
+  readonly startColumnByte: number | null;
+  readonly endLine: number | null;
+  readonly endColumnByte: number | null;
+}
+
+export type ProjectDependencyBindingCreationAttributes = Optional<
+  ProjectDependencyBindingAttributes,
+  "id" | "typeOnly"
+>;
+
 export interface ProjectSymbolIndexRunAttributes {
   readonly id: string;
   readonly projectId: string;
@@ -232,6 +384,10 @@ export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, 
 
 export interface ArcDatabaseModels {
   readonly chatSessions: ModelStatic<ChatSessionModel>;
+  readonly projectDependencyBindings: ModelStatic<ProjectDependencyBindingModel>;
+  readonly projectDependencyEdges: ModelStatic<ProjectDependencyEdgeModel>;
+  readonly projectDependencyFiles: ModelStatic<ProjectDependencyFileModel>;
+  readonly projectDependencyIndexRuns: ModelStatic<ProjectDependencyIndexRunModel>;
   readonly chatMessages: ModelStatic<ChatMessageModel>;
   readonly projectFiles: ModelStatic<ProjectFileModel>;
   readonly projects: ModelStatic<ProjectModel>;

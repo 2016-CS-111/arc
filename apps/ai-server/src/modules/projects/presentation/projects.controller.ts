@@ -1,15 +1,18 @@
 import {
   CheckProjectPathRequestSchema,
+  LatestProjectDependencyIndexResponseSchema,
   LatestProjectScanResponseSchema,
   LatestProjectSourceIndexResponseSchema,
   LatestProjectSymbolIndexResponseSchema,
   ProjectIdSchema,
   RegisterProjectRequestSchema,
   type CheckProjectPathRequest,
+  type LatestProjectDependencyIndexResponse,
   type LatestProjectScanResponse,
   type LatestProjectSourceIndexResponse,
   type LatestProjectSymbolIndexResponse,
   type ProjectIgnoreDecision,
+  type ProjectDependencyIndex,
   type ProjectScan,
   type ProjectSourceIndex,
   type ProjectSymbolIndex,
@@ -31,6 +34,7 @@ import {
 } from "@nestjs/common";
 
 import { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
+import { ProjectDependencyIndexService } from "../application/project-dependency-index.service.js";
 import { ProjectInventoryService } from "../application/project-inventory.service.js";
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
 import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
@@ -40,6 +44,8 @@ import {
   InvalidProjectPathError,
   InvalidProjectRootError,
   ProjectNotFoundError,
+  ProjectDependencyIndexAlreadyRunningError,
+  ProjectDependencyIndexFailedError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
   ProjectInventoryRequiredError,
@@ -64,6 +70,8 @@ export class ProjectsController {
     private readonly projectSourceIndexService: ProjectSourceIndexService,
     @Inject(ProjectSymbolIndexService)
     private readonly projectSymbolIndexService: ProjectSymbolIndexService,
+    @Inject(ProjectDependencyIndexService)
+    private readonly projectDependencyIndexService: ProjectDependencyIndexService,
   ) {}
 
   @Post("register")
@@ -100,6 +108,32 @@ export class ProjectsController {
       return await this.projectSymbolIndexService.index(projectId);
     } catch (error) {
       this.mapSymbolIndexError(error);
+    }
+  }
+
+  @Post(":projectId/dependencies/index")
+  public async indexDependencies(@Param("projectId") projectIdValue: unknown): Promise<ProjectDependencyIndex> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return await this.projectDependencyIndexService.index(projectId);
+    } catch (error) {
+      this.mapDependencyIndexError(error);
+    }
+  }
+
+  @Get(":projectId/dependencies/index")
+  public async getLatestDependencyIndex(
+    @Param("projectId") projectIdValue: unknown,
+  ): Promise<LatestProjectDependencyIndexResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+
+    try {
+      return LatestProjectDependencyIndexResponseSchema.parse(
+        await this.projectDependencyIndexService.getLatest(projectId),
+      );
+    } catch (error) {
+      this.mapDependencyIndexError(error);
     }
   }
 
@@ -243,6 +277,24 @@ export class ProjectsController {
       throw new ConflictException(error.message);
     }
     if (error instanceof ProjectSymbolIndexFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
+
+    throw error;
+  }
+
+  private mapDependencyIndexError(error: unknown): never {
+    if (error instanceof ProjectNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (
+      error instanceof ProjectSourceCatalogRequiredError ||
+      error instanceof ProjectSourceCatalogStaleError ||
+      error instanceof ProjectDependencyIndexAlreadyRunningError
+    ) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectDependencyIndexFailedError) {
       throw new ServiceUnavailableException(error.message);
     }
 

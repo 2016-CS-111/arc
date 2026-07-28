@@ -46,6 +46,10 @@ function createDatabase(
     models: {
       chatMessages: {} as ArcDatabase["models"]["chatMessages"],
       chatSessions: {} as ArcDatabase["models"]["chatSessions"],
+      projectDependencyBindings: {} as ArcDatabase["models"]["projectDependencyBindings"],
+      projectDependencyEdges: {} as ArcDatabase["models"]["projectDependencyEdges"],
+      projectDependencyFiles: {} as ArcDatabase["models"]["projectDependencyFiles"],
+      projectDependencyIndexRuns: {} as ArcDatabase["models"]["projectDependencyIndexRuns"],
       projectFiles: {} as ArcDatabase["models"]["projectFiles"],
       projects: { findByPk, findOrCreate } as unknown as ModelStatic<ProjectModel>,
       projectScans: {} as ArcDatabase["models"]["projectScans"],
