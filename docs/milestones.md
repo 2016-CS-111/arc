@@ -994,10 +994,22 @@ added.
 
 #### Milestone 4.4.3: Express Analyzer
 
-Status: Planned.
+Status: Complete.
 
 Goal: detect Express applications, routers, routes, middleware, error middleware, and statically
 linked router mounts.
+
+Delivered:
+
+- Exact `express` default, namespace, named `Router`, CommonJS, and alias binding resolution.
+- Transient application/router, standard direct and chained HTTP route, and middleware facts.
+- Static normalized string/array paths plus explicit unresolved dynamic-path facts and omissions.
+- Direct four-parameter error-middleware classification and named handler symbol linking.
+- Same-file router links and local dependency-edge router-mount provenance.
+- Coverage for aliases, ESM/CommonJS forms, chains, mounts, dynamic values, limits, stable keys,
+  source privacy, false positives, and native smoke compatibility.
+
+No persistence, migration, endpoint, Next.js, React, Sequelize, or VSCode change was added.
 
 #### Milestone 4.4.4: Next.js and React Analyzers
 

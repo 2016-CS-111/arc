@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 and 4.4.2 are complete; Milestone 4.4.3 is next.
+Status: In progress. Milestones 4.4.1 through 4.4.3 are complete; Milestone 4.4.4 is next.
 
 ## Goal
 
@@ -768,12 +768,12 @@ No Express, Next.js, React, Sequelize, migration, database write, API, or VSCode
 
 ### 4.4.3 Express Analyzer
 
-Status: Planned.
+Status: Complete.
 
-- Implement framework-bound application/router creation, routes, middleware, error middleware, and
-  local router mounts.
-- Prove ESM/CommonJS imports, aliases, chained routes, static and dynamic paths, mount linking,
-  stable identities, and false-positive rejection.
+- Implements framework-bound application/router creation, standard direct and chained routes,
+  middleware, direct error middleware, and local router mounts.
+- Proves ESM/CommonJS imports, aliases, static and dynamic paths, mount linking, stable
+  identities, source privacy, limits, native smoke compatibility, and false-positive rejection.
 - No Next.js, React, Sequelize, migration, database write, API, or VSCode change.
 
 ### 4.4.4 Next.js and React Analyzers

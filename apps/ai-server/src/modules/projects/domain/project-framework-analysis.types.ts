@@ -85,11 +85,43 @@ export interface NestRouteEntityAttributes {
   readonly methodPaths: readonly string[];
 }
 
+export interface ExpressApplicationEntityAttributes {
+  readonly kind: "express_application";
+  readonly localName: string;
+}
+
+export interface ExpressRouterEntityAttributes {
+  readonly kind: "express_router";
+  readonly localName: string;
+}
+
+export interface ExpressRouteEntityAttributes {
+  readonly dynamicPath: boolean;
+  readonly handlerNames: readonly string[];
+  readonly httpMethod: "ALL" | "DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT";
+  readonly kind: "express_route";
+  readonly ownerName: string;
+  readonly paths: readonly string[];
+}
+
+export interface ExpressMiddlewareEntityAttributes {
+  readonly dynamicPath: boolean;
+  readonly errorHandler: boolean;
+  readonly handlerName: string | null;
+  readonly kind: "express_middleware";
+  readonly ownerName: string;
+  readonly paths: readonly string[];
+}
+
 export type ProjectFrameworkEntityAttributes =
   | NestModuleEntityAttributes
   | NestControllerEntityAttributes
   | NestProviderEntityAttributes
-  | NestRouteEntityAttributes;
+  | NestRouteEntityAttributes
+  | ExpressApplicationEntityAttributes
+  | ExpressRouterEntityAttributes
+  | ExpressRouteEntityAttributes
+  | ExpressMiddlewareEntityAttributes;
 
 export interface ProjectFrameworkEntityFact {
   readonly attributes: ProjectFrameworkEntityAttributes;
@@ -124,10 +156,30 @@ export interface NestInjectionRelationshipAttributes {
   readonly tokenKind: "identifier" | "string" | "unknown";
 }
 
+export interface ExpressRouteOwnershipRelationshipAttributes {
+  readonly httpMethod: ExpressRouteEntityAttributes["httpMethod"];
+  readonly kind: "express_route_ownership";
+}
+
+export interface ExpressMiddlewareRegistrationRelationshipAttributes {
+  readonly errorHandler: boolean;
+  readonly kind: "express_middleware_registration";
+  readonly paths: readonly string[];
+}
+
+export interface ExpressRouterMountRelationshipAttributes {
+  readonly dynamicPath: boolean;
+  readonly kind: "express_router_mount";
+  readonly paths: readonly string[];
+}
+
 export type ProjectFrameworkRelationshipAttributes =
   | NestInjectionRelationshipAttributes
   | NestModuleRegistrationRelationshipAttributes
-  | NestRouteOwnershipRelationshipAttributes;
+  | NestRouteOwnershipRelationshipAttributes
+  | ExpressRouteOwnershipRelationshipAttributes
+  | ExpressMiddlewareRegistrationRelationshipAttributes
+  | ExpressRouterMountRelationshipAttributes;
 
 export interface ProjectFrameworkRelationshipFact {
   readonly attributes: ProjectFrameworkRelationshipAttributes;

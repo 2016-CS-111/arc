@@ -64,7 +64,15 @@ export interface SourceFrameworkDecoratorEvidence extends SourceFrameworkEvidenc
 export interface SourceFrameworkCallEvidence extends SourceFrameworkEvidenceBase {
   readonly arguments: readonly SourceFrameworkStaticValue[];
   readonly assignedName: string | null;
+  readonly inlineHandlerParameterCounts: readonly (number | null)[];
   readonly kind: "call_expression";
+  readonly memberName: string | null;
+  readonly reference: SourceFrameworkReference | null;
+  readonly receiverCall: SourceFrameworkCallReceiver | null;
+}
+
+export interface SourceFrameworkCallReceiver {
+  readonly arguments: readonly SourceFrameworkStaticValue[];
   readonly reference: SourceFrameworkReference | null;
 }
 

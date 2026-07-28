@@ -282,7 +282,10 @@ Milestone 4.4.2 adds the first framework analyzer. NestJS modules, controllers, 
 routes, static module registrations, explicit injection tokens, and typed constructor injection
 become transient Arc facts only when their decorators resolve through exact `@nestjs/common`
 bindings. Static paths are normalized and combined; dynamic metadata remains explicitly
-unresolved.
+unresolved. Milestone 4.4.3 adds transient Express applications, routers, standard HTTP routes,
+middleware, directly-declared error middleware, and local router mounts. Express facts require
+verified `express` ESM/CommonJS bindings; aliases and route chains are supported, while dynamic
+paths remain explicitly unresolved.
 
-No framework persistence, endpoint, or VSCode control exists yet. Express analysis is the next
-gate. The complete design and sub-milestone boundaries are in `docs/milestone-4.4-architecture.md`.
+No framework persistence, endpoint, or VSCode control exists yet. The complete design and
+sub-milestone boundaries are in `docs/milestone-4.4-architecture.md`.

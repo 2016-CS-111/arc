@@ -526,6 +526,12 @@ remain named facts for the later catalog linker. Dynamic paths, module factories
 and spread metadata are preserved as unresolved facts and omissions without executing project
 code. Stable fact keys exclude byte offsets, and no NestJS fact is durable before Milestone 4.4.6.
 
+Milestone 4.4.3 applies the same transient analyzer contract to Express. An application or router
+must first be created from an exact `express` runtime binding. Standard direct and chained HTTP
+registrations become route facts; `use` becomes middleware or a local router mount. Static paths
+are normalized, directly registered four-parameter functions are classified as error middleware,
+and dynamic values remain unresolved. No Express fact is durable before Milestone 4.4.6.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

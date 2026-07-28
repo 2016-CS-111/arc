@@ -8,6 +8,7 @@ import type {
   SourceFrameworkLanguage,
 } from "../modules/projects/domain/project-framework.types.js";
 import { TreeSitterFrameworkEvidenceExtractor } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-framework-evidence.extractor.js";
+import { TreeSitterExpressFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-express-framework.analyzer.js";
 import { TreeSitterNestFrameworkAnalyzer } from "../modules/projects/infrastructure/tree-sitter/tree-sitter-nest-framework.analyzer.js";
 
 interface SmokeFixture {
@@ -125,8 +126,50 @@ function main(): void {
   );
   assert(!JSON.stringify(nestResult).includes(nestSource), "NestJS analysis retained its source body.");
 
+  const expressSource = `import express, { Router } from "express";
+const app = express();
+const router = Router();
+app.get("/health", handler);
+app.use("/api", router);
+`;
+  const expressDependency: ProjectFrameworkDependency = {
+    bindings: [
+      { bindingKey: "express", importedName: "default", kind: "default", localName: "express", typeOnly: false },
+      { bindingKey: "Router", importedName: "Router", kind: "named", localName: "Router", typeOnly: false },
+    ],
+    externalPackage: "express",
+    id: "express-smoke-edge",
+    sourceFileId: "express-smoke-source",
+    sourceRelativePath: "src/app.ts",
+    specifier: "express",
+    typeOnly: false,
+  };
+  const expressResult = new TreeSitterExpressFrameworkAnalyzer().analyze({
+    dependencies: [expressDependency],
+    evidence: extractor.extract({ language: "typescript", limits, source: expressSource }).evidence,
+    importBindings: new ProjectFrameworkImportResolver().resolve([expressDependency]),
+    limits: { maxEntities: 20, maxNameBytes: 128, maxRelationships: 40 },
+    relativePath: "src/app.ts",
+    scopeKey: "b".repeat(64),
+    sourceFileId: "express-smoke-source",
+    symbols: [],
+  });
+  assert(
+    expressResult.entities.some(
+      (entity) => entity.attributes.kind === "express_route" && entity.attributes.paths.includes("/health"),
+    ),
+    "Express route extraction smoke failed.",
+  );
+  assert(
+    expressResult.relationships.some(
+      (relationship) => relationship.relationshipKind === "mounts_router" && relationship.targetName === "router",
+    ),
+    "Express router mount smoke failed.",
+  );
+  assert(!JSON.stringify(expressResult).includes(expressSource), "Express analysis retained its source body.");
+
   logger.info("Framework evidence compatibility smoke passed", {
-    analyzerIdentities: [nestResult.analyzerIdentity],
+    analyzerIdentities: [nestResult.analyzerIdentity, expressResult.analyzerIdentity],
     architecture: process.arch,
     evidenceCounts: results.map(({ fixture, result }) => ({
       count: result.evidence.length,

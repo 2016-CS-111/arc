@@ -223,12 +223,33 @@ export class TreeSitterFrameworkEvidenceExtractor implements SourceFrameworkEvid
     state: EvidenceBuildState,
   ): FrameworkEvidenceDraft {
     const functionNode = node.childForFieldName("function");
+    const receiverCall = findRootReceiverCall(functionNode);
     return {
       arguments: this.readArguments(input, node, state),
       assignedName: readAssignedName(node),
+      inlineHandlerParameterCounts: this.readInlineHandlerParameterCounts(node),
       kind: "call_expression",
+      memberName: readMemberName(functionNode),
       reference: functionNode === null ? null : readTreeSitterReference(functionNode),
+      receiverCall:
+        receiverCall === null
+          ? null
+          : {
+              arguments: this.readArguments(input, receiverCall, state),
+              reference: (() => {
+                const receiverFunction = receiverCall.childForFieldName("function");
+                return receiverFunction === null ? null : readTreeSitterReference(receiverFunction);
+              })(),
+            },
     };
+  }
+
+  private readInlineHandlerParameterCounts(call: Parser.SyntaxNode): readonly (number | null)[] {
+    const argumentsNode = call.childForFieldName("arguments");
+    if (argumentsNode === null) {
+      return [];
+    }
+    return argumentsNode.namedChildren.map((argument) => readInlineHandlerParameterCount(argument));
   }
 
   private buildClassHeritage(node: Parser.SyntaxNode): FrameworkEvidenceDraft | null {
@@ -412,6 +433,42 @@ function readAssignedName(call: Parser.SyntaxNode): string | null {
   return null;
 }
 
+function readMemberName(node: Parser.SyntaxNode | null): string | null {
+  if (node?.type !== "member_expression") {
+    return null;
+  }
+  const property = node.childForFieldName("property");
+  return property === null ? null : readReferenceText(property);
+}
+
+function findRootReceiverCall(functionNode: Parser.SyntaxNode | null): Parser.SyntaxNode | null {
+  const initialReceiver = functionNode?.childForFieldName("object") ?? null;
+  if (initialReceiver?.type !== "call_expression") {
+    return null;
+  }
+  let receiver: Parser.SyntaxNode = initialReceiver;
+  for (;;) {
+    const nestedFunction: Parser.SyntaxNode | null = receiver.childForFieldName("function");
+    const nestedReceiver: Parser.SyntaxNode | null = nestedFunction?.childForFieldName("object") ?? null;
+    if (nestedReceiver?.type !== "call_expression") {
+      return receiver;
+    }
+    receiver = nestedReceiver;
+  }
+}
+
+function readInlineHandlerParameterCount(node: Parser.SyntaxNode): number | null {
+  if (node.type !== "arrow_function" && node.type !== "function_expression") {
+    return null;
+  }
+  const parameters =
+    node.childForFieldName("parameters") ?? node.namedChildren.find((child) => child.type === "formal_parameters");
+  if (parameters === undefined) {
+    return null;
+  }
+  return parameters.namedChildren.length;
+}
+
 function readReferenceText(node: Parser.SyntaxNode | null): string | null {
   const reference = node === null ? null : readTreeSitterReference(node);
   return reference?.segments.join(".") ?? null;
@@ -434,7 +491,12 @@ function evidenceNames(draft: FrameworkEvidenceDraft): readonly string[] {
     return [...referenceNames(draft.reference), ...(draft.targetName === null ? [] : [draft.targetName])];
   }
   if (draft.kind === "call_expression") {
-    return [...referenceNames(draft.reference), ...(draft.assignedName === null ? [] : [draft.assignedName])];
+    return [
+      ...referenceNames(draft.reference),
+      ...referenceNames(draft.receiverCall?.reference ?? null),
+      ...(draft.assignedName === null ? [] : [draft.assignedName]),
+      ...(draft.memberName === null ? [] : [draft.memberName]),
+    ];
   }
   if (draft.kind === "class_heritage") {
     return [...referenceNames(draft.extendsReference), ...(draft.className === null ? [] : [draft.className])];
