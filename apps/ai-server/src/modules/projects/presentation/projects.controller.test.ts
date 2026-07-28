@@ -1,4 +1,5 @@
 import type {
+  ProjectDependencyGraphResponse,
   ProjectDependencyIndex,
   ProjectScan,
   ProjectSourceIndex,
@@ -15,6 +16,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
+import type { ProjectDependencyGraphService } from "../application/project-dependency-graph.service.js";
 import type { ProjectDependencyIndexService } from "../application/project-dependency-index.service.js";
 import type { ProjectInventoryService } from "../application/project-inventory.service.js";
 import type { ProjectRegistrationService } from "../application/project-registration.service.js";
@@ -24,9 +26,13 @@ import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
   InvalidProjectRootError,
-  ProjectNotFoundError,
+  ProjectDependencyCatalogRequiredError,
+  ProjectDependencyCatalogStaleError,
+  ProjectDependencyGraphFailedError,
   ProjectDependencyIndexAlreadyRunningError,
   ProjectDependencyIndexFailedError,
+  ProjectDependencyPathNotFoundError,
+  ProjectNotFoundError,
   ProjectInventoryRequiredError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
@@ -119,6 +125,58 @@ const completedDependencyIndex: ProjectDependencyIndex = {
   status: "completed",
   unresolvedEdgeCount: 1,
   unsupportedFileCount: 1,
+};
+
+const dependencyGraph: ProjectDependencyGraphResponse = {
+  dependencyIndexId: completedDependencyIndex.id,
+  depth: 1,
+  direction: "outgoing",
+  edges: [
+    {
+      bindings: [],
+      externalPackage: null,
+      id: "0ff1777d-03a4-4299-8303-4da001503f68",
+      kind: "static_import",
+      range: {
+        endByte: 31,
+        endColumnByte: 31,
+        endLine: 0,
+        startByte: 0,
+        startColumnByte: 0,
+        startLine: 0,
+      },
+      resolutionKind: "unresolved",
+      sourceFileId: "ac871053-d9f1-4f28-b022-1a18079927bb",
+      sourceNodeId: "file:ac871053-d9f1-4f28-b022-1a18079927bb",
+      sourcePath: "src/main.ts",
+      specifier: "./missing.js",
+      specifierRange: {
+        endByte: 29,
+        endColumnByte: 29,
+        endLine: 0,
+        startByte: 18,
+        startColumnByte: 18,
+        startLine: 0,
+      },
+      targetNodeId: null,
+      targetPath: null,
+      targetSourceFileId: null,
+      typeOnly: false,
+      unresolvedReason: "not_found",
+    },
+  ],
+  nodes: [
+    {
+      id: "file:ac871053-d9f1-4f28-b022-1a18079927bb",
+      kind: "file",
+      path: "src/main.ts",
+      sourceFileId: "ac871053-d9f1-4f28-b022-1a18079927bb",
+    },
+  ],
+  projectId: registration.project.id,
+  sourceIndexRunId: completedSourceIndex.id,
+  startPath: "src/main.ts",
+  truncated: { depth: false, edges: false, nodes: false },
 };
 
 describe("ProjectsController", () => {
@@ -412,6 +470,67 @@ describe("ProjectsController", () => {
     await expect(controller.indexDependencies("invalid")).rejects.toBeInstanceOf(BadRequestException);
     await expect(controller.getLatestDependencyIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it("validates dependency graph queries and returns the bounded graph", async () => {
+    const getGraph = vi.fn(() => Promise.resolve(dependencyGraph));
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      getGraph,
+    );
+
+    await expect(controller.getDependencyGraph(registration.project.id, { path: "src/main.ts" })).resolves.toEqual(
+      dependencyGraph,
+    );
+    expect(getGraph).toHaveBeenCalledWith(registration.project.id, {
+      dependencyKind: [],
+      depth: 1,
+      direction: "outgoing",
+      includeBindings: false,
+      maxEdges: 500,
+      maxNodes: 100,
+      path: "src/main.ts",
+      resolutionKind: [],
+    });
+    await expect(
+      controller.getDependencyGraph(registration.project.id, { depth: "0", path: "src/main.ts" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each([
+    [new InvalidProjectPathError(), BadRequestException],
+    [new ProjectNotFoundError(registration.project.id), NotFoundException],
+    [new ProjectDependencyPathNotFoundError("src/missing.ts"), NotFoundException],
+    [new ProjectDependencyCatalogRequiredError(registration.project.id), ConflictException],
+    [new ProjectDependencyCatalogStaleError(registration.project.id), ConflictException],
+    [new ProjectDependencyGraphFailedError(), ServiceUnavailableException],
+  ])("maps dependency graph errors to stable HTTP responses", async (error, expectedError) => {
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(() => Promise.reject(error)),
+    );
+
+    await expect(
+      controller.getDependencyGraph(registration.project.id, { path: "src/main.ts" }),
+    ).rejects.toBeInstanceOf(expectedError);
+  });
 });
 
 function createController(
@@ -425,6 +544,7 @@ function createController(
   getLatestSymbols: ReturnType<typeof vi.fn> = vi.fn(),
   indexDependencies: ReturnType<typeof vi.fn> = vi.fn(),
   getLatestDependencies: ReturnType<typeof vi.fn> = vi.fn(),
+  getGraph: ReturnType<typeof vi.fn> = vi.fn(),
 ): ProjectsController {
   return new ProjectsController(
     { register } as unknown as ProjectRegistrationService,
@@ -436,5 +556,6 @@ function createController(
       getLatest: getLatestDependencies,
       index: indexDependencies,
     } as unknown as ProjectDependencyIndexService,
+    { getGraph } as unknown as ProjectDependencyGraphService,
   );
 }

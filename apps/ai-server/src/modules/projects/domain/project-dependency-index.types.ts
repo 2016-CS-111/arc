@@ -3,10 +3,12 @@ import type {
   ProjectDependencyFileStatus,
   ProjectDependencyIndexErrorCode,
   ProjectDependencyIndexLimitReason,
+  ProjectDependencyGraphDirection,
+  ProjectDependencyResolutionKind,
   ProjectDependencyResolverWarningCode,
 } from "@arc/contracts";
 
-import type { ProjectModuleResolution } from "./project-module-resolution.types.js";
+import type { ProjectModuleResolution, ProjectModuleUnresolvedReason } from "./project-module-resolution.types.js";
 import type { SourceCodeRange } from "./source-code.types.js";
 
 export const SOURCE_DEPENDENCY_LANGUAGES = ["javascript", "javascriptreact", "typescript", "typescriptreact"] as const;
@@ -148,4 +150,59 @@ export interface FailProjectDependencyIndexInput {
   readonly projectId: string;
   readonly resolutionContextHash?: string;
   readonly resolverWarnings?: readonly ProjectDependencyResolverWarningCode[];
+}
+
+export interface ProjectDependencyGraphFileRecord {
+  readonly relativePath: string;
+  readonly sourceFileId: string;
+}
+
+export interface ProjectDependencyGraphBindingRecord {
+  readonly bindingKey: string;
+  readonly exportedName: string | null;
+  readonly importedName: string | null;
+  readonly kind: SourceDependencyBindingKind;
+  readonly localName: string | null;
+  readonly range: SourceCodeRange | null;
+  readonly typeOnly: boolean;
+}
+
+export interface ProjectDependencyGraphEdgeRecord {
+  readonly bindings: readonly ProjectDependencyGraphBindingRecord[];
+  readonly externalPackage: string | null;
+  readonly id: string;
+  readonly kind: SourceDependencyKind;
+  readonly range: SourceCodeRange;
+  readonly resolutionKind: ProjectDependencyResolutionKind;
+  readonly sourceFileId: string;
+  readonly sourceRelativePath: string;
+  readonly specifier: string;
+  readonly specifierRange: SourceCodeRange;
+  readonly targetRelativePath: string | null;
+  readonly targetSourceFileId: string | null;
+  readonly typeOnly: boolean;
+  readonly unresolvedReason: ProjectModuleUnresolvedReason | null;
+}
+
+export interface FindProjectDependencyGraphFileInput {
+  readonly dependencyIndexId: string;
+  readonly projectId: string;
+  readonly relativePath: string;
+}
+
+export interface FindProjectDependencyGraphEdgesInput {
+  readonly dependencyIndexId: string;
+  readonly dependencyKinds: readonly SourceDependencyKind[];
+  readonly direction: ProjectDependencyGraphDirection;
+  readonly excludedEdgeIds: readonly string[];
+  readonly frontierSourceFileIds: readonly string[];
+  readonly includeBindings: boolean;
+  readonly limit: number;
+  readonly projectId: string;
+  readonly resolutionKinds: readonly ProjectDependencyResolutionKind[];
+}
+
+export interface ProjectDependencyGraphEdgePage {
+  readonly edges: readonly ProjectDependencyGraphEdgeRecord[];
+  readonly hasMore: boolean;
 }

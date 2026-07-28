@@ -4,6 +4,8 @@ import {
   LatestProjectScanResponseSchema,
   LatestProjectSourceIndexResponseSchema,
   LatestProjectSymbolIndexResponseSchema,
+  ProjectDependencyGraphQuerySchema,
+  ProjectDependencyGraphResponseSchema,
   ProjectIdSchema,
   RegisterProjectRequestSchema,
   type CheckProjectPathRequest,
@@ -12,6 +14,8 @@ import {
   type LatestProjectSourceIndexResponse,
   type LatestProjectSymbolIndexResponse,
   type ProjectIgnoreDecision,
+  type ProjectDependencyGraphQuery,
+  type ProjectDependencyGraphResponse,
   type ProjectDependencyIndex,
   type ProjectScan,
   type ProjectSourceIndex,
@@ -29,12 +33,14 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from "@nestjs/common";
 
-import { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
+import { ProjectDependencyGraphService } from "../application/project-dependency-graph.service.js";
 import { ProjectDependencyIndexService } from "../application/project-dependency-index.service.js";
+import { ProjectIgnorePolicyService } from "../application/project-ignore-policy.service.js";
 import { ProjectInventoryService } from "../application/project-inventory.service.js";
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
 import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
@@ -43,9 +49,13 @@ import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
   InvalidProjectRootError,
-  ProjectNotFoundError,
+  ProjectDependencyCatalogRequiredError,
+  ProjectDependencyCatalogStaleError,
+  ProjectDependencyGraphFailedError,
   ProjectDependencyIndexAlreadyRunningError,
   ProjectDependencyIndexFailedError,
+  ProjectDependencyPathNotFoundError,
+  ProjectNotFoundError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
   ProjectInventoryRequiredError,
@@ -72,6 +82,8 @@ export class ProjectsController {
     private readonly projectSymbolIndexService: ProjectSymbolIndexService,
     @Inject(ProjectDependencyIndexService)
     private readonly projectDependencyIndexService: ProjectDependencyIndexService,
+    @Inject(ProjectDependencyGraphService)
+    private readonly projectDependencyGraphService: ProjectDependencyGraphService,
   ) {}
 
   @Post("register")
@@ -134,6 +146,23 @@ export class ProjectsController {
       );
     } catch (error) {
       this.mapDependencyIndexError(error);
+    }
+  }
+
+  @Get(":projectId/dependencies/graph")
+  public async getDependencyGraph(
+    @Param("projectId") projectIdValue: unknown,
+    @Query() queryValue: unknown,
+  ): Promise<ProjectDependencyGraphResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+    const query = this.parseDependencyGraphQuery(queryValue);
+
+    try {
+      return ProjectDependencyGraphResponseSchema.parse(
+        await this.projectDependencyGraphService.getGraph(projectId, query),
+      );
+    } catch (error) {
+      this.mapDependencyGraphError(error);
     }
   }
 
@@ -237,6 +266,15 @@ export class ProjectsController {
     return parsed.data;
   }
 
+  private parseDependencyGraphQuery(payload: unknown): ProjectDependencyGraphQuery {
+    const parsed = ProjectDependencyGraphQuerySchema.safeParse(payload);
+    if (!parsed.success) {
+      throw new BadRequestException("Arc dependency graph query is invalid.");
+    }
+
+    return parsed.data;
+  }
+
   private mapInventoryError(error: unknown): never {
     if (error instanceof ProjectNotFoundError) {
       throw new NotFoundException(error.message);
@@ -295,6 +333,23 @@ export class ProjectsController {
       throw new ConflictException(error.message);
     }
     if (error instanceof ProjectDependencyIndexFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
+
+    throw error;
+  }
+
+  private mapDependencyGraphError(error: unknown): never {
+    if (error instanceof InvalidProjectPathError) {
+      throw new BadRequestException(error.message);
+    }
+    if (error instanceof ProjectNotFoundError || error instanceof ProjectDependencyPathNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof ProjectDependencyCatalogRequiredError || error instanceof ProjectDependencyCatalogStaleError) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectDependencyGraphFailedError) {
       throw new ServiceUnavailableException(error.message);
     }
 

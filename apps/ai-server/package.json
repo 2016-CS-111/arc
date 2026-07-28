@@ -11,6 +11,7 @@
     "db:create": "tsx src/cli/db-create.ts",
     "db:migrate": "tsx src/cli/db-migrate.ts",
     "db:verify": "tsx src/cli/db-verify.ts",
+    "dependency:index:verify": "tsx src/cli/dependency-index-verify.ts",
     "dev": "tsx watch src/main.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
     "project:verify": "tsx src/cli/project-inventory-verify.ts",

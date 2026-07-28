@@ -87,6 +87,7 @@ function createDependencyFile(): ProjectDependencyFileModel {
   return {
     get: () => attributes,
     id: dependencyFileId,
+    relativePath: attributes.relativePath,
     sourceFileId,
   } as unknown as ProjectDependencyFileModel;
 }
@@ -160,6 +161,7 @@ function createDatabase(run: ProjectDependencyIndexRunModel) {
   const updateRuns = vi.fn(() => Promise.resolve([0]));
   const bulkCreateFiles = vi.fn(() => Promise.resolve([]));
   const findFiles = vi.fn(() => Promise.resolve([createDependencyFile()]));
+  const findFile = vi.fn(() => Promise.resolve(createDependencyFile()));
   const destroyFiles = vi.fn(() => Promise.resolve(0));
   const bulkCreateEdges = vi.fn(() => Promise.resolve([]));
   const findEdges = vi.fn(() => Promise.resolve([createDependencyEdge()]));
@@ -185,6 +187,7 @@ function createDatabase(run: ProjectDependencyIndexRunModel) {
         bulkCreate: bulkCreateFiles,
         destroy: destroyFiles,
         findAll: findFiles,
+        findOne: findFile,
       },
       projectDependencyIndexRuns: {
         create,
@@ -206,6 +209,7 @@ function createDatabase(run: ProjectDependencyIndexRunModel) {
     destroyFiles,
     findBindings,
     findEdges,
+    findFile,
     findFiles,
     transactionValue,
     updateRuns,
@@ -405,6 +409,84 @@ describe("SequelizeProjectDependencyIndexRepository", () => {
         status: "extracted",
       }),
     ]);
+  });
+
+  it("reads a run-scoped graph deterministically with filters and optional bindings", async () => {
+    const { run } = createRun();
+    const { database, findBindings, findEdges, findFile, findFiles } = createDatabase(run);
+    const repository = new SequelizeProjectDependencyIndexRepository(database);
+
+    await expect(
+      repository.findGraphFile({
+        dependencyIndexId,
+        projectId,
+        relativePath: "src/main.ts",
+      }),
+    ).resolves.toEqual({
+      relativePath: "src/main.ts",
+      sourceFileId,
+    });
+    expect(findFile).toHaveBeenCalledWith({
+      where: {
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+        relativePath: "src/main.ts",
+      },
+    });
+
+    await expect(
+      repository.findGraphEdges({
+        dependencyIndexId,
+        dependencyKinds: ["static_import"],
+        direction: "both",
+        excludedEdgeIds: ["87ab758d-535c-4a80-9c9c-b8bc81da83e9"],
+        frontierSourceFileIds: [sourceFileId],
+        includeBindings: true,
+        limit: 10,
+        projectId,
+        resolutionKinds: ["local"],
+      }),
+    ).resolves.toEqual({
+      edges: [
+        expect.objectContaining({
+          bindings: [expect.objectContaining({ bindingKey, importedName: "target" })],
+          id: dependencyEdgeId,
+          sourceRelativePath: "src/main.ts",
+          targetRelativePath: "src/target.ts",
+        }),
+      ],
+      hasMore: false,
+    });
+    const edgeQuery: unknown = findEdges.mock.calls.at(-1)?.[0];
+    expect(edgeQuery).toMatchObject({
+      limit: 11,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["extractionKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+      },
+    });
+    expect(findFiles).toHaveBeenLastCalledWith({
+      where: {
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+        sourceFileId: { [Op.in]: [sourceFileId] },
+      },
+    });
+    expect(findBindings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          dependencyEdgeId: { [Op.in]: [dependencyEdgeId] },
+          dependencyIndexRunId: dependencyIndexId,
+          projectId,
+        },
+      }),
+    );
   });
 
   it("aborts publication when current file identities cannot be recovered", async () => {

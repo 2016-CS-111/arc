@@ -414,7 +414,7 @@ recovery, checks source-body privacy, and removes all temporary database and fil
 ## Import and Dependency Graph
 
 Milestone 4.3 reuses Tree-sitter to extract static dependency syntax from fresh JavaScript,
-JSX, TypeScript, and TSX source files. A separate TypeScript compiler API adapter will resolve
+JSX, TypeScript, and TSX source files. A separate TypeScript compiler API adapter resolves
 project-local targets against a virtual filesystem built only from Arc's current source catalog,
 including bounded in-project compiler configuration and package metadata. Built-in modules,
 external packages, local files, and unresolved imports remain explicit classifications.
@@ -435,7 +435,7 @@ is added, removed, or retargeted by compiler configuration without reparsing its
 The graph persists module specifiers, binding identifiers, stable relationship keys, source ranges,
 relative local targets, and run provenance. It does not persist source bodies, syntax trees,
 absolute target paths, or TypeScript failed-lookup paths. Failed and interrupted runs preserve the
-previous graph, and Milestone 4.3.4 traversal will reject stale graphs. The complete
+previous graph, and Milestone 4.3.4 traversal rejects stale graphs. The complete
 design and four implementation gates are documented in `docs/milestone-4.3-architecture.md`.
 
 Milestone 4.3.1 implements the extraction half of this boundary. Versioned JavaScript and
@@ -462,9 +462,19 @@ a replacement source catalog cannot partially destroy the previous graph.
 The dependency service safely reads changed code and resolver metadata, reuses unchanged
 declarations by source hash and effective extractor identity, and re-resolves every current edge.
 One Sequelize transaction upserts all current rows, removes stale run-owned rows, and completes the
-run. Failed or interrupted work leaves the previous graph intact. Explicit dependency index and
-status endpoints are available; bounded traversal and local PostgreSQL acceptance remain Milestone
-4.3.4.
+run. Failed or interrupted work leaves the previous graph intact. Explicit dependency index,
+status, and graph endpoints are available.
+
+Milestone 4.3.4 completes the boundary with strict graph contracts and deterministic breadth-first
+incoming, outgoing, and bidirectional traversal. Only local file nodes expand; external and
+built-in nodes are terminal, unresolved edges have no target, cycles are visited once, and node,
+edge, and depth ceilings expose explicit truncation state. Every query is scoped to one immutable
+dependency run and rechecks source/dependency freshness before returning.
+
+`pnpm dependency:index:verify` drives a temporary project through real Tree-sitter extraction,
+catalog-bounded TypeScript resolution, Sequelize publication, graph traversal, incremental target
+and alias changes, rollback, restart recovery, privacy checks, and cleanup against local
+PostgreSQL.
 
 ## Local Infrastructure
 

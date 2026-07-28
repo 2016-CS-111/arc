@@ -199,6 +199,8 @@ function createFixture(options: FixtureOptions = {}) {
   const dependencyIndexRepository = {
     beginIndex,
     failIndex,
+    findGraphEdges: vi.fn(),
+    findGraphFile: vi.fn(),
     getCurrentCatalogRun: vi.fn(() =>
       Promise.resolve({
         ...runningDependencyIndex,

@@ -3,6 +3,10 @@ import type { ProjectDependencyIndex } from "@arc/contracts";
 import type {
   CurrentProjectDependencyFile,
   FailProjectDependencyIndexInput,
+  FindProjectDependencyGraphEdgesInput,
+  FindProjectDependencyGraphFileInput,
+  ProjectDependencyGraphEdgePage,
+  ProjectDependencyGraphFileRecord,
   PublishProjectDependencyIndexInput,
 } from "../domain/project-dependency-index.types.js";
 
@@ -14,4 +18,6 @@ export interface ProjectDependencyIndexRepository {
   getCurrentCatalogRun(projectId: string): Promise<ProjectDependencyIndex | null>;
   getLatestRun(projectId: string): Promise<ProjectDependencyIndex | null>;
   recoverInterruptedIndexes(): Promise<number>;
+  findGraphFile(input: FindProjectDependencyGraphFileInput): Promise<ProjectDependencyGraphFileRecord | null>;
+  findGraphEdges(input: FindProjectDependencyGraphEdgesInput): Promise<ProjectDependencyGraphEdgePage>;
 }

@@ -57,6 +57,9 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES: z.coerce.number().int().positive().max(16_777_216).default(1_048_576),
   ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES: z.coerce.number().int().positive().max(1_000).default(25),
   ARC_PROJECT_DEPENDENCY_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
+  ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH: z.coerce.number().int().positive().max(5).default(5),
+  ARC_PROJECT_DEPENDENCY_GRAPH_MAX_NODES: z.coerce.number().int().positive().max(500).default(500),
+  ARC_PROJECT_DEPENDENCY_GRAPH_MAX_EDGES: z.coerce.number().int().positive().max(2_000).default(2_000),
 });
 
 export interface AppConfig {
@@ -95,6 +98,9 @@ export interface AppConfig {
     readonly batchSize: number;
   };
   readonly projectDependency: {
+    readonly graphMaxDepth: number;
+    readonly graphMaxNodes: number;
+    readonly graphMaxEdges: number;
     readonly maxEdgesPerFile: number;
     readonly maxTotalEdges: number;
     readonly maxBindingsPerEdge: number;
@@ -151,6 +157,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     },
     projectDependency: {
       batchSize: parsed.ARC_PROJECT_DEPENDENCY_BATCH_SIZE,
+      graphMaxDepth: parsed.ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH,
+      graphMaxEdges: parsed.ARC_PROJECT_DEPENDENCY_GRAPH_MAX_EDGES,
+      graphMaxNodes: parsed.ARC_PROJECT_DEPENDENCY_GRAPH_MAX_NODES,
       maxBindingNameBytes: parsed.ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES,
       maxBindingsPerEdge: parsed.ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE,
       maxConfigBytes: parsed.ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES,

@@ -1,6 +1,6 @@
 # Milestone 4.3 Architecture: Import and Dependency Graph
 
-Status: In progress. Milestones 4.3.1 through 4.3.3 are implemented and verified.
+Status: Complete. Milestones 4.3.1 through 4.3.4 are implemented and verified.
 
 ## Goal
 
@@ -766,7 +766,7 @@ extension change, or webview change was introduced. These remain Milestones 4.3.
 
 ### 4.3.4 Graph Traversal and Acceptance
 
-Status: Planned.
+Status: Complete.
 
 - Add the bounded dependency graph endpoint and deterministic traversal service.
 - Add `pnpm dependency:index:verify` against local PostgreSQL.
@@ -778,7 +778,27 @@ Status: Planned.
   native parser smoke, and local PostgreSQL verification gates.
 - No VSCode graph UI or automatic indexing.
 
-Each gate must compile and pass independently before implementation proceeds to the next gate.
+Implemented:
+
+- Strict graph query and response contracts with portable paths, direction, depth, dependency and
+  resolution filters, bounded nodes and edges, optional bindings, typed terminal nodes, and
+  truncation state.
+- Run-scoped Sequelize graph lookups and deterministic edge pages with filter pushdown, optional
+  binding reads, excluded-edge tracking, and `limit + 1` truncation detection.
+- A deterministic breadth-first traversal service with cycle safety, local-file-only expansion,
+  terminal external and built-in nodes, targetless unresolved edges, server ceilings, event-loop
+  yields, and before/after catalog freshness checks.
+- `GET /projects/:projectId/dependencies/graph` with stable validation and domain-error mapping.
+- `pnpm dependency:index:verify` against local PostgreSQL, covering all supported dialects,
+  incoming/outgoing/bidirectional cycles, terminal nodes, binding opt-in, stable responses, stale
+  rejection, target addition/removal, alias retargeting with zero importer parses, stable edge and
+  binding UUIDs, total and traversal limits, atomic rollback, restart recovery, privacy, and
+  cleanup.
+- Complete verification with 296 tests, TypeScript build, strict lint, formatting, development and
+  compiled native smokes, webview type-check, and production builds.
+
+No VSCode graph UI, automatic indexing, filesystem watcher, framework interpretation, symbol
+linkage, embeddings, or chat context was introduced.
 
 ## Acceptance Gate
 

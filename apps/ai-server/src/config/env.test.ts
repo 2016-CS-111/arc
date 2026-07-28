@@ -37,6 +37,9 @@ describe("loadConfig", () => {
     });
     expect(config.projectDependency).toEqual({
       batchSize: 500,
+      graphMaxDepth: 5,
+      graphMaxEdges: 2_000,
+      graphMaxNodes: 500,
       maxBindingNameBytes: 512,
       maxBindingsPerEdge: 100,
       maxConfigBytes: 1_048_576,
@@ -71,6 +74,9 @@ describe("loadConfig", () => {
       ARC_PROJECT_SYMBOL_MAX_TOTAL_SYMBOLS: "50000",
       ARC_PROJECT_SYMBOL_YIELD_EVERY_FILES: "10",
       ARC_PROJECT_DEPENDENCY_BATCH_SIZE: "125",
+      ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH: "3",
+      ARC_PROJECT_DEPENDENCY_GRAPH_MAX_EDGES: "750",
+      ARC_PROJECT_DEPENDENCY_GRAPH_MAX_NODES: "150",
       ARC_PROJECT_DEPENDENCY_MAX_BINDING_NAME_BYTES: "128",
       ARC_PROJECT_DEPENDENCY_MAX_BINDINGS_PER_EDGE: "25",
       ARC_PROJECT_DEPENDENCY_MAX_CONFIG_BYTES: "262144",
@@ -113,6 +119,9 @@ describe("loadConfig", () => {
     });
     expect(config.projectDependency).toEqual({
       batchSize: 125,
+      graphMaxDepth: 3,
+      graphMaxEdges: 750,
+      graphMaxNodes: 150,
       maxBindingNameBytes: 128,
       maxBindingsPerEdge: 25,
       maxConfigBytes: 262_144,

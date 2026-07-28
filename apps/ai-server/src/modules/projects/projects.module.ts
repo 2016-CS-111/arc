@@ -4,6 +4,7 @@ import { DATABASE } from "../../database/database.constants.js";
 import { DatabaseModule } from "../../database/database.module.js";
 import type { ArcDatabase } from "../../database/database.types.js";
 import type { IgnoreRulesFileReader } from "./application/ignore-rules-file.reader.js";
+import { ProjectDependencyGraphService } from "./application/project-dependency-graph.service.js";
 import type { ProjectDependencyIndexRepository } from "./application/project-dependency-index.repository.js";
 import { ProjectDependencyIndexService } from "./application/project-dependency-index.service.js";
 import { ProjectIgnorePolicyService } from "./application/project-ignore-policy.service.js";
@@ -139,6 +140,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,
+    ProjectDependencyGraphService,
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
@@ -149,6 +151,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,
+    ProjectDependencyGraphService,
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,

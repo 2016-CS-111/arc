@@ -806,7 +806,7 @@ VSCode source-intelligence controls remain Milestone 4.5.
 
 ### Milestone 4.3: Import and Dependency Graph
 
-Status: In progress.
+Status: Complete.
 
 Goal: resolve file and module relationships into a traversable project graph.
 
@@ -899,13 +899,28 @@ dependency controls were introduced; those remain Milestones 4.3.4 and 4.5.
 
 #### Milestone 4.3.4: Graph Traversal and Acceptance
 
-Status: Planned.
+Status: Complete.
 
-Goal: expose bounded cycle-safe traversal and prove identity, invalidation, atomicity, privacy,
-recovery, and cleanup against local PostgreSQL.
+Delivered:
 
-Implementation requires explicit approval for each sub-milestone. The complete design is in
-`docs/milestone-4.3-architecture.md`.
+- Strict graph query and response contracts for portable paths, direction, depth, dependency and
+  resolution filters, node and edge bounds, optional bindings, typed nodes, and truncation state.
+- `GET /projects/:projectId/dependencies/graph` with stable `400`, `404`, `409`, and `503`
+  behavior.
+- Deterministic breadth-first incoming, outgoing, and bidirectional traversal over immutable
+  dependency-run rows.
+- Cycle safety, local-only expansion, terminal external and built-in nodes, targetless unresolved
+  edges, configurable server ceilings, and periodic event-loop yields.
+- Run-scoped Sequelize graph reads with deterministic sorting, filter pushdown, optional binding
+  loading, excluded-edge tracking, and `limit + 1` truncation detection.
+- `pnpm dependency:index:verify` using a temporary project and local PostgreSQL to prove supported
+  dialects, target addition/removal, alias retargeting without importer reparsing, stable UUIDs,
+  stale rejection, limits, rollback, recovery, privacy, and cleanup.
+- Complete verification with 296 tests, TypeScript build, strict lint, formatting, native parser
+  and resolver smokes, webview type-check, and production builds.
+
+Milestone 4.3 is complete. Framework interpretation begins in Milestone 4.4; VSCode dependency
+controls remain Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 

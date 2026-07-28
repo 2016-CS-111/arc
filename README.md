@@ -33,6 +33,7 @@ pnpm db:verify
 pnpm project:verify
 pnpm source:index:verify
 pnpm symbol:index:verify
+pnpm dependency:index:verify
 pnpm module-resolution:smoke
 pnpm tree-sitter:smoke
 pnpm ollama:smoke
@@ -229,11 +230,13 @@ remain Milestone 4.5.
 
 ## Dependency Graph
 
-Milestone 4.3.3 adds explicit durable dependency indexing for a fresh source catalog:
+Milestone 4.3 adds explicit durable dependency indexing and bounded traversal for a fresh source
+catalog:
 
 ```txt
 POST /projects/:projectId/dependencies/index
 GET  /projects/:projectId/dependencies/index
+GET  /projects/:projectId/dependencies/graph?path=src/main.ts
 ```
 
 The backend reuses unchanged JavaScript, JSX, TypeScript, and TSX dependency declarations without
@@ -249,5 +252,12 @@ Configure indexing with `ARC_PROJECT_DEPENDENCY_MAX_EDGES_PER_FILE`,
 `ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES`, and `ARC_PROJECT_DEPENDENCY_BATCH_SIZE`. Apply migration
 `0006_project_dependency_graph.sql` with `pnpm db:migrate` before using the endpoints.
 
-Public graph traversal and the local PostgreSQL dependency acceptance command remain Milestone
-4.3.4. VSCode dependency controls remain Milestone 4.5.
+Graph traversal accepts `direction=outgoing|incoming|both`, `depth=1..5`, repeated or comma-separated
+dependency and resolution filters, `maxNodes`, `maxEdges`, and `includeBindings`. Server ceilings
+are configured with `ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH`,
+`ARC_PROJECT_DEPENDENCY_GRAPH_MAX_NODES`, and `ARC_PROJECT_DEPENDENCY_GRAPH_MAX_EDGES`.
+
+`pnpm dependency:index:verify` creates a temporary project and verifies all supported dialects,
+incremental re-resolution, stable edge and binding UUIDs, deterministic cycle-safe traversal,
+limits, stale rejection, atomic rollback, restart recovery, privacy, and cleanup against local
+PostgreSQL. VSCode dependency controls remain Milestone 4.5.

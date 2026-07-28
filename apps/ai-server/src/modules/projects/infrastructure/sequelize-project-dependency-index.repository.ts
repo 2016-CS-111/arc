@@ -1,5 +1,5 @@
 import { ProjectDependencyIndexSchema, type ProjectDependencyIndex } from "@arc/contracts";
-import { Op, Transaction, UniqueConstraintError } from "sequelize";
+import { Op, Transaction, UniqueConstraintError, type WhereOptions } from "sequelize";
 
 import type {
   ArcDatabase,
@@ -14,6 +14,12 @@ import type {
   ExtractedSourceDependency,
   ExtractedSourceDependencyBinding,
   FailProjectDependencyIndexInput,
+  FindProjectDependencyGraphEdgesInput,
+  FindProjectDependencyGraphFileInput,
+  ProjectDependencyGraphBindingRecord,
+  ProjectDependencyGraphEdgePage,
+  ProjectDependencyGraphEdgeRecord,
+  ProjectDependencyGraphFileRecord,
   ProjectDependencyFileOutcome,
   PublishProjectDependencyIndexInput,
 } from "../domain/project-dependency-index.types.js";
@@ -163,6 +169,95 @@ export class SequelizeProjectDependencyIndexRepository implements ProjectDepende
       },
     });
     return run === null ? null : toProjectDependencyIndex(run);
+  }
+
+  public async findGraphFile(
+    input: FindProjectDependencyGraphFileInput,
+  ): Promise<ProjectDependencyGraphFileRecord | null> {
+    const file = await this.database.models.projectDependencyFiles.findOne({
+      where: {
+        dependencyIndexRunId: input.dependencyIndexId,
+        projectId: input.projectId,
+        relativePath: input.relativePath,
+      },
+    });
+    return file === null
+      ? null
+      : {
+          relativePath: file.relativePath,
+          sourceFileId: file.sourceFileId,
+        };
+  }
+
+  public async findGraphEdges(input: FindProjectDependencyGraphEdgesInput): Promise<ProjectDependencyGraphEdgePage> {
+    if (input.frontierSourceFileIds.length === 0) {
+      return { edges: [], hasMore: false };
+    }
+
+    const conditions: WhereOptions<ProjectDependencyEdgeAttributes>[] = [
+      graphDirectionWhere(input.direction, input.frontierSourceFileIds),
+    ];
+    if (input.dependencyKinds.length > 0) {
+      conditions.push({ kind: { [Op.in]: [...input.dependencyKinds] } });
+    }
+    if (input.resolutionKinds.length > 0) {
+      conditions.push({ resolutionKind: { [Op.in]: [...input.resolutionKinds] } });
+    }
+    if (input.excludedEdgeIds.length > 0) {
+      conditions.push({ id: { [Op.notIn]: [...input.excludedEdgeIds] } });
+    }
+
+    const candidates = await this.database.models.projectDependencyEdges.findAll({
+      limit: input.limit + 1,
+      order: [
+        ["sourceFileId", "ASC"],
+        ["startByte", "ASC"],
+        ["extractionKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        [Op.and]: conditions,
+        dependencyIndexRunId: input.dependencyIndexId,
+        projectId: input.projectId,
+      },
+    });
+    const hasMore = candidates.length > input.limit;
+    const selected = candidates.slice(0, input.limit);
+    if (selected.length === 0) {
+      return { edges: [], hasMore };
+    }
+
+    const sourceFileIds = [...new Set(selected.map((edge) => edge.sourceFileId))];
+    const sourceFiles = await this.database.models.projectDependencyFiles.findAll({
+      where: {
+        dependencyIndexRunId: input.dependencyIndexId,
+        projectId: input.projectId,
+        sourceFileId: { [Op.in]: sourceFileIds },
+      },
+    });
+    const sourcePaths = new Map(sourceFiles.map((file) => [file.sourceFileId, file.relativePath]));
+    if (sourcePaths.size !== sourceFileIds.length) {
+      throw new Error("Arc dependency graph contains an edge without a current source file.");
+    }
+
+    const bindingsByEdge = input.includeBindings
+      ? await this.getGraphBindings(
+          input.projectId,
+          input.dependencyIndexId,
+          selected.map((edge) => edge.id),
+        )
+      : new Map<string, readonly ProjectDependencyGraphBindingRecord[]>();
+
+    return {
+      edges: selected.map((edge) => {
+        const sourceRelativePath = sourcePaths.get(edge.sourceFileId);
+        if (sourceRelativePath === undefined) {
+          throw new Error("Arc dependency graph contains an edge without a current source path.");
+        }
+        return toGraphEdgeRecord(edge.get(), sourceRelativePath, bindingsByEdge.get(edge.id) ?? []);
+      }),
+      hasMore,
+    };
   }
 
   public async getLatestRun(projectId: string): Promise<ProjectDependencyIndex | null> {
@@ -440,6 +535,111 @@ export class SequelizeProjectDependencyIndexRepository implements ProjectDepende
     }
     return run;
   }
+
+  private async getGraphBindings(
+    projectId: string,
+    dependencyIndexId: string,
+    edgeIds: readonly string[],
+  ): Promise<ReadonlyMap<string, readonly ProjectDependencyGraphBindingRecord[]>> {
+    const bindings = await this.database.models.projectDependencyBindings.findAll({
+      order: [
+        ["dependencyEdgeId", "ASC"],
+        ["bindingKey", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        dependencyEdgeId: { [Op.in]: [...edgeIds] },
+        dependencyIndexRunId: dependencyIndexId,
+        projectId,
+      },
+    });
+    return groupBy(
+      bindings.map((binding) => toGraphBindingRecord(binding.get())),
+      (binding) => binding.dependencyEdgeId,
+    );
+  }
+}
+
+interface GraphBindingWithEdge extends ProjectDependencyGraphBindingRecord {
+  readonly dependencyEdgeId: string;
+}
+
+function graphDirectionWhere(
+  direction: FindProjectDependencyGraphEdgesInput["direction"],
+  frontierSourceFileIds: readonly string[],
+): WhereOptions<ProjectDependencyEdgeAttributes> {
+  if (direction === "outgoing") {
+    return { sourceFileId: { [Op.in]: [...frontierSourceFileIds] } };
+  }
+  if (direction === "incoming") {
+    return { targetSourceFileId: { [Op.in]: [...frontierSourceFileIds] } };
+  }
+  return {
+    [Op.or]: [
+      { sourceFileId: { [Op.in]: [...frontierSourceFileIds] } },
+      { targetSourceFileId: { [Op.in]: [...frontierSourceFileIds] } },
+    ],
+  };
+}
+
+function toGraphEdgeRecord(
+  edge: ProjectDependencyEdgeAttributes,
+  sourceRelativePath: string,
+  bindings: readonly ProjectDependencyGraphBindingRecord[],
+): ProjectDependencyGraphEdgeRecord {
+  return {
+    bindings,
+    externalPackage: edge.externalPackage,
+    id: edge.id,
+    kind: edge.kind,
+    range: {
+      endByte: edge.endByte,
+      endColumnByte: edge.endColumnByte,
+      endLine: edge.endLine,
+      startByte: edge.startByte,
+      startColumnByte: edge.startColumnByte,
+      startLine: edge.startLine,
+    },
+    resolutionKind: edge.resolutionKind,
+    sourceFileId: edge.sourceFileId,
+    sourceRelativePath,
+    specifier: edge.specifier,
+    specifierRange: {
+      endByte: edge.specifierEndByte,
+      endColumnByte: edge.specifierEndColumnByte,
+      endLine: edge.specifierEndLine,
+      startByte: edge.specifierStartByte,
+      startColumnByte: edge.specifierStartColumnByte,
+      startLine: edge.specifierStartLine,
+    },
+    targetRelativePath: edge.targetRelativePath,
+    targetSourceFileId: edge.targetSourceFileId,
+    typeOnly: edge.typeOnly,
+    unresolvedReason: edge.unresolvedReason,
+  };
+}
+
+function toGraphBindingRecord(binding: ProjectDependencyBindingAttributes): GraphBindingWithEdge {
+  return {
+    bindingKey: binding.bindingKey,
+    dependencyEdgeId: binding.dependencyEdgeId,
+    exportedName: binding.exportedName,
+    importedName: binding.importedName,
+    kind: binding.kind,
+    localName: binding.localName,
+    range:
+      binding.startByte === null
+        ? null
+        : {
+            endByte: requireNumber(binding.endByte),
+            endColumnByte: requireNumber(binding.endColumnByte),
+            endLine: requireNumber(binding.endLine),
+            startByte: binding.startByte,
+            startColumnByte: requireNumber(binding.startColumnByte),
+            startLine: requireNumber(binding.startLine),
+          },
+    typeOnly: binding.typeOnly,
+  };
 }
 
 function toExtractedDependency(

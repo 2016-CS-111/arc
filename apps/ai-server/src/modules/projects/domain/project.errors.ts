@@ -102,3 +102,31 @@ export class ProjectDependencyIndexFailedError extends Error {
     this.name = "ProjectDependencyIndexFailedError";
   }
 }
+
+export class ProjectDependencyCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a dependency index before graph traversal.`);
+    this.name = "ProjectDependencyCatalogRequiredError";
+  }
+}
+
+export class ProjectDependencyCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a fresh dependency index before graph traversal.`);
+    this.name = "ProjectDependencyCatalogStaleError";
+  }
+}
+
+export class ProjectDependencyPathNotFoundError extends Error {
+  public constructor(relativePath: string) {
+    super(`Arc dependency graph does not contain ${relativePath}.`);
+    this.name = "ProjectDependencyPathNotFoundError";
+  }
+}
+
+export class ProjectDependencyGraphFailedError extends Error {
+  public constructor() {
+    super("Arc could not read the project dependency graph.");
+    this.name = "ProjectDependencyGraphFailedError";
+  }
+}
