@@ -1041,10 +1041,27 @@ and standard associations, including the user's legacy `associate(models)` patte
 
 #### Milestone 4.4.6: Durable Incremental Framework Catalog
 
-Status: Planned.
+Status: Complete.
 
 Goal: atomically persist fresh framework scopes, file outcomes, entities, relationships,
 provenance, limits, and recovery with incremental evidence reuse and full relinking.
+
+Delivered:
+
+- PostgreSQL migrations `0007_project_framework_catalog.sql` and
+  `0008_project_framework_evidence_cache.sql`, five class-based Sequelize models, stable unique
+  identities, provenance foreign keys, lifecycle constraints, indexes, and bounded normalized
+  evidence reuse.
+- A typed repository and orchestration service that require one coherent source/symbol/dependency
+  snapshot, recheck it before publication, relink cached evidence against current catalogs with
+  zero source reads/parses, and atomically replace stale scopes, files, entities, and relationships.
+- Explicit per-file and total framework limits, upstream-limit propagation, durable counters,
+  typed conflict/failure handling, status contracts/API, one-running-run enforcement, and restart
+  recovery.
+- Focused contract, service, repository, controller, rollback, stable-upsert, zero-read reuse,
+  upstream-gap, and recovery tests plus migration and model verification against local PostgreSQL.
+
+No public framework catalog query, acceptance CLI, automatic indexing, or VSCode change was added.
 
 #### Milestone 4.4.7: Framework Catalog Query and Acceptance
 

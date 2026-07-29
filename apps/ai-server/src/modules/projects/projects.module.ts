@@ -18,6 +18,8 @@ import type { ProjectSourceIndexRepository } from "./application/project-source-
 import { ProjectSourceIndexService } from "./application/project-source-index.service.js";
 import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
 import { ProjectSymbolIndexService } from "./application/project-symbol-index.service.js";
+import { ProjectFrameworkIndexService } from "./application/project-framework-index.service.js";
+import type { ProjectFrameworkIndexRepository } from "./domain/project-framework-index.types.js";
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
 import { SourceLanguageClassifier } from "./application/source-language.classifier.js";
 import type { SourceTextReader } from "./application/source-text.reader.js";
@@ -33,6 +35,7 @@ import { SequelizeProjectDependencyIndexRepository } from "./infrastructure/sequ
 import { SequelizeProjectRepository } from "./infrastructure/sequelize-project.repository.js";
 import { SequelizeProjectSourceIndexRepository } from "./infrastructure/sequelize-project-source-index.repository.js";
 import { SequelizeProjectSymbolIndexRepository } from "./infrastructure/sequelize-project-symbol-index.repository.js";
+import { SequelizeProjectFrameworkIndexRepository } from "./infrastructure/sequelize-project-framework-index.repository.js";
 import { TreeSitterSymbolExtractor } from "./infrastructure/tree-sitter/tree-sitter-symbol.extractor.js";
 import { TreeSitterDependencyExtractor } from "./infrastructure/tree-sitter/tree-sitter-dependency.extractor.js";
 import { TypeScriptProjectModuleResolver } from "./infrastructure/typescript/typescript-project-module.resolver.js";
@@ -44,6 +47,7 @@ import {
   PROJECT_REPOSITORY,
   PROJECT_SOURCE_INDEX_REPOSITORY,
   PROJECT_SYMBOL_INDEX_REPOSITORY,
+  PROJECT_FRAMEWORK_INDEX_REPOSITORY,
   REPOSITORY_INVENTORY_WALKER,
   SOURCE_TEXT_READER,
   SOURCE_DEPENDENCY_EXTRACTOR,
@@ -104,6 +108,12 @@ const projectSymbolIndexRepositoryProvider: Provider<ProjectSymbolIndexRepositor
   useFactory: (database: ArcDatabase): ProjectSymbolIndexRepository =>
     new SequelizeProjectSymbolIndexRepository(database),
 };
+const projectFrameworkIndexRepositoryProvider: Provider<ProjectFrameworkIndexRepository> = {
+  provide: PROJECT_FRAMEWORK_INDEX_REPOSITORY,
+  inject: [DATABASE],
+  useFactory: (database: ArcDatabase): ProjectFrameworkIndexRepository =>
+    new SequelizeProjectFrameworkIndexRepository(database),
+};
 
 const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
   provide: SOURCE_SYMBOL_EXTRACTOR,
@@ -129,6 +139,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     projectDependencyIndexRepositoryProvider,
     projectSourceIndexRepositoryProvider,
     projectSymbolIndexRepositoryProvider,
+    projectFrameworkIndexRepositoryProvider,
     workspaceRootResolverProvider,
     ignoreRulesFileReaderProvider,
     repositoryInventoryWalkerProvider,
@@ -144,6 +155,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
+    ProjectFrameworkIndexService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -155,6 +167,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
+    ProjectFrameworkIndexService,
   ],
 })
 export class ProjectsModule {}

@@ -45,6 +45,54 @@ import type { ProjectSourceIndexRunModel } from "./models/project-source-index-r
 import type { ProjectSymbolFileModel } from "./models/project-symbol-file.model.js";
 import type { ProjectSymbolIndexRunModel } from "./models/project-symbol-index-run.model.js";
 import type { ProjectSymbolModel } from "./models/project-symbol.model.js";
+import type { ProjectFrameworkIndexRunModel } from "./models/project-framework-index-run.model.js";
+import type { ProjectFrameworkScopeModel } from "./models/project-framework-scope.model.js";
+import type { ProjectFrameworkFileModel } from "./models/project-framework-file.model.js";
+import type { ProjectFrameworkEntityModel } from "./models/project-framework-entity.model.js";
+import type { ProjectFrameworkRelationshipModel } from "./models/project-framework-relationship.model.js";
+
+export interface ProjectFrameworkIndexRunAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly sourceIndexRunId: string;
+  readonly symbolIndexRunId: string;
+  readonly dependencyIndexRunId: string;
+  readonly status: "running" | "completed" | "limited" | "failed";
+  readonly analyzerSetIdentity: string;
+  readonly scopeCount: number;
+  readonly analyzedFileCount: number;
+  readonly reusedFileCount: number;
+  readonly unsupportedFileCount: number;
+  readonly failedFileCount: number;
+  readonly entityCount: number;
+  readonly relationshipCount: number;
+  readonly unresolvedRelationshipCount: number;
+  readonly omissionCount: number;
+  readonly limitReasons: string[];
+  readonly warnings: string[];
+  readonly errorCode: string | null;
+  readonly startedAt: Date;
+  readonly completedAt: Date | null;
+}
+export type ProjectFrameworkIndexRunCreationAttributes = Optional<
+  ProjectFrameworkIndexRunAttributes,
+  | "id"
+  | "status"
+  | "scopeCount"
+  | "analyzedFileCount"
+  | "reusedFileCount"
+  | "unsupportedFileCount"
+  | "failedFileCount"
+  | "entityCount"
+  | "relationshipCount"
+  | "unresolvedRelationshipCount"
+  | "omissionCount"
+  | "limitReasons"
+  | "warnings"
+  | "errorCode"
+  | "startedAt"
+  | "completedAt"
+>;
 
 export interface ChatSessionAttributes {
   readonly id: string;
@@ -383,6 +431,11 @@ export interface ProjectSymbolAttributes {
 export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, "id" | "exported">;
 
 export interface ArcDatabaseModels {
+  readonly projectFrameworkIndexRuns: ModelStatic<ProjectFrameworkIndexRunModel>;
+  readonly projectFrameworkScopes: ModelStatic<ProjectFrameworkScopeModel>;
+  readonly projectFrameworkFiles: ModelStatic<ProjectFrameworkFileModel>;
+  readonly projectFrameworkEntities: ModelStatic<ProjectFrameworkEntityModel>;
+  readonly projectFrameworkRelationships: ModelStatic<ProjectFrameworkRelationshipModel>;
   readonly chatSessions: ModelStatic<ChatSessionModel>;
   readonly projectDependencyBindings: ModelStatic<ProjectDependencyBindingModel>;
   readonly projectDependencyEdges: ModelStatic<ProjectDependencyEdgeModel>;

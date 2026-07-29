@@ -4,6 +4,7 @@ import {
   LatestProjectScanResponseSchema,
   LatestProjectSourceIndexResponseSchema,
   LatestProjectSymbolIndexResponseSchema,
+  LatestProjectFrameworkIndexResponseSchema,
   ProjectDependencyGraphQuerySchema,
   ProjectDependencyGraphResponseSchema,
   ProjectIdSchema,
@@ -13,6 +14,8 @@ import {
   type LatestProjectScanResponse,
   type LatestProjectSourceIndexResponse,
   type LatestProjectSymbolIndexResponse,
+  type LatestProjectFrameworkIndexResponse,
+  type ProjectFrameworkIndex,
   type ProjectIgnoreDecision,
   type ProjectDependencyGraphQuery,
   type ProjectDependencyGraphResponse,
@@ -45,6 +48,7 @@ import { ProjectInventoryService } from "../application/project-inventory.servic
 import { ProjectRegistrationService } from "../application/project-registration.service.js";
 import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
 import { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
+import { ProjectFrameworkIndexService } from "../application/project-framework-index.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -55,6 +59,10 @@ import {
   ProjectDependencyIndexAlreadyRunningError,
   ProjectDependencyIndexFailedError,
   ProjectDependencyPathNotFoundError,
+  ProjectFrameworkIndexAlreadyRunningError,
+  ProjectFrameworkIndexFailedError,
+  ProjectFrameworkUpstreamCatalogRequiredError,
+  ProjectFrameworkUpstreamCatalogStaleError,
   ProjectNotFoundError,
   ProjectScanAlreadyRunningError,
   ProjectScanFailedError,
@@ -84,7 +92,45 @@ export class ProjectsController {
     private readonly projectDependencyIndexService: ProjectDependencyIndexService,
     @Inject(ProjectDependencyGraphService)
     private readonly projectDependencyGraphService: ProjectDependencyGraphService,
+    @Inject(ProjectFrameworkIndexService)
+    private readonly projectFrameworkIndexService: ProjectFrameworkIndexService,
   ) {}
+
+  @Post(":projectId/frameworks/index")
+  public async indexFrameworks(@Param("projectId") projectIdValue: unknown): Promise<ProjectFrameworkIndex> {
+    const projectId = this.parseProjectId(projectIdValue);
+    try {
+      return await this.projectFrameworkIndexService.index(projectId);
+    } catch (error) {
+      if (error instanceof ProjectNotFoundError) throw new NotFoundException(error.message);
+      if (
+        error instanceof ProjectFrameworkUpstreamCatalogRequiredError ||
+        error instanceof ProjectFrameworkUpstreamCatalogStaleError ||
+        error instanceof ProjectFrameworkIndexAlreadyRunningError
+      ) {
+        throw new ConflictException(error.message);
+      }
+      if (error instanceof ProjectFrameworkIndexFailedError) {
+        throw new ServiceUnavailableException(error.message);
+      }
+      throw error;
+    }
+  }
+
+  @Get(":projectId/frameworks/index")
+  public async getLatestFrameworkIndex(
+    @Param("projectId") projectIdValue: unknown,
+  ): Promise<LatestProjectFrameworkIndexResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+    try {
+      return LatestProjectFrameworkIndexResponseSchema.parse(
+        await this.projectFrameworkIndexService.getLatest(projectId),
+      );
+    } catch (error) {
+      if (error instanceof ProjectNotFoundError) throw new NotFoundException(error.message);
+      throw error;
+    }
+  }
 
   @Post("register")
   public async register(@Body() payload: unknown): Promise<RegisterProjectResponse> {

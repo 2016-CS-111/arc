@@ -532,6 +532,21 @@ registrations become route facts; `use` becomes middleware or a local router mou
 are normalized, directly registered four-parameter functions are classified as error middleware,
 and dynamic values remain unresolved. No Express fact is durable before Milestone 4.4.6.
 
+Milestones 4.4.4 and 4.4.5 add Next.js/React and Sequelize analyzers. They recognize documented
+route conventions, client boundaries, JSX-backed components, class-based `Model.init`, legacy
+`sequelize.define`, and static associations while keeping dynamic values explicit and never
+executing project code.
+
+Milestone 4.4.6 makes the framework view durable. Five class-based Sequelize models store current
+scopes, file outcomes, normalized reusable evidence, entities, and relationships with exact
+source/symbol/dependency run provenance. A repeated run can rerun analyzers over cached evidence
+against new symbol/dependency rows without reading or parsing unchanged source.
+
+One transaction upserts stable identities, removes stale framework rows, and completes the run.
+Publication failure preserves the previous catalog; interrupted runs are failed during backend
+bootstrap. Explicit index and status endpoints expose bounded lifecycle contracts, while the
+catalog query remains the separate Milestone 4.4.7 gate.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

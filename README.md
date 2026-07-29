@@ -278,14 +278,25 @@ scope detection, exact framework import alias resolution, bounded Tree-sitter ev
 for all four supported dialects, stable evidence identities, and immutable run-scoped symbol and
 dependency readers.
 
-Milestone 4.4.2 adds the first framework analyzer. NestJS modules, controllers, providers, HTTP
-routes, static module registrations, explicit injection tokens, and typed constructor injection
-become transient Arc facts only when their decorators resolve through exact `@nestjs/common`
-bindings. Static paths are normalized and combined; dynamic metadata remains explicitly
-unresolved. Milestone 4.4.3 adds transient Express applications, routers, standard HTTP routes,
-middleware, directly-declared error middleware, and local router mounts. Express facts require
-verified `express` ESM/CommonJS bindings; aliases and route chains are supported, while dynamic
-paths remain explicitly unresolved.
+Milestones 4.4.2 through 4.4.5 add NestJS, Express, Next.js, React, and Sequelize analyzers. Facts
+require exact framework bindings or documented Next.js conventions; static paths, metadata,
+components, model attributes, and associations are normalized while dynamic values remain
+explicitly unresolved.
 
-No framework persistence, endpoint, or VSCode control exists yet. The complete design and
-sub-milestone boundaries are in `docs/milestone-4.4-architecture.md`.
+Milestone 4.4.6 adds explicit durable framework indexing and status:
+
+```txt
+POST /projects/:projectId/frameworks/index
+GET  /projects/:projectId/frameworks/index
+```
+
+The backend requires one coherent source/symbol/dependency snapshot, caches bounded normalized
+evidence, and relinks unchanged files against the current upstream catalogs without reopening or
+reparsing source. One Sequelize transaction publishes stable scopes, file outcomes, entities, and
+relationships; failed and interrupted runs preserve the prior catalog.
+
+Apply migrations `0007_project_framework_catalog.sql` and
+`0008_project_framework_evidence_cache.sql` before using these endpoints. Framework limits use the
+`ARC_PROJECT_FRAMEWORK_*` settings in `.env.example`. The public bounded catalog query, local
+PostgreSQL acceptance CLI, and VSCode controls remain later gates. The complete design is in
+`docs/milestone-4.4-architecture.md`.

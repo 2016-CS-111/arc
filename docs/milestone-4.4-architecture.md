@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 through 4.4.5 are complete; Milestone 4.4.6 is next.
+Status: In progress. Milestones 4.4.1 through 4.4.6 are complete; Milestone 4.4.7 is next.
 
 ## Goal
 
@@ -485,7 +485,8 @@ every relationship against the exact current upstream runs.
 
 ## Persistence Model
 
-Milestone 4.4.6 will add migration `0007_project_framework_catalog.sql`.
+Milestone 4.4.6 adds migrations `0007_project_framework_catalog.sql` and
+`0008_project_framework_evidence_cache.sql`.
 
 ### `project_framework_index_runs`
 
@@ -684,6 +685,7 @@ Create:
 - `packages/contracts/src/api/project-framework-catalog.contract.ts`
 - `packages/contracts/src/api/project-framework-catalog.contract.test.ts`
 - `apps/ai-server/migrations/0007_project_framework_catalog.sql`
+- `apps/ai-server/migrations/0008_project_framework_evidence_cache.sql`
 - Five class-based Sequelize models for runs, scopes, files, entities, and relationships.
 - Framework domain types, repository port, index service, query service, detector, extractor port,
   and linker.
@@ -801,15 +803,21 @@ Status: Complete.
 
 ### 4.4.6 Durable Incremental Framework Catalog
 
-Status: Planned.
+Status: Complete.
 
-- Add migration `0007_project_framework_catalog.sql`, class-based Sequelize models, repository,
-  orchestration service, status contracts/API, configuration, and recovery.
-- Require coherent source/symbol/dependency provenance.
-- Reuse unchanged evidence with zero source reads/parses while relinking every relationship.
-- Publish scopes, file outcomes, entities, and relationships in one transaction.
-- Prove limits, upstream gaps, stale cleanup, stable UUIDs, rollback, privacy, and restart recovery.
-- No public catalog query, PostgreSQL acceptance CLI, automatic indexing, or VSCode change.
+- Added migrations `0007_project_framework_catalog.sql` and
+  `0008_project_framework_evidence_cache.sql`, five class-based Sequelize models, repository,
+  orchestration service, status contracts/API, bounded configuration, and recovery.
+- Requires coherent source/symbol/dependency provenance at start and immediately before
+  publication.
+- Reuses unchanged normalized evidence with zero source reads or Tree-sitter parses while rerunning
+  analyzers against the exact current symbol/dependency catalogs.
+- Publishes scopes, file outcomes, entities, and relationships in one transaction with stable
+  upserts and deterministic stale cleanup.
+- Proves limits, upstream gaps, stable identities, transaction failure behavior, privacy
+  boundaries, typed HTTP mapping, and restart recovery with focused tests.
+- Verified both migrations and Sequelize initialization against local PostgreSQL.
+- Added no public catalog query, PostgreSQL acceptance CLI, automatic indexing, or VSCode change.
 
 ### 4.4.7 Framework Catalog Query and Acceptance
 

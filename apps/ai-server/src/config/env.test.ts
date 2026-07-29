@@ -49,6 +49,20 @@ describe("loadConfig", () => {
       maxTotalEdges: 100_000,
       yieldEveryFiles: 25,
     });
+    expect(config.projectFramework).toEqual({
+      batchSize: 500,
+      maxCollectionEntries: 100,
+      maxEntitiesPerFile: 1_000,
+      maxEvidencePerFile: 2_000,
+      maxNameBytes: 512,
+      maxPackageMetadataBytes: 1_048_576,
+      maxRelationshipsPerFile: 2_000,
+      maxStaticDepth: 12,
+      maxStaticValueBytes: 65_536,
+      maxTotalEntities: 100_000,
+      maxTotalRelationships: 200_000,
+      yieldEveryFiles: 25,
+    });
   });
 
   it("normalizes the Ollama base URL and accepts a configured model", () => {
@@ -85,6 +99,18 @@ describe("loadConfig", () => {
       ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS: "12500",
       ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES: "5000",
       ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES: "5",
+      ARC_PROJECT_FRAMEWORK_BATCH_SIZE: "100",
+      ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES: "20",
+      ARC_PROJECT_FRAMEWORK_MAX_ENTITIES_PER_FILE: "200",
+      ARC_PROJECT_FRAMEWORK_MAX_EVIDENCE_PER_FILE: "300",
+      ARC_PROJECT_FRAMEWORK_MAX_NAME_BYTES: "128",
+      ARC_PROJECT_FRAMEWORK_MAX_PACKAGE_METADATA_BYTES: "131072",
+      ARC_PROJECT_FRAMEWORK_MAX_RELATIONSHIPS_PER_FILE: "400",
+      ARC_PROJECT_FRAMEWORK_MAX_STATIC_DEPTH: "8",
+      ARC_PROJECT_FRAMEWORK_MAX_STATIC_VALUE_BYTES: "8192",
+      ARC_PROJECT_FRAMEWORK_MAX_TOTAL_ENTITIES: "1000",
+      ARC_PROJECT_FRAMEWORK_MAX_TOTAL_RELATIONSHIPS: "2000",
+      ARC_PROJECT_FRAMEWORK_YIELD_EVERY_FILES: "4",
     });
 
     expect(config.ollama).toEqual({
@@ -130,6 +156,20 @@ describe("loadConfig", () => {
       maxTotalBindings: 12_500,
       maxTotalEdges: 5_000,
       yieldEveryFiles: 5,
+    });
+    expect(config.projectFramework).toEqual({
+      batchSize: 100,
+      maxCollectionEntries: 20,
+      maxEntitiesPerFile: 200,
+      maxEvidencePerFile: 300,
+      maxNameBytes: 128,
+      maxPackageMetadataBytes: 131_072,
+      maxRelationshipsPerFile: 400,
+      maxStaticDepth: 8,
+      maxStaticValueBytes: 8_192,
+      maxTotalEntities: 1_000,
+      maxTotalRelationships: 2_000,
+      yieldEveryFiles: 4,
     });
   });
 

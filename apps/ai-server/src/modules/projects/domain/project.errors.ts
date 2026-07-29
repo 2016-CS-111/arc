@@ -130,3 +130,31 @@ export class ProjectDependencyGraphFailedError extends Error {
     this.name = "ProjectDependencyGraphFailedError";
   }
 }
+
+export class ProjectFrameworkUpstreamCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires coherent source, symbol, and dependency catalogs.`);
+    this.name = "ProjectFrameworkUpstreamCatalogRequiredError";
+  }
+}
+
+export class ProjectFrameworkUpstreamCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires fresh source, symbol, and dependency catalogs.`);
+    this.name = "ProjectFrameworkUpstreamCatalogStaleError";
+  }
+}
+
+export class ProjectFrameworkIndexAlreadyRunningError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} already has a running framework index.`);
+    this.name = "ProjectFrameworkIndexAlreadyRunningError";
+  }
+}
+
+export class ProjectFrameworkIndexFailedError extends Error {
+  public constructor() {
+    super("Arc could not complete the project framework index.");
+    this.name = "ProjectFrameworkIndexFailedError";
+  }
+}

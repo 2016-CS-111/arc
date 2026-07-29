@@ -1,6 +1,7 @@
 import type {
   ProjectDependencyGraphResponse,
   ProjectDependencyIndex,
+  ProjectFrameworkIndex,
   ProjectScan,
   ProjectSourceIndex,
   ProjectSymbolIndex,
@@ -22,6 +23,7 @@ import type { ProjectInventoryService } from "../application/project-inventory.s
 import type { ProjectRegistrationService } from "../application/project-registration.service.js";
 import type { ProjectSourceIndexService } from "../application/project-source-index.service.js";
 import type { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
+import type { ProjectFrameworkIndexService } from "../application/project-framework-index.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -32,6 +34,10 @@ import {
   ProjectDependencyIndexAlreadyRunningError,
   ProjectDependencyIndexFailedError,
   ProjectDependencyPathNotFoundError,
+  ProjectFrameworkIndexAlreadyRunningError,
+  ProjectFrameworkIndexFailedError,
+  ProjectFrameworkUpstreamCatalogRequiredError,
+  ProjectFrameworkUpstreamCatalogStaleError,
   ProjectNotFoundError,
   ProjectInventoryRequiredError,
   ProjectScanAlreadyRunningError,
@@ -125,6 +131,30 @@ const completedDependencyIndex: ProjectDependencyIndex = {
   status: "completed",
   unresolvedEdgeCount: 1,
   unsupportedFileCount: 1,
+};
+
+const completedFrameworkIndex: ProjectFrameworkIndex = {
+  analyzedFileCount: 5,
+  analyzerSetIdentity: "f".repeat(64),
+  completedAt: "2026-07-29T13:01:00.000Z",
+  dependencyIndexRunId: completedDependencyIndex.id,
+  entityCount: 12,
+  errorCode: null,
+  failedFileCount: 0,
+  id: "3aa73626-4418-49a4-afbf-9f83fd46734c",
+  limitReasons: [],
+  omissionCount: 1,
+  projectId: registration.project.id,
+  relationshipCount: 8,
+  reusedFileCount: 2,
+  scopeCount: 3,
+  sourceIndexRunId: completedSourceIndex.id,
+  startedAt: "2026-07-29T13:00:00.000Z",
+  status: "completed",
+  symbolIndexRunId: completedSymbolIndex.id,
+  unresolvedRelationshipCount: 1,
+  unsupportedFileCount: 1,
+  warnings: [],
 };
 
 const dependencyGraph: ProjectDependencyGraphResponse = {
@@ -471,6 +501,62 @@ describe("ProjectsController", () => {
     await expect(controller.getLatestDependencyIndex("invalid")).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it("starts framework indexing and returns durable framework status", async () => {
+    const indexFrameworks = vi.fn(() => Promise.resolve(completedFrameworkIndex));
+    const getLatestFrameworks = vi.fn(() =>
+      Promise.resolve({
+        currentCatalog: { ...completedFrameworkIndex, stale: false },
+        latestRun: completedFrameworkIndex,
+      }),
+    );
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      indexFrameworks,
+      getLatestFrameworks,
+    );
+
+    await expect(controller.indexFrameworks(registration.project.id)).resolves.toEqual(completedFrameworkIndex);
+    await expect(controller.getLatestFrameworkIndex(registration.project.id)).resolves.toEqual({
+      currentCatalog: { ...completedFrameworkIndex, stale: false },
+      latestRun: completedFrameworkIndex,
+    });
+  });
+
+  it.each([
+    [new ProjectNotFoundError(registration.project.id), NotFoundException],
+    [new ProjectFrameworkUpstreamCatalogRequiredError(registration.project.id), ConflictException],
+    [new ProjectFrameworkUpstreamCatalogStaleError(registration.project.id), ConflictException],
+    [new ProjectFrameworkIndexAlreadyRunningError(registration.project.id), ConflictException],
+    [new ProjectFrameworkIndexFailedError(), ServiceUnavailableException],
+  ])("maps framework-index errors to stable HTTP responses", async (error, expectedError) => {
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(() => Promise.reject(error)),
+    );
+
+    await expect(controller.indexFrameworks(registration.project.id)).rejects.toBeInstanceOf(expectedError);
+  });
+
   it("validates dependency graph queries and returns the bounded graph", async () => {
     const getGraph = vi.fn(() => Promise.resolve(dependencyGraph));
     const controller = createController(
@@ -545,6 +631,8 @@ function createController(
   indexDependencies: ReturnType<typeof vi.fn> = vi.fn(),
   getLatestDependencies: ReturnType<typeof vi.fn> = vi.fn(),
   getGraph: ReturnType<typeof vi.fn> = vi.fn(),
+  indexFrameworks: ReturnType<typeof vi.fn> = vi.fn(),
+  getLatestFrameworks: ReturnType<typeof vi.fn> = vi.fn(),
 ): ProjectsController {
   return new ProjectsController(
     { register } as unknown as ProjectRegistrationService,
@@ -557,5 +645,6 @@ function createController(
       index: indexDependencies,
     } as unknown as ProjectDependencyIndexService,
     { getGraph } as unknown as ProjectDependencyGraphService,
+    { getLatest: getLatestFrameworks, index: indexFrameworks } as unknown as ProjectFrameworkIndexService,
   );
 }

@@ -60,6 +60,23 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH: z.coerce.number().int().positive().max(5).default(5),
   ARC_PROJECT_DEPENDENCY_GRAPH_MAX_NODES: z.coerce.number().int().positive().max(500).default(500),
   ARC_PROJECT_DEPENDENCY_GRAPH_MAX_EDGES: z.coerce.number().int().positive().max(2_000).default(2_000),
+  ARC_PROJECT_FRAMEWORK_MAX_ENTITIES_PER_FILE: z.coerce.number().int().positive().max(100_000).default(1_000),
+  ARC_PROJECT_FRAMEWORK_MAX_RELATIONSHIPS_PER_FILE: z.coerce.number().int().positive().max(100_000).default(2_000),
+  ARC_PROJECT_FRAMEWORK_MAX_TOTAL_ENTITIES: z.coerce.number().int().positive().max(1_000_000).default(100_000),
+  ARC_PROJECT_FRAMEWORK_MAX_TOTAL_RELATIONSHIPS: z.coerce.number().int().positive().max(2_000_000).default(200_000),
+  ARC_PROJECT_FRAMEWORK_MAX_NAME_BYTES: z.coerce.number().int().positive().max(4_096).default(512),
+  ARC_PROJECT_FRAMEWORK_MAX_STATIC_VALUE_BYTES: z.coerce.number().int().positive().max(1_048_576).default(65_536),
+  ARC_PROJECT_FRAMEWORK_MAX_PACKAGE_METADATA_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(16_777_216)
+    .default(1_048_576),
+  ARC_PROJECT_FRAMEWORK_MAX_EVIDENCE_PER_FILE: z.coerce.number().int().positive().max(100_000).default(2_000),
+  ARC_PROJECT_FRAMEWORK_MAX_STATIC_DEPTH: z.coerce.number().int().positive().max(64).default(12),
+  ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES: z.coerce.number().int().positive().max(10_000).default(100),
+  ARC_PROJECT_FRAMEWORK_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
+  ARC_PROJECT_FRAMEWORK_YIELD_EVERY_FILES: z.coerce.number().int().positive().max(1_000).default(25),
 });
 
 export interface AppConfig {
@@ -110,6 +127,20 @@ export interface AppConfig {
     readonly maxConfigBytes: number;
     readonly yieldEveryFiles: number;
     readonly batchSize: number;
+  };
+  readonly projectFramework: {
+    readonly maxEntitiesPerFile: number;
+    readonly maxRelationshipsPerFile: number;
+    readonly maxTotalEntities: number;
+    readonly maxTotalRelationships: number;
+    readonly maxNameBytes: number;
+    readonly maxStaticValueBytes: number;
+    readonly maxPackageMetadataBytes: number;
+    readonly maxEvidencePerFile: number;
+    readonly maxStaticDepth: number;
+    readonly maxCollectionEntries: number;
+    readonly batchSize: number;
+    readonly yieldEveryFiles: number;
   };
 }
 
@@ -168,6 +199,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       maxTotalBindings: parsed.ARC_PROJECT_DEPENDENCY_MAX_TOTAL_BINDINGS,
       maxTotalEdges: parsed.ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES,
       yieldEveryFiles: parsed.ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES,
+    },
+    projectFramework: {
+      batchSize: parsed.ARC_PROJECT_FRAMEWORK_BATCH_SIZE,
+      maxCollectionEntries: parsed.ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES,
+      maxEntitiesPerFile: parsed.ARC_PROJECT_FRAMEWORK_MAX_ENTITIES_PER_FILE,
+      maxEvidencePerFile: parsed.ARC_PROJECT_FRAMEWORK_MAX_EVIDENCE_PER_FILE,
+      maxNameBytes: parsed.ARC_PROJECT_FRAMEWORK_MAX_NAME_BYTES,
+      maxPackageMetadataBytes: parsed.ARC_PROJECT_FRAMEWORK_MAX_PACKAGE_METADATA_BYTES,
+      maxRelationshipsPerFile: parsed.ARC_PROJECT_FRAMEWORK_MAX_RELATIONSHIPS_PER_FILE,
+      maxStaticDepth: parsed.ARC_PROJECT_FRAMEWORK_MAX_STATIC_DEPTH,
+      maxStaticValueBytes: parsed.ARC_PROJECT_FRAMEWORK_MAX_STATIC_VALUE_BYTES,
+      maxTotalEntities: parsed.ARC_PROJECT_FRAMEWORK_MAX_TOTAL_ENTITIES,
+      maxTotalRelationships: parsed.ARC_PROJECT_FRAMEWORK_MAX_TOTAL_RELATIONSHIPS,
+      yieldEveryFiles: parsed.ARC_PROJECT_FRAMEWORK_YIELD_EVERY_FILES,
     },
   };
 }

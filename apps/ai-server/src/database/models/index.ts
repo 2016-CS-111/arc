@@ -15,9 +15,19 @@ import { ProjectSourceIndexRunModel } from "./project-source-index-run.model.js"
 import { ProjectSymbolFileModel } from "./project-symbol-file.model.js";
 import { ProjectSymbolIndexRunModel } from "./project-symbol-index-run.model.js";
 import { ProjectSymbolModel } from "./project-symbol.model.js";
+import { ProjectFrameworkIndexRunModel } from "./project-framework-index-run.model.js";
+import { ProjectFrameworkScopeModel } from "./project-framework-scope.model.js";
+import { ProjectFrameworkFileModel } from "./project-framework-file.model.js";
+import { ProjectFrameworkEntityModel } from "./project-framework-entity.model.js";
+import { ProjectFrameworkRelationshipModel } from "./project-framework-relationship.model.js";
 
 export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
+    projectFrameworkIndexRuns: ProjectFrameworkIndexRunModel.initialize(sequelize),
+    projectFrameworkScopes: ProjectFrameworkScopeModel.initialize(sequelize),
+    projectFrameworkFiles: ProjectFrameworkFileModel.initialize(sequelize),
+    projectFrameworkEntities: ProjectFrameworkEntityModel.initialize(sequelize),
+    projectFrameworkRelationships: ProjectFrameworkRelationshipModel.initialize(sequelize),
     chatSessions: ChatSessionModel.initialize(sequelize),
     chatMessages: ChatMessageModel.initialize(sequelize),
     projectDependencyBindings: ProjectDependencyBindingModel.initialize(sequelize),
@@ -42,6 +52,61 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.chatMessages.belongsTo(models.chatSessions, {
     as: "session",
     foreignKey: "sessionId",
+  });
+  models.projects.hasMany(models.projectFrameworkIndexRuns, {
+    as: "frameworkIndexRuns",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkIndexRuns.belongsTo(models.projects, { as: "project", foreignKey: "projectId" });
+  models.projects.hasMany(models.projectFrameworkScopes, {
+    as: "frameworkScopes",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkScopes.belongsTo(models.projects, { as: "project", foreignKey: "projectId" });
+  models.projectFrameworkIndexRuns.hasMany(models.projectFrameworkScopes, {
+    as: "scopes",
+    foreignKey: "frameworkIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkScopes.belongsTo(models.projectFrameworkIndexRuns, {
+    as: "frameworkIndexRun",
+    foreignKey: "frameworkIndexRunId",
+  });
+  models.projects.hasMany(models.projectFrameworkFiles, {
+    as: "frameworkFiles",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkFiles.belongsTo(models.projects, { as: "project", foreignKey: "projectId" });
+  models.projectFrameworkScopes.hasMany(models.projectFrameworkFiles, {
+    as: "files",
+    foreignKey: "scopeId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkFiles.belongsTo(models.projectFrameworkScopes, { as: "scope", foreignKey: "scopeId" });
+  models.projectFrameworkFiles.hasMany(models.projectFrameworkEntities, {
+    as: "entities",
+    foreignKey: "frameworkFileId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkEntities.belongsTo(models.projectFrameworkFiles, {
+    as: "file",
+    foreignKey: "frameworkFileId",
+  });
+  models.projectFrameworkEntities.hasMany(models.projectFrameworkRelationships, {
+    as: "outgoingRelationships",
+    foreignKey: "sourceEntityId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkRelationships.belongsTo(models.projectFrameworkEntities, {
+    as: "sourceEntity",
+    foreignKey: "sourceEntityId",
+  });
+  models.projectFrameworkRelationships.belongsTo(models.projectFrameworkEntities, {
+    as: "targetEntity",
+    foreignKey: "targetEntityId",
   });
   models.projects.hasMany(models.projectScans, {
     as: "scans",
