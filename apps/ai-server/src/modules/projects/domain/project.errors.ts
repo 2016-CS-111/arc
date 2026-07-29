@@ -122,6 +122,27 @@ export class ProjectEmbeddingIndexFailedError extends Error {
   }
 }
 
+export class ProjectEmbeddingCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires an embedding index before semantic search.`);
+    this.name = "ProjectEmbeddingCatalogRequiredError";
+  }
+}
+
+export class ProjectEmbeddingCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a fresh embedding index before semantic search.`);
+    this.name = "ProjectEmbeddingCatalogStaleError";
+  }
+}
+
+export class ProjectSemanticSearchFailedError extends Error {
+  public constructor() {
+    super("Arc could not search the project embedding index.");
+    this.name = "ProjectSemanticSearchFailedError";
+  }
+}
+
 export class ProjectSymbolIndexAlreadyRunningError extends Error {
   public constructor(projectId: string) {
     super(`Arc project ${projectId} already has a running symbol index.`);

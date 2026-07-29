@@ -227,6 +227,7 @@ function createHarness(options: HarnessOptions = {}) {
     getLatestRun: vi.fn(() => Promise.resolve(options.current ?? null)),
     publishIndex,
     recoverInterruptedIndexes: vi.fn(() => Promise.resolve(0)),
+    searchSemantic: vi.fn(() => Promise.resolve([])),
   } satisfies ProjectEmbeddingIndexRepository;
   const sourceRepository = {
     getCurrentReadyCatalog: vi.fn(() => Promise.resolve(sourceCatalog)),

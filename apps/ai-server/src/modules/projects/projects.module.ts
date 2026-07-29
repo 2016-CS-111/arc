@@ -18,6 +18,7 @@ import { ProjectRegistrationService } from "./application/project-registration.s
 import type { ProjectRepository } from "./application/project.repository.js";
 import type { ProjectSourceIndexRepository } from "./application/project-source-index.repository.js";
 import { ProjectSourceIndexService } from "./application/project-source-index.service.js";
+import { ProjectSemanticSearchService } from "./application/project-semantic-search.service.js";
 import { ProjectSourceChunker } from "./application/project-source-chunker.js";
 import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
 import { ProjectSymbolIndexService } from "./application/project-symbol-index.service.js";
@@ -63,6 +64,7 @@ import {
 } from "./projects.constants.js";
 import { ProjectsController } from "./presentation/projects.controller.js";
 import { ProjectEmbeddingsController } from "./presentation/project-embeddings.controller.js";
+import { ProjectSemanticSearchController } from "./presentation/project-semantic-search.controller.js";
 
 const projectRepositoryProvider: Provider<ProjectRepository> = {
   provide: PROJECT_REPOSITORY,
@@ -147,7 +149,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
 
 @Module({
   imports: [DatabaseModule, EmbeddingsModule],
-  controllers: [ProjectsController, ProjectEmbeddingsController],
+  controllers: [ProjectsController, ProjectEmbeddingsController, ProjectSemanticSearchController],
   providers: [
     projectRepositoryProvider,
     projectInventoryRepositoryProvider,
@@ -175,6 +177,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
     ProjectEmbeddingIndexService,
+    ProjectSemanticSearchService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -190,6 +193,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
     ProjectEmbeddingIndexService,
+    ProjectSemanticSearchService,
   ],
 })
 export class ProjectsModule {}

@@ -6,6 +6,7 @@ import type {
 
 import type { SourceSymbolKind } from "./project-symbol-index.types.js";
 import type { SourceCodeRange } from "./source-code.types.js";
+import type { ProjectSemanticSearchQuery, ProjectSemanticSearchRecord } from "./project-semantic-search.types.js";
 
 export interface BeginProjectEmbeddingIndexInput {
   readonly projectId: string;
@@ -82,5 +83,6 @@ export interface ProjectEmbeddingIndexRepository {
   ): Promise<ProjectEmbeddingIndex>;
   getLatestRun(projectId: string): Promise<ProjectEmbeddingIndex | null>;
   getCurrentCatalogRun(projectId: string): Promise<ProjectEmbeddingIndex | null>;
+  searchSemantic(input: ProjectSemanticSearchQuery): Promise<readonly ProjectSemanticSearchRecord[]>;
   recoverInterruptedIndexes(): Promise<number>;
 }

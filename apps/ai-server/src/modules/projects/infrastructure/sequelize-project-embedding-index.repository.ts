@@ -3,7 +3,8 @@ import {
   type ProjectEmbeddingIndex,
   type ProjectEmbeddingIndexErrorCode,
 } from "@arc/contracts";
-import { Op, UniqueConstraintError, type Transaction } from "sequelize";
+import pgvector from "pgvector";
+import { Op, QueryTypes, UniqueConstraintError, type Transaction } from "sequelize";
 
 import type { ArcDatabase } from "../../../database/database.types.js";
 import type { ProjectEmbeddingIndexRunModel } from "../../../database/models/project-embedding-index-run.model.js";
@@ -14,6 +15,10 @@ import type {
   PublishProjectEmbeddingIndexInput,
   ReusableProjectEmbeddingChunk,
 } from "../domain/project-embedding-index.types.js";
+import type {
+  ProjectSemanticSearchQuery,
+  ProjectSemanticSearchRecord,
+} from "../domain/project-semantic-search.types.js";
 import { ProjectEmbeddingIndexAlreadyRunningError } from "../domain/project.errors.js";
 
 export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddingIndexRepository {
@@ -181,6 +186,88 @@ export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddin
     return row === null ? null : toIndex(row);
   }
 
+  public async searchSemantic(input: ProjectSemanticSearchQuery): Promise<readonly ProjectSemanticSearchRecord[]> {
+    const bind: unknown[] = [pgvector.toSql([...input.embedding]), input.projectId, input.embeddingIndexId];
+    const filters = ["project_id = $2", "embedding_index_run_id = $3"];
+
+    if (input.pathPrefix !== undefined) {
+      bind.push(input.pathPrefix);
+      const position = bind.length;
+      filters.push(
+        `(relative_path = $${String(position)} OR ` +
+          `left(relative_path, char_length($${String(position)}) + 1) = $${String(position)} || '/')`,
+      );
+    }
+    if (input.languages.length > 0) {
+      bind.push([...input.languages]);
+      filters.push(`language = ANY($${String(bind.length)}::varchar[])`);
+    }
+
+    bind.push(input.limit + 1);
+    const rows = await this.database.sequelize.query<SemanticSearchRow>(
+      `SELECT
+         id AS "chunkId",
+         identity_key AS "identityKey",
+         source_file_id AS "sourceFileId",
+         relative_path AS "path",
+         language,
+         source_content_hash AS "sourceHash",
+         content_hash AS "contentHash",
+         owner_symbol_id AS "ownerSymbolId",
+         owner_symbol_identity_key AS "ownerSymbolIdentityKey",
+         owner_symbol_kind AS "ownerSymbolKind",
+         owner_symbol_name AS "ownerSymbolName",
+         owner_symbol_qualified_name AS "ownerSymbolQualifiedName",
+         start_byte AS "startByte",
+         end_byte AS "endByte",
+         start_line AS "startLine",
+         start_column_byte AS "startColumnByte",
+         end_line AS "endLine",
+         end_column_byte AS "endColumnByte",
+         1 - (embedding <=> $1::vector) AS score
+       FROM project_embedding_chunks
+       WHERE ${filters.join(" AND ")}
+       ORDER BY score DESC, relative_path ASC, start_byte ASC, id ASC
+       LIMIT $${String(bind.length)}`,
+      {
+        bind,
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return rows.map((row) => ({
+      chunkId: row.chunkId,
+      identityKey: row.identityKey,
+      sourceFileId: row.sourceFileId,
+      path: row.path,
+      language: row.language,
+      sourceHash: row.sourceHash,
+      contentHash: row.contentHash,
+      range: {
+        startByte: row.startByte,
+        endByte: row.endByte,
+        startLine: row.startLine,
+        startColumnByte: row.startColumnByte,
+        endLine: row.endLine,
+        endColumnByte: row.endColumnByte,
+      },
+      symbol:
+        row.ownerSymbolIdentityKey === null ||
+        row.ownerSymbolKind === null ||
+        row.ownerSymbolName === null ||
+        row.ownerSymbolQualifiedName === null
+          ? null
+          : {
+              id: row.ownerSymbolId,
+              identityKey: row.ownerSymbolIdentityKey,
+              kind: row.ownerSymbolKind,
+              name: row.ownerSymbolName,
+              qualifiedName: row.ownerSymbolQualifiedName,
+            },
+      score: Math.max(-1, Math.min(1, Number(row.score))),
+    }));
+  }
+
   public async recoverInterruptedIndexes(): Promise<number> {
     const [count] = await this.database.models.projectEmbeddingIndexRuns.update(
       {
@@ -209,6 +296,28 @@ export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddin
     }
     return row;
   }
+}
+
+interface SemanticSearchRow {
+  readonly chunkId: string;
+  readonly identityKey: string;
+  readonly sourceFileId: string;
+  readonly path: string;
+  readonly language: string;
+  readonly sourceHash: string;
+  readonly contentHash: string;
+  readonly ownerSymbolId: string | null;
+  readonly ownerSymbolIdentityKey: string | null;
+  readonly ownerSymbolKind: string | null;
+  readonly ownerSymbolName: string | null;
+  readonly ownerSymbolQualifiedName: string | null;
+  readonly startByte: number;
+  readonly endByte: number;
+  readonly startLine: number;
+  readonly startColumnByte: number;
+  readonly endLine: number;
+  readonly endColumnByte: number;
+  readonly score: number | string;
 }
 
 function toIndex(row: ProjectEmbeddingIndexRunModel): ProjectEmbeddingIndex {

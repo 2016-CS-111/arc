@@ -121,13 +121,17 @@ pnpm embedding:catalog:verify
 ```
 
 The pgvector smoke applies pending migrations and uses only a temporary 1,024-dimensional table.
-The catalog verifier publishes temporary durable vectors, verifies reuse/recovery, and removes its
-temporary project. Project embedding indexes are available through:
+The catalog verifier publishes temporary durable vectors, verifies reuse, cosine search, path
+filtering, recovery, and cleanup. Project embedding indexes and semantic search are available
+through:
 
 ```txt
 POST /projects/:projectId/embeddings/index
 GET  /projects/:projectId/embeddings/index
+POST /projects/:projectId/embeddings/search
 ```
+
+The search body accepts `query`, optional `pathPrefix` and `languages`, and a `limit` from 1 to 50.
 
 Milestone 2.2 adds the backend-only Socket.IO chat gateway at the `/chat` namespace. With the
 backend already running, verify the complete local streaming protocol:

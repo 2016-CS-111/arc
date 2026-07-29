@@ -8,6 +8,7 @@ export * from "./api/project-dependency-graph.contract.js";
 export * from "./api/project-embedding-index.contract.js";
 export * from "./api/project-inventory.contract.js";
 export * from "./api/project-source-index.contract.js";
+export * from "./api/project-semantic-search.contract.js";
 export * from "./api/project-symbol-index.contract.js";
 export * from "./api/project-framework-index.contract.js";
 export * from "./api/project-framework-catalog.contract.js";

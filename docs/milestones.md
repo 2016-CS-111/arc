@@ -1119,7 +1119,7 @@ integration design is in `docs/milestone-4.5-architecture.md`.
 
 ## Milestone 5: Embeddings and Semantic Retrieval
 
-Status: In progress. Milestones 5.1 through 5.3 complete.
+Status: In progress. Milestones 5.1 through 5.4 complete.
 
 Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
 persisting raw source chunks or coupling retrieval directly to chat.
@@ -1210,4 +1210,22 @@ Delivered:
   stable reuse, recovery, and project-cascade cleanup.
 - Persisted no source chunk text, embedding input, absolute path, or full vector in an API response.
 
-Milestone 5.4 adds bounded cosine semantic search over the current fresh catalog.
+### Milestone 5.4: Bounded Semantic Search
+
+Status: Complete.
+
+Delivered:
+
+- Added bounded shared request/result contracts and
+  `POST /projects/:projectId/embeddings/search`.
+- Embedded one sensitive query with the local BGE-M3 query purpose and persisted neither the query
+  nor its vector.
+- Queried only the current project embedding run with pgvector cosine distance, optional path and
+  language filters, deterministic ordering, and a 1-to-50 result limit.
+- Rechecked catalog freshness after retrieval and returned immutable source, symbol, dependency,
+  framework, and embedding provenance.
+- Returned no raw source, full vectors, absolute paths, or query echo.
+- Verified the live 1,024-dimensional query and path filter through
+  `pnpm embedding:catalog:verify`.
+
+Milestone 5.5 adds metadata-only lexical candidates and deterministic hybrid ranking.

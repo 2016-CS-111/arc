@@ -1,6 +1,6 @@
 # Milestone 5 Architecture: Embeddings and Semantic Retrieval
 
-Status: Approved. Milestones 5.1 through 5.3 complete.
+Status: Approved. Milestones 5.1 through 5.4 complete.
 
 ## Goal
 
@@ -17,8 +17,7 @@ chat context remain Milestone 6.
 - The local PostgreSQL server is healthy.
 - pgvector `0.8.5` is installed and enabled by migration `0009_pgvector_extension.sql`.
 - Ollama is healthy with `bge-m3` installed.
-- Arc has an embedding provider port and compatibility smokes, but no project vector schema or
-  retrieval API yet.
+- Arc has a durable project vector catalog and bounded dense retrieval API.
 
 Milestone 5.1 installed:
 
@@ -186,7 +185,7 @@ source content hash, chunk content hash, owning semantic role, occurrence, and c
 
 ## Durable Catalog
 
-Migration `0010_project_embeddings.sql` will add:
+Migration `0010_project_embedding_catalog.sql` adds:
 
 ### `project_embedding_index_runs`
 
@@ -274,7 +273,7 @@ The public API returns paths, ranges, metadata, scores, provenance, and truncati
 
 ## API Shape
 
-Planned endpoints:
+Endpoints:
 
 ```txt
 GET  /providers/ollama/embeddings/status
@@ -318,6 +317,8 @@ Status: Complete.
 - Add explicit index/status endpoints.
 
 ### 5.4 Bounded Semantic Search
+
+Status: Complete.
 
 - Add query/result contracts.
 - Add query embedding and pgvector cosine retrieval.
@@ -409,8 +410,21 @@ by the Milestone 5.3 indexing orchestrator.
 - Added `pnpm embedding:catalog:verify` for local migration, vector persistence, reuse, stable
   upsert, recovery, privacy-boundary, cascade-cleanup, and 1,024-dimension verification.
 
-No source text or embedding input is persisted. Semantic queries and public chunk reads remain
-Milestone 5.4.
+No source text or embedding input is persisted.
+
+## Milestone 5.4 Delivered
+
+- Added `POST /projects/:projectId/embeddings/search` with a 4,096-character query limit, optional
+  path/language filters, and a result limit from 1 to 50.
+- Embedded the query with `purpose: query` and searched only the current project catalog through
+  pgvector cosine distance.
+- Limited the repository read to one row beyond the requested result count for explicit
+  truncation, with deterministic path/range/UUID tie-breaking.
+- Checked catalog freshness before query embedding and after retrieval.
+- Returned only relative path, language, hashes, range, approved symbol metadata, rank, score, and
+  immutable catalog provenance. Query text, source text, and vectors are not returned or stored.
+- Extended `pnpm embedding:catalog:verify` to exercise the live 1,024-dimensional cosine query and
+  path filter against local PostgreSQL.
 
 ## Acceptance
 

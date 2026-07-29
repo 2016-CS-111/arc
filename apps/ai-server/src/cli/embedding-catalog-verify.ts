@@ -155,6 +155,26 @@ async function main(): Promise<void> {
     assert(reusable.length === 1, "The published vector should be reusable.");
     assert(reusable[0]?.embedding.length === vectorDimensions, "The reusable vector should retain 1,024 dimensions.");
 
+    const searchResults = await repository.searchSemantic({
+      projectId,
+      embeddingIndexId: firstRun.id,
+      embedding: vector,
+      pathPrefix: "src",
+      languages: ["typescript"],
+      limit: 1,
+    });
+    const excludedResults = await repository.searchSemantic({
+      projectId,
+      embeddingIndexId: firstRun.id,
+      embedding: vector,
+      pathPrefix: "docs",
+      languages: ["typescript"],
+      limit: 1,
+    });
+    assert(searchResults[0]?.identityKey === identityKey, "Cosine search should return the matching chunk.");
+    assert(searchResults[0].score > 0.99, "The matching vector should have a near-perfect cosine score.");
+    assert(excludedResults.length === 0, "Path scope should exclude chunks outside the requested prefix.");
+
     const secondRun = await repository.beginIndex({
       projectId,
       sourceIndexRunId,
@@ -241,6 +261,7 @@ async function main(): Promise<void> {
     logger.info("Durable embedding catalog verification passed", {
       dimensions: vectorDimensions,
       reusedChunkCount: 1,
+      semanticScore: searchResults[0].score,
       stableChunkId: firstChunk.id,
     });
   } finally {

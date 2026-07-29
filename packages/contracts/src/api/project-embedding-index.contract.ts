@@ -50,6 +50,7 @@ export const LatestProjectEmbeddingIndexResponseSchema = z.object({
 });
 
 export type LatestProjectEmbeddingIndexResponse = z.infer<typeof LatestProjectEmbeddingIndexResponseSchema>;
+export type ProjectEmbeddingCatalogStatus = z.infer<typeof ProjectEmbeddingCatalogStatusSchema>;
 export type ProjectEmbeddingIndex = z.infer<typeof ProjectEmbeddingIndexSchema>;
 export type ProjectEmbeddingIndexErrorCode = z.infer<typeof ProjectEmbeddingIndexErrorCodeSchema>;
 export type ProjectEmbeddingIndexLimitReason = z.infer<typeof ProjectEmbeddingIndexLimitReasonSchema>;

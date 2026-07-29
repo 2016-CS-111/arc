@@ -585,8 +585,8 @@ Every index and query is bounded and tied to one exact source, symbol, dependenc
 provenance chain. A later context builder will re-read selected ranges and verify source hashes
 before adding any project content to a prompt.
 
-The compatibility, chunking, and durable vector-catalog gates are complete. Semantic search,
-hybrid search, and client acceptance remain. The complete design is in
+The compatibility, chunking, durable vector-catalog, and bounded semantic-search gates are
+complete. Metadata hybrid search and client acceptance remain. The complete design is in
 `docs/milestone-5-architecture.md`.
 
 ## Local Infrastructure
