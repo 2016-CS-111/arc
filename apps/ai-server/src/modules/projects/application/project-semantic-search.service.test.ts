@@ -44,10 +44,10 @@ const catalog: ProjectEmbeddingCatalogStatus = {
   stale: false,
 };
 
-function createRecord(chunkId: string, score: number): ProjectSemanticSearchRecord {
+function createRecord(chunkId: string, identity: string, score: number): ProjectSemanticSearchRecord {
   return {
     chunkId,
-    identityKey: "a".repeat(64),
+    identityKey: identity.repeat(64),
     sourceFileId: ids.sourceFile,
     path: "src/example.ts",
     language: "typescript",
@@ -76,8 +76,14 @@ function createHarness(catalogs: readonly (ProjectEmbeddingCatalogStatus | null)
   }
   const searchSemantic = vi.fn(() =>
     Promise.resolve([
-      createRecord("00000000-0000-4000-8000-000000000020", 0.95),
-      createRecord("00000000-0000-4000-8000-000000000021", 0.9),
+      createRecord("00000000-0000-4000-8000-000000000020", "a", 0.95),
+      createRecord("00000000-0000-4000-8000-000000000021", "b", 0.9),
+    ]),
+  );
+  const searchMetadata = vi.fn(() =>
+    Promise.resolve([
+      createRecord("00000000-0000-4000-8000-000000000021", "b", 0.8),
+      createRecord("00000000-0000-4000-8000-000000000022", "c", 0.7),
     ]),
   );
   const embeddingModel = {
@@ -92,7 +98,7 @@ function createHarness(catalogs: readonly (ProjectEmbeddingCatalogStatus | null)
       }),
     ),
   } satisfies EmbeddingModelPort;
-  const repository = { searchSemantic } as unknown as ProjectEmbeddingIndexRepository;
+  const repository = { searchMetadata, searchSemantic } as unknown as ProjectEmbeddingIndexRepository;
   const service = new ProjectSemanticSearchService(
     { getLatest } as unknown as ProjectEmbeddingIndexService,
     repository,
@@ -100,7 +106,7 @@ function createHarness(catalogs: readonly (ProjectEmbeddingCatalogStatus | null)
     new ProjectPathNormalizer(),
   );
 
-  return { embeddingModel, searchSemantic, service };
+  return { embeddingModel, searchMetadata, searchSemantic, service };
 }
 
 beforeEach(() => {
@@ -108,7 +114,7 @@ beforeEach(() => {
 });
 
 describe("ProjectSemanticSearchService", () => {
-  it("embeds the query and returns bounded ranked metadata", async () => {
+  it("fuses bounded dense and lexical candidates", async () => {
     const harness = createHarness();
     const response = await harness.service.search(ids.project, {
       query: "private registration question",
@@ -127,13 +133,33 @@ describe("ProjectSemanticSearchService", () => {
       embedding: [1, 0, 0],
       pathPrefix: "src/services",
       languages: ["typescript"],
-      limit: 1,
+      limit: 20,
+    });
+    expect(harness.searchMetadata).toHaveBeenCalledWith({
+      projectId: ids.project,
+      embeddingIndexId: ids.embedding,
+      query: "private registration question",
+      pathPrefix: "src/services",
+      languages: ["typescript"],
+      limit: 20,
     });
     expect(response).toMatchObject({
       embeddingIndexId: ids.embedding,
+      ranking: "rrf-v1",
+      rrfK: 60,
+      candidateLimit: 20,
       limit: 1,
       truncated: true,
-      results: [{ rank: 1, score: 0.95 }],
+      results: [
+        {
+          identityKey: "b".repeat(64),
+          rank: 1,
+          denseRank: 2,
+          denseScore: 0.9,
+          lexicalRank: 1,
+          lexicalScore: 0.8,
+        },
+      ],
     });
     expect(JSON.stringify(response)).not.toContain("private registration question");
     expect(JSON.stringify(response)).not.toContain("[1,0,0]");
@@ -146,6 +172,20 @@ describe("ProjectSemanticSearchService", () => {
       harness.service.search(ids.project, { query: "find code", languages: [], limit: 10 }),
     ).rejects.toBeInstanceOf(ProjectEmbeddingCatalogRequiredError);
     expect(harness.embeddingModel.embed).not.toHaveBeenCalled();
+  });
+
+  it("caps each candidate stream at 200", async () => {
+    const harness = createHarness();
+
+    const response = await harness.service.search(ids.project, {
+      query: "find code",
+      languages: [],
+      limit: 50,
+    });
+
+    expect(response.candidateLimit).toBe(200);
+    expect(harness.searchSemantic).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
+    expect(harness.searchMetadata).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
   });
 
   it("rejects results when the catalog changes during the query", async () => {

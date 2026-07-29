@@ -51,6 +51,19 @@ async function main(): Promise<void> {
       readyBytes: 10,
       completedAt: now,
     });
+    await database.models.projectSourceFiles.create({
+      id: sourceFileId,
+      projectId,
+      sourceIndexRunId,
+      inventoryScanId,
+      relativePath: "src/example.ts",
+      status: "ready",
+      skipReason: null,
+      contentHash: "e".repeat(64),
+      language: "typescript",
+      sizeBytes: 10,
+      modifiedAt: now,
+    });
     await database.models.projectSymbolIndexRuns.create({
       id: symbolIndexRunId,
       projectId,
@@ -78,6 +91,61 @@ async function main(): Promise<void> {
       analyzerSetIdentity: "b".repeat(64),
       analyzedFileCount: 1,
       completedAt: now,
+    });
+    const frameworkScope = await database.models.projectFrameworkScopes.create({
+      projectId,
+      frameworkIndexRunId,
+      scopeKey: "1".repeat(64),
+      framework: "nestjs",
+      rootPath: ".",
+      packageName: null,
+      contextHash: "2".repeat(64),
+      evidence: [],
+    });
+    const frameworkFile = await database.models.projectFrameworkFiles.create({
+      projectId,
+      frameworkIndexRunId,
+      scopeId: frameworkScope.id,
+      sourceFileId,
+      relativePath: "src/example.ts",
+      sourceContentHash: "e".repeat(64),
+      language: "typescript",
+      analyzerIdentity: "verification",
+      extractorIdentity: "verification",
+      evidence: [],
+      extractionOmissionCount: 0,
+      extractionOmissionReasons: [],
+      status: "analyzed",
+      hasSyntaxErrors: false,
+      entityCount: 1,
+      relationshipCount: 0,
+      omissionCount: 0,
+      errorCode: null,
+      analyzedAt: now,
+    });
+    await database.models.projectFrameworkEntities.create({
+      projectId,
+      frameworkIndexRunId,
+      scopeId: frameworkScope.id,
+      frameworkFileId: frameworkFile.id,
+      sourceFileId,
+      identityKey: "3".repeat(64),
+      framework: "nestjs",
+      entityKind: "controller",
+      name: "HealthController",
+      relativePath: "src/example.ts",
+      symbolId: null,
+      evidenceKind: "decorator",
+      certainty: "declared",
+      range: {
+        startByte: 0,
+        endByte: 10,
+        startLine: 0,
+        startColumnByte: 0,
+        endLine: 0,
+        endColumnByte: 10,
+      },
+      attributes: { kind: "nest_controller", dynamicPath: false, paths: ["/health"] },
     });
 
     const repository = new SequelizeProjectEmbeddingIndexRepository(database);
@@ -121,10 +189,10 @@ async function main(): Promise<void> {
               contentHash: "f".repeat(64),
               inputHash,
               ownerSymbolId: null,
-              ownerSymbolIdentityKey: null,
-              ownerSymbolKind: null,
-              ownerSymbolName: null,
-              ownerSymbolQualifiedName: null,
+              ownerSymbolIdentityKey: "4".repeat(64),
+              ownerSymbolKind: "class",
+              ownerSymbolName: "RegistrationService",
+              ownerSymbolQualifiedName: "RegistrationService",
               range: {
                 startByte: 0,
                 endByte: 10,
@@ -175,6 +243,25 @@ async function main(): Promise<void> {
     assert(searchResults[0].score > 0.99, "The matching vector should have a near-perfect cosine score.");
     assert(excludedResults.length === 0, "Path scope should exclude chunks outside the requested prefix.");
 
+    const symbolMatches = await repository.searchMetadata({
+      projectId,
+      embeddingIndexId: firstRun.id,
+      query: "RegistrationService",
+      pathPrefix: "src",
+      languages: ["typescript"],
+      limit: 1,
+    });
+    const frameworkMatches = await repository.searchMetadata({
+      projectId,
+      embeddingIndexId: firstRun.id,
+      query: "HealthController",
+      pathPrefix: "src",
+      languages: ["typescript"],
+      limit: 1,
+    });
+    assert(symbolMatches[0]?.identityKey === identityKey, "Symbol metadata should find the matching chunk.");
+    assert(frameworkMatches[0]?.identityKey === identityKey, "Framework metadata should find the overlapping chunk.");
+
     const secondRun = await repository.beginIndex({
       projectId,
       sourceIndexRunId,
@@ -211,10 +298,10 @@ async function main(): Promise<void> {
               contentHash: "f".repeat(64),
               inputHash,
               ownerSymbolId: null,
-              ownerSymbolIdentityKey: null,
-              ownerSymbolKind: null,
-              ownerSymbolName: null,
-              ownerSymbolQualifiedName: null,
+              ownerSymbolIdentityKey: "4".repeat(64),
+              ownerSymbolKind: "class",
+              ownerSymbolName: "RegistrationService",
+              ownerSymbolQualifiedName: "RegistrationService",
               range: {
                 startByte: 0,
                 endByte: 10,
@@ -260,8 +347,10 @@ async function main(): Promise<void> {
 
     logger.info("Durable embedding catalog verification passed", {
       dimensions: vectorDimensions,
+      frameworkLexicalScore: frameworkMatches[0].score,
       reusedChunkCount: 1,
       semanticScore: searchResults[0].score,
+      symbolLexicalScore: symbolMatches[0].score,
       stableChunkId: firstChunk.id,
     });
   } finally {

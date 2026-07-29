@@ -132,6 +132,7 @@ POST /projects/:projectId/embeddings/search
 ```
 
 The search body accepts `query`, optional `pathPrefix` and `languages`, and a `limit` from 1 to 50.
+Results include deterministic `rrf-v1` fused, dense, and metadata lexical ranks and scores.
 
 Milestone 2.2 adds the backend-only Socket.IO chat gateway at the `/chat` namespace. With the
 backend already running, verify the complete local streaming protocol:

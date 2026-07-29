@@ -40,7 +40,11 @@ export const ProjectSemanticSearchResultSchema = z.object({
     })
     .nullable(),
   rank: z.number().int().positive(),
-  score: z.number().finite().min(-1).max(1),
+  score: z.number().finite().nonnegative(),
+  denseRank: z.number().int().positive().nullable(),
+  denseScore: z.number().finite().min(-1).max(1).nullable(),
+  lexicalRank: z.number().int().positive().nullable(),
+  lexicalScore: z.number().finite().nonnegative().nullable(),
 });
 
 export const ProjectSemanticSearchResponseSchema = z.object({
@@ -53,6 +57,9 @@ export const ProjectSemanticSearchResponseSchema = z.object({
   model: z.string().min(1),
   dimensions: z.number().int().positive(),
   catalogLimited: z.boolean(),
+  ranking: z.literal("rrf-v1"),
+  rrfK: z.literal(60),
+  candidateLimit: z.number().int().min(1).max(200),
   limit: z.number().int().min(1).max(50),
   truncated: z.boolean(),
   results: ProjectSemanticSearchResultSchema.array().max(50),

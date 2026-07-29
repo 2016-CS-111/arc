@@ -1,6 +1,6 @@
 # Milestone 5 Architecture: Embeddings and Semantic Retrieval
 
-Status: Approved. Milestones 5.1 through 5.4 complete.
+Status: Approved. Milestones 5.1 through 5.5 complete.
 
 ## Goal
 
@@ -219,7 +219,8 @@ Indexes:
 - Project/run/path/range lookup.
 - HNSW cosine vector search.
 
-The metadata search document and GIN index are added with metadata hybrid search in Milestone 5.5.
+Migration `0011_project_embedding_metadata_search.sql` adds generated metadata search documents and
+GIN indexes for embedding chunks and framework entities.
 
 The repository will use the official `pgvector` Sequelize integration while preserving Arc's
 class-based Sequelize models and transaction patterns.
@@ -326,6 +327,8 @@ Status: Complete.
 
 ### 5.5 Metadata Hybrid Search
 
+Status: Complete.
+
 - Add metadata lexical candidates and reciprocal-rank fusion.
 - Prove ranking, deduplication, limits, and source-body privacy.
 
@@ -425,6 +428,18 @@ No source text or embedding input is persisted.
   immutable catalog provenance. Query text, source text, and vectors are not returned or stored.
 - Extended `pnpm embedding:catalog:verify` to exercise the live 1,024-dimensional cosine query and
   path filter against local PostgreSQL.
+
+## Milestone 5.5 Delivered
+
+- Added generated weighted `tsvector` documents and GIN indexes for relative path, language, symbol,
+  and framework entity metadata.
+- Kept source content and embedding input out of the lexical documents.
+- Retrieved independent dense and lexical candidate lists with a 20-to-200 candidate bound.
+- Fused candidates by stable chunk identity with deterministic reciprocal-rank fusion
+  `rrf-v1 (k=60)`.
+- Returned fused, dense, and lexical scores and ranks plus the explicit candidate and result limits.
+- Extended `pnpm embedding:catalog:verify` to prove symbol and framework metadata matches against
+  local PostgreSQL.
 
 ## Acceptance
 

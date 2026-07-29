@@ -16,10 +16,31 @@ import type {
   ReusableProjectEmbeddingChunk,
 } from "../domain/project-embedding-index.types.js";
 import type {
+  ProjectMetadataSearchQuery,
   ProjectSemanticSearchQuery,
   ProjectSemanticSearchRecord,
 } from "../domain/project-semantic-search.types.js";
 import { ProjectEmbeddingIndexAlreadyRunningError } from "../domain/project.errors.js";
+
+const searchResultColumns = `
+  c.id AS "chunkId",
+  c.identity_key AS "identityKey",
+  c.source_file_id AS "sourceFileId",
+  c.relative_path AS "path",
+  c.language,
+  c.source_content_hash AS "sourceHash",
+  c.content_hash AS "contentHash",
+  c.owner_symbol_id AS "ownerSymbolId",
+  c.owner_symbol_identity_key AS "ownerSymbolIdentityKey",
+  c.owner_symbol_kind AS "ownerSymbolKind",
+  c.owner_symbol_name AS "ownerSymbolName",
+  c.owner_symbol_qualified_name AS "ownerSymbolQualifiedName",
+  c.start_byte AS "startByte",
+  c.end_byte AS "endByte",
+  c.start_line AS "startLine",
+  c.start_column_byte AS "startColumnByte",
+  c.end_line AS "endLine",
+  c.end_column_byte AS "endColumnByte"`;
 
 export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddingIndexRepository {
   public constructor(private readonly database: ArcDatabase) {}
@@ -188,46 +209,28 @@ export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddin
 
   public async searchSemantic(input: ProjectSemanticSearchQuery): Promise<readonly ProjectSemanticSearchRecord[]> {
     const bind: unknown[] = [pgvector.toSql([...input.embedding]), input.projectId, input.embeddingIndexId];
-    const filters = ["project_id = $2", "embedding_index_run_id = $3"];
+    const filters = ["c.project_id = $2", "c.embedding_index_run_id = $3"];
 
     if (input.pathPrefix !== undefined) {
       bind.push(input.pathPrefix);
       const position = bind.length;
       filters.push(
-        `(relative_path = $${String(position)} OR ` +
-          `left(relative_path, char_length($${String(position)}) + 1) = $${String(position)} || '/')`,
+        `(c.relative_path = $${String(position)} OR ` +
+          `left(c.relative_path, char_length($${String(position)}) + 1) = $${String(position)} || '/')`,
       );
     }
     if (input.languages.length > 0) {
       bind.push([...input.languages]);
-      filters.push(`language = ANY($${String(bind.length)}::varchar[])`);
+      filters.push(`c.language = ANY($${String(bind.length)}::varchar[])`);
     }
 
     bind.push(input.limit + 1);
     const rows = await this.database.sequelize.query<SemanticSearchRow>(
-      `SELECT
-         id AS "chunkId",
-         identity_key AS "identityKey",
-         source_file_id AS "sourceFileId",
-         relative_path AS "path",
-         language,
-         source_content_hash AS "sourceHash",
-         content_hash AS "contentHash",
-         owner_symbol_id AS "ownerSymbolId",
-         owner_symbol_identity_key AS "ownerSymbolIdentityKey",
-         owner_symbol_kind AS "ownerSymbolKind",
-         owner_symbol_name AS "ownerSymbolName",
-         owner_symbol_qualified_name AS "ownerSymbolQualifiedName",
-         start_byte AS "startByte",
-         end_byte AS "endByte",
-         start_line AS "startLine",
-         start_column_byte AS "startColumnByte",
-         end_line AS "endLine",
-         end_column_byte AS "endColumnByte",
-         1 - (embedding <=> $1::vector) AS score
-       FROM project_embedding_chunks
+      `SELECT ${searchResultColumns},
+         1 - (c.embedding <=> $1::vector) AS score
+       FROM project_embedding_chunks c
        WHERE ${filters.join(" AND ")}
-       ORDER BY score DESC, relative_path ASC, start_byte ASC, id ASC
+       ORDER BY score DESC, c.relative_path ASC, c.start_byte ASC, c.id ASC
        LIMIT $${String(bind.length)}`,
       {
         bind,
@@ -236,36 +239,89 @@ export class SequelizeProjectEmbeddingIndexRepository implements ProjectEmbeddin
     );
 
     return rows.map((row) => ({
-      chunkId: row.chunkId,
-      identityKey: row.identityKey,
-      sourceFileId: row.sourceFileId,
-      path: row.path,
-      language: row.language,
-      sourceHash: row.sourceHash,
-      contentHash: row.contentHash,
-      range: {
-        startByte: row.startByte,
-        endByte: row.endByte,
-        startLine: row.startLine,
-        startColumnByte: row.startColumnByte,
-        endLine: row.endLine,
-        endColumnByte: row.endColumnByte,
-      },
-      symbol:
-        row.ownerSymbolIdentityKey === null ||
-        row.ownerSymbolKind === null ||
-        row.ownerSymbolName === null ||
-        row.ownerSymbolQualifiedName === null
-          ? null
-          : {
-              id: row.ownerSymbolId,
-              identityKey: row.ownerSymbolIdentityKey,
-              kind: row.ownerSymbolKind,
-              name: row.ownerSymbolName,
-              qualifiedName: row.ownerSymbolQualifiedName,
-            },
+      ...mapSearchRow(row),
       score: Math.max(-1, Math.min(1, Number(row.score))),
     }));
+  }
+
+  public async searchMetadata(input: ProjectMetadataSearchQuery): Promise<readonly ProjectSemanticSearchRecord[]> {
+    const bind: unknown[] = [input.query, input.projectId, input.embeddingIndexId];
+    const filters = ["c.project_id = $2", "c.embedding_index_run_id = $3"];
+
+    if (input.pathPrefix !== undefined) {
+      bind.push(input.pathPrefix);
+      const position = bind.length;
+      filters.push(
+        `(c.relative_path = $${String(position)} OR ` +
+          `left(c.relative_path, char_length($${String(position)}) + 1) = $${String(position)} || '/')`,
+      );
+    }
+    if (input.languages.length > 0) {
+      bind.push([...input.languages]);
+      filters.push(`c.language = ANY($${String(bind.length)}::varchar[])`);
+    }
+
+    bind.push(input.limit + 1);
+    const rows = await this.database.sequelize.query<SemanticSearchRow>(
+      `WITH search_query AS (
+         SELECT plainto_tsquery(
+           'simple'::regconfig,
+           regexp_replace($1::text, '([[:lower:][:digit:]])([[:upper:]])', '\\1 \\2', 'g')
+         ) AS value
+       ),
+       chunk_matches AS (
+         SELECT c.id, ts_rank_cd(c.metadata_search_document, q.value) AS score
+         FROM project_embedding_chunks c
+         CROSS JOIN search_query q
+         WHERE ${filters.join(" AND ")}
+           AND c.metadata_search_document @@ q.value
+       ),
+       framework_matches AS (
+         SELECT c.id, MAX(ts_rank_cd(f.metadata_search_document, q.value)) AS score
+         FROM project_embedding_index_runs r
+         JOIN project_framework_entities f
+           ON f.project_id = r.project_id
+          AND f.framework_index_run_id = r.framework_index_run_id
+         JOIN project_embedding_chunks c
+           ON c.project_id = r.project_id
+          AND c.embedding_index_run_id = r.id
+          AND c.source_file_id = f.source_file_id
+         CROSS JOIN search_query q
+         WHERE r.id = $3
+           AND r.project_id = $2
+           AND ${filters.join(" AND ")}
+           AND f.metadata_search_document @@ q.value
+           AND (
+             (f.symbol_id IS NOT NULL AND f.symbol_id = c.owner_symbol_id)
+             OR f.range IS NULL
+             OR (
+               (f.range ->> 'startByte')::integer < c.end_byte
+               AND (f.range ->> 'endByte')::integer > c.start_byte
+             )
+           )
+         GROUP BY c.id
+       ),
+       matches AS (
+         SELECT id, MAX(score) AS score
+         FROM (
+           SELECT id, score FROM chunk_matches
+           UNION ALL
+           SELECT id, score FROM framework_matches
+         ) candidates
+         GROUP BY id
+       )
+       SELECT ${searchResultColumns}, matches.score
+       FROM matches
+       JOIN project_embedding_chunks c ON c.id = matches.id
+       ORDER BY matches.score DESC, c.relative_path ASC, c.start_byte ASC, c.id ASC
+       LIMIT $${String(bind.length)}`,
+      {
+        bind,
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return rows.map(mapSearchRow);
   }
 
   public async recoverInterruptedIndexes(): Promise<number> {
@@ -318,6 +374,40 @@ interface SemanticSearchRow {
   readonly endLine: number;
   readonly endColumnByte: number;
   readonly score: number | string;
+}
+
+function mapSearchRow(row: SemanticSearchRow): ProjectSemanticSearchRecord {
+  return {
+    chunkId: row.chunkId,
+    identityKey: row.identityKey,
+    sourceFileId: row.sourceFileId,
+    path: row.path,
+    language: row.language,
+    sourceHash: row.sourceHash,
+    contentHash: row.contentHash,
+    range: {
+      startByte: row.startByte,
+      endByte: row.endByte,
+      startLine: row.startLine,
+      startColumnByte: row.startColumnByte,
+      endLine: row.endLine,
+      endColumnByte: row.endColumnByte,
+    },
+    symbol:
+      row.ownerSymbolIdentityKey === null ||
+      row.ownerSymbolKind === null ||
+      row.ownerSymbolName === null ||
+      row.ownerSymbolQualifiedName === null
+        ? null
+        : {
+            id: row.ownerSymbolId,
+            identityKey: row.ownerSymbolIdentityKey,
+            kind: row.ownerSymbolKind,
+            name: row.ownerSymbolName,
+            qualifiedName: row.ownerSymbolQualifiedName,
+          },
+    score: Number(row.score),
+  };
 }
 
 function toIndex(row: ProjectEmbeddingIndexRunModel): ProjectEmbeddingIndex {

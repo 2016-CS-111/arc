@@ -37,6 +37,9 @@ describe("project semantic search contract", () => {
       model: "bge-m3",
       dimensions: 1_024,
       catalogLimited: false,
+      ranking: "rrf-v1",
+      rrfK: 60,
+      candidateLimit: 40,
       limit: 10,
       truncated: false,
       results: [
@@ -58,14 +61,22 @@ describe("project semantic search contract", () => {
           },
           symbol: null,
           rank: 1,
-          score: 0.95,
+          score: 2 / 61,
+          denseRank: 1,
+          denseScore: 0.95,
+          lexicalRank: 1,
+          lexicalScore: 0.8,
           embedding: [1, 0, 0],
           sourceText: "private source",
         },
       ],
     });
 
-    expect(response.results[0]).toMatchObject({ rank: 1, score: 0.95 });
+    expect(response.results[0]).toMatchObject({
+      rank: 1,
+      denseRank: 1,
+      lexicalRank: 1,
+    });
     expect(response.results[0]).not.toHaveProperty("embedding");
     expect(response.results[0]).not.toHaveProperty("sourceText");
   });

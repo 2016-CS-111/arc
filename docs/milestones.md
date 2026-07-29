@@ -1119,7 +1119,7 @@ integration design is in `docs/milestone-4.5-architecture.md`.
 
 ## Milestone 5: Embeddings and Semantic Retrieval
 
-Status: In progress. Milestones 5.1 through 5.4 complete.
+Status: In progress. Milestones 5.1 through 5.5 complete.
 
 Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
 persisting raw source chunks or coupling retrieval directly to chat.
@@ -1228,4 +1228,21 @@ Delivered:
 - Verified the live 1,024-dimensional query and path filter through
   `pnpm embedding:catalog:verify`.
 
-Milestone 5.5 adds metadata-only lexical candidates and deterministic hybrid ranking.
+### Milestone 5.5: Metadata Hybrid Search
+
+Status: Complete.
+
+Delivered:
+
+- Added migration `0011_project_embedding_metadata_search.sql` with generated weighted metadata
+  documents and GIN indexes for embedding chunks and framework entities.
+- Indexed only approved relative path, language, symbol, framework, entity kind, and entity name
+  metadata.
+- Added bounded metadata candidates alongside dense pgvector candidates.
+- Deduplicated by stable chunk identity and fused ranks with versioned `rrf-v1 (k=60)`.
+- Returned fused, dense, and lexical scores/ranks with explicit candidate limits and deterministic
+  tie-breaking.
+- Verified symbol and overlapping framework-entity matches against local PostgreSQL while keeping
+  source and query text out of storage and responses.
+
+Milestone 5.6 adds VSCode indexing/status integration and complete local acceptance.
