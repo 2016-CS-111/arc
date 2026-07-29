@@ -35,6 +35,9 @@ const rawEnvSchema = z.object({
   ARC_OLLAMA_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(900_000).default(300_000),
   ARC_OLLAMA_READINESS_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
+  ARC_OLLAMA_EMBEDDING_MODEL: z.string().trim().min(1).optional(),
+  ARC_OLLAMA_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1_024),
+  ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
   ARC_PROJECT_SCAN_MAX_FILES: z.coerce.number().int().positive().max(100_000).default(20_000),
   ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(1_099_511_627_776).default(2_147_483_648),
   ARC_PROJECT_SCAN_MAX_DEPTH: z.coerce.number().int().positive().max(100).default(32),
@@ -96,6 +99,11 @@ export interface AppConfig {
     readonly model?: string;
     readonly requestTimeoutMs: number;
     readonly readinessTimeoutMs: number;
+  };
+  readonly embedding: {
+    readonly model?: string;
+    readonly dimensions: number;
+    readonly timeoutMs: number;
   };
   readonly projectScan: {
     readonly maxFiles: number;
@@ -164,12 +172,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     sync: parsed.ARC_DATABASE_SYNC,
   };
 
+  const embedding = {
+    dimensions: parsed.ARC_OLLAMA_EMBEDDING_DIMENSIONS,
+    timeoutMs: parsed.ARC_OLLAMA_EMBEDDING_TIMEOUT_MS,
+    ...(parsed.ARC_OLLAMA_EMBEDDING_MODEL === undefined ? {} : { model: parsed.ARC_OLLAMA_EMBEDDING_MODEL }),
+  };
+
   return {
     nodeEnv: parsed.NODE_ENV,
     host: parsed.ARC_SERVER_HOST,
     port: parsed.ARC_SERVER_PORT,
     corsOrigin: parsed.ARC_CORS_ORIGIN,
     database,
+    embedding,
     ollama,
     projectScan: {
       maxFiles: parsed.ARC_PROJECT_SCAN_MAX_FILES,

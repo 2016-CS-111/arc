@@ -111,6 +111,17 @@ pnpm ollama:smoke
 pnpm ollama:smoke "Explain a TypeScript discriminated union in two sentences."
 ```
 
+Milestone 5.1 uses `ARC_OLLAMA_EMBEDDING_MODEL=bge-m3` independently from the chat model. Verify the
+local embedding and PostgreSQL vector foundations with:
+
+```sh
+pnpm embedding:smoke
+pnpm pgvector:smoke
+```
+
+The pgvector smoke applies pending migrations and uses only a temporary 1,024-dimensional table.
+Project vectors are not persisted until Milestone 5.3.
+
 Milestone 2.2 adds the backend-only Socket.IO chat gateway at the `/chat` namespace. With the
 backend already running, verify the complete local streaming protocol:
 

@@ -16,6 +16,10 @@ describe("loadConfig", () => {
       sync: false,
       url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     });
+    expect(config.embedding).toEqual({
+      dimensions: 1_024,
+      timeoutMs: 300_000,
+    });
     expect(config.projectScan).toEqual({
       batchSize: 500,
       maxDepth: 32,
@@ -71,6 +75,9 @@ describe("loadConfig", () => {
     const config = loadConfig({
       ARC_OLLAMA_BASE_URL: "http://localhost:11434///",
       ARC_OLLAMA_MODEL: "qwen2.5-coder:3b",
+      ARC_OLLAMA_EMBEDDING_DIMENSIONS: "768",
+      ARC_OLLAMA_EMBEDDING_MODEL: "bge-m3",
+      ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: "90000",
       ARC_OLLAMA_READINESS_TIMEOUT_MS: "2500",
       ARC_OLLAMA_REQUEST_TIMEOUT_MS: "120000",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
@@ -127,6 +134,11 @@ describe("loadConfig", () => {
       connectTimeoutMs: 8_000,
       sync: true,
       url: "postgres://arc:arc@localhost:5433/arc_test",
+    });
+    expect(config.embedding).toEqual({
+      dimensions: 768,
+      model: "bge-m3",
+      timeoutMs: 90_000,
     });
     expect(config.projectScan).toEqual({
       batchSize: 250,

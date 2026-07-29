@@ -573,6 +573,22 @@ No source content enters the extension. Indexing remains user initiated, with no
 activation-time scan, hidden retry, or automatic refresh. `pnpm source:intelligence:verify`
 composes the four local PostgreSQL acceptance harnesses that cover the full pipeline.
 
+## Embeddings and Semantic Retrieval
+
+Milestone 5 is designed as a separate local vector pipeline. Hash-verified source is chunked
+transiently and sent only to a dedicated local Ollama embedding adapter. PostgreSQL stores
+1,024-dimensional BGE-M3 vectors, relative ranges, hashes, stable identities, and approved
+path/symbol/framework metadata; it does not store raw chunk text.
+
+Dense pgvector cosine candidates and metadata-only lexical candidates are fused deterministically.
+Every index and query is bounded and tied to one exact source, symbol, dependency, and framework
+provenance chain. A later context builder will re-read selected ranges and verify source hashes
+before adding any project content to a prompt.
+
+The architecture is split into six compatibility, chunking, persistence, semantic search, hybrid
+search, and client-acceptance gates. The complete design is in
+`docs/milestone-5-architecture.md`.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and

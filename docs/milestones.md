@@ -1116,3 +1116,51 @@ Delivered:
 
 Milestone 4 is complete. Embeddings and semantic retrieval begin in Milestone 5. The complete
 integration design is in `docs/milestone-4.5-architecture.md`.
+
+## Milestone 5: Embeddings and Semantic Retrieval
+
+Status: In progress. Milestone 5.1 complete.
+
+Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
+persisting raw source chunks or coupling retrieval directly to chat.
+
+Architecture:
+
+- A separate Ollama embedding port uses BGE-M3 independently from the Qwen chat model.
+- Deterministic symbol-aware chunks are generated from hash-verified source and discarded after
+  embedding.
+- PostgreSQL stores vectors, ranges, hashes, stable identities, and approved metadata only.
+- Exact source/symbol/dependency/framework provenance controls freshness and incremental reuse.
+- Dense cosine retrieval and metadata-only lexical retrieval combine through deterministic
+  reciprocal-rank fusion.
+- Context rehydration and prompt token budgeting remain Milestone 6.
+
+Planned gates:
+
+- 5.1 Local embedding and pgvector compatibility.
+- 5.2 Deterministic safe chunking.
+- 5.3 Durable incremental vector catalog.
+- 5.4 Bounded semantic search.
+- 5.5 Metadata hybrid search.
+- 5.6 VSCode integration and acceptance.
+
+### Milestone 5.1: Local Embedding and pgvector Compatibility
+
+Status: Complete.
+
+Delivered:
+
+- Installed pgvector `0.8.5` for local PostgreSQL 18 and added migration
+  `0009_pgvector_extension.sql`.
+- Installed Ollama `bge-m3` and separated its model, dimensions, and timeout from chat
+  configuration.
+- Added a provider-neutral embedding port, compact Ollama adapter, typed errors, and provider
+  status endpoint.
+- Added `pnpm embedding:smoke` and `pnpm pgvector:smoke` with compiled equivalents.
+- Verified two 1,024-dimensional BGE-M3 vectors and a temporary pgvector cosine query against the
+  local services.
+- Persisted no vectors, source text, query text, or new project metadata.
+
+The Node pgvector integration is deferred to Milestone 5.3, when the first class-based Sequelize
+vector model is introduced. Milestone 5.2 is deterministic transient chunking. The complete design
+and privacy boundary are in `docs/milestone-5-architecture.md`.
