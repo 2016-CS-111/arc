@@ -75,6 +75,18 @@ export class ProjectSourceCatalogStaleError extends Error {
   }
 }
 
+export type ProjectSourceChunkErrorCode = "source_unavailable" | "source_hash_mismatch";
+
+export class ProjectSourceChunkError extends Error {
+  public constructor(
+    public readonly code: ProjectSourceChunkErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ProjectSourceChunkError";
+  }
+}
+
 export class ProjectSymbolIndexAlreadyRunningError extends Error {
   public constructor(projectId: string) {
     super(`Arc project ${projectId} already has a running symbol index.`);

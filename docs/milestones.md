@@ -1119,7 +1119,7 @@ integration design is in `docs/milestone-4.5-architecture.md`.
 
 ## Milestone 5: Embeddings and Semantic Retrieval
 
-Status: In progress. Milestone 5.1 complete.
+Status: In progress. Milestones 5.1 and 5.2 complete.
 
 Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
 persisting raw source chunks or coupling retrieval directly to chat.
@@ -1164,3 +1164,25 @@ Delivered:
 The Node pgvector integration is deferred to Milestone 5.3, when the first class-based Sequelize
 vector model is introduced. Milestone 5.2 is deterministic transient chunking. The complete design
 and privacy boundary are in `docs/milestone-5-architecture.md`.
+
+### Milestone 5.2: Deterministic Safe Chunking
+
+Status: Complete.
+
+Delivered:
+
+- Added one injectable, class-based source chunker with no database or API surface.
+- Reused the existing safe source reader and rejected content that no longer matches the durable
+  source hash.
+- Preferred complete non-overlapping symbol ranges, split oversized symbols on UTF-8-safe line
+  boundaries, and filled uncovered source with bounded fallback windows.
+- Added stable chunk/input/content identities plus transient relative path, language, and symbol
+  metadata headers.
+- Enforced 8 KiB source slices and a 500-chunk per-file limit while dropping whitespace-only
+  chunks.
+- Verified symbol ownership, fallback coverage, UTF-8 ranges, truncation, offset-stable identities,
+  and hash drift with focused tests.
+- Persisted no chunk text, embedding input, vector, or new project metadata.
+
+Milestone 5.3 will reapply the ignore policy once per project run, add whole-project limits, embed
+the transient chunks, and publish the first durable vector catalog.

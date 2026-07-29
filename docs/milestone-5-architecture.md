@@ -1,6 +1,6 @@
 # Milestone 5 Architecture: Embeddings and Semantic Retrieval
 
-Status: Approved. Milestone 5.1 complete.
+Status: Approved. Milestones 5.1 and 5.2 complete.
 
 ## Goal
 
@@ -164,7 +164,7 @@ The Ollama adapter:
 Chunking is deterministic and provider-neutral:
 
 1. Consume only `ready` files from one immutable source catalog.
-2. Reapply ignore policy and safely re-read the file.
+2. Reapply ignore policy in the indexing orchestrator and safely re-read the file.
 3. Require the read SHA-256 to equal the source-catalog hash.
 4. Prefer complete durable symbol ranges when they fit.
 5. Split oversized symbols on UTF-8-safe line boundaries.
@@ -290,6 +290,8 @@ history.
 
 ### 5.1 Local Embedding and pgvector Compatibility
 
+Status: Complete.
+
 - Install and enable pgvector for local PostgreSQL 18.
 - Add separate embedding configuration and provider-neutral contracts.
 - Implement and test the Ollama BGE adapter.
@@ -298,6 +300,8 @@ history.
 - Persist no project vectors or source text.
 
 ### 5.2 Deterministic Safe Chunking
+
+Status: Complete.
 
 - Add chunk contracts and stable identities.
 - Add symbol-aware and line-window chunking.
@@ -366,6 +370,25 @@ External prerequisites completed:
 
 - `brew install pgvector`
 - `ollama pull bge-m3`
+
+## Milestone 5.2 Delivered
+
+- Added one class-based `ProjectSourceChunker` in the Projects module.
+- Reused the existing symlink-safe, inventory-aware, bounded UTF-8 source reader.
+- Required the reread SHA-256 to match the immutable source-catalog hash.
+- Preferred complete non-overlapping symbol ranges and split oversized ranges on UTF-8-safe line
+  boundaries.
+- Covered source outside symbols with the same bounded line windows and discarded whitespace-only
+  chunks.
+- Added offset-stable chunk identities, exact input/content hashes, relative metadata headers,
+  8 KiB source slices, and a 500-chunk per-file limit.
+- Kept source text and embedding inputs transient; no migration, model, endpoint, or embedding call
+  was added.
+- Added focused tests for symbols, fallback coverage, UTF-8 ranges, limits, stable identities, and
+  source drift.
+
+Ignore-policy reapplication, whole-project chunk limits, batching, and atomic publication belong to
+the Milestone 5.3 indexing orchestrator.
 
 ## Acceptance
 
