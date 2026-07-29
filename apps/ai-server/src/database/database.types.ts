@@ -9,6 +9,8 @@ import type {
   ProjectDependencyIndexStatus,
   ProjectDependencyResolutionKind,
   ProjectDependencyResolverWarningCode,
+  ProjectEmbeddingIndexErrorCode,
+  ProjectEmbeddingIndexLimitReason,
   ProjectScanErrorCode,
   ProjectScanLimitReason,
   ProjectScanStatus,
@@ -50,6 +52,96 @@ import type { ProjectFrameworkScopeModel } from "./models/project-framework-scop
 import type { ProjectFrameworkFileModel } from "./models/project-framework-file.model.js";
 import type { ProjectFrameworkEntityModel } from "./models/project-framework-entity.model.js";
 import type { ProjectFrameworkRelationshipModel } from "./models/project-framework-relationship.model.js";
+import type { ProjectEmbeddingChunkModel } from "./models/project-embedding-chunk.model.js";
+import type { ProjectEmbeddingFileModel } from "./models/project-embedding-file.model.js";
+import type { ProjectEmbeddingIndexRunModel } from "./models/project-embedding-index-run.model.js";
+
+export interface ProjectEmbeddingIndexRunAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly sourceIndexRunId: string;
+  readonly symbolIndexRunId: string;
+  readonly dependencyIndexRunId: string;
+  readonly frameworkIndexRunId: string;
+  readonly status: "running" | "completed" | "limited" | "failed";
+  readonly provider: "ollama";
+  readonly model: string;
+  readonly dimensions: number;
+  readonly inputFormat: string;
+  readonly chunkerIdentity: string;
+  readonly fileCount: number;
+  readonly chunkCount: number;
+  readonly embeddedChunkCount: number;
+  readonly reusedChunkCount: number;
+  readonly limitReasons: ProjectEmbeddingIndexLimitReason[];
+  readonly errorCode: ProjectEmbeddingIndexErrorCode | null;
+  readonly startedAt: Date;
+  readonly completedAt: Date | null;
+}
+
+export type ProjectEmbeddingIndexRunCreationAttributes = Optional<
+  ProjectEmbeddingIndexRunAttributes,
+  | "id"
+  | "status"
+  | "fileCount"
+  | "chunkCount"
+  | "embeddedChunkCount"
+  | "reusedChunkCount"
+  | "limitReasons"
+  | "errorCode"
+  | "startedAt"
+  | "completedAt"
+>;
+
+export interface ProjectEmbeddingFileAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly embeddingIndexRunId: string;
+  readonly sourceFileId: string;
+  readonly relativePath: string;
+  readonly sourceContentHash: string;
+  readonly language: string;
+  readonly status: "indexed" | "limited";
+  readonly chunkCount: number;
+  readonly indexedAt: Date;
+}
+
+export type ProjectEmbeddingFileCreationAttributes = Optional<
+  ProjectEmbeddingFileAttributes,
+  "id" | "chunkCount" | "indexedAt"
+>;
+
+export interface ProjectEmbeddingChunkAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly embeddingIndexRunId: string;
+  readonly embeddingFileId: string;
+  readonly sourceFileId: string;
+  readonly identityKey: string;
+  readonly relativePath: string;
+  readonly language: string;
+  readonly sourceContentHash: string;
+  readonly contentHash: string;
+  readonly inputHash: string;
+  readonly inputFormat: string;
+  readonly provider: "ollama";
+  readonly model: string;
+  readonly dimensions: number;
+  readonly ownerSymbolId: string | null;
+  readonly ownerSymbolIdentityKey: string | null;
+  readonly ownerSymbolKind: SourceSymbolKind | null;
+  readonly ownerSymbolName: string | null;
+  readonly ownerSymbolQualifiedName: string | null;
+  readonly startByte: number;
+  readonly endByte: number;
+  readonly startLine: number;
+  readonly startColumnByte: number;
+  readonly endLine: number;
+  readonly endColumnByte: number;
+  readonly embedding: number[];
+}
+
+export type ProjectEmbeddingChunkCreationAttributes = Optional<ProjectEmbeddingChunkAttributes, "id">;
 
 export interface ProjectFrameworkIndexRunAttributes {
   readonly id: string;
@@ -431,6 +523,9 @@ export interface ProjectSymbolAttributes {
 export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, "id" | "exported">;
 
 export interface ArcDatabaseModels {
+  readonly projectEmbeddingIndexRuns: ModelStatic<ProjectEmbeddingIndexRunModel>;
+  readonly projectEmbeddingFiles: ModelStatic<ProjectEmbeddingFileModel>;
+  readonly projectEmbeddingChunks: ModelStatic<ProjectEmbeddingChunkModel>;
   readonly projectFrameworkIndexRuns: ModelStatic<ProjectFrameworkIndexRunModel>;
   readonly projectFrameworkScopes: ModelStatic<ProjectFrameworkScopeModel>;
   readonly projectFrameworkFiles: ModelStatic<ProjectFrameworkFileModel>;

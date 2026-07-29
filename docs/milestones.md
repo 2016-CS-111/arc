@@ -1119,7 +1119,7 @@ integration design is in `docs/milestone-4.5-architecture.md`.
 
 ## Milestone 5: Embeddings and Semantic Retrieval
 
-Status: In progress. Milestones 5.1 and 5.2 complete.
+Status: In progress. Milestones 5.1 through 5.3 complete.
 
 Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
 persisting raw source chunks or coupling retrieval directly to chat.
@@ -1184,5 +1184,30 @@ Delivered:
   and hash drift with focused tests.
 - Persisted no chunk text, embedding input, vector, or new project metadata.
 
-Milestone 5.3 will reapply the ignore policy once per project run, add whole-project limits, embed
-the transient chunks, and publish the first durable vector catalog.
+Milestone 5.3 owns ignore-policy reapplication, whole-project limits, transient embedding, and
+durable vector-catalog publication.
+
+### Milestone 5.3: Durable Incremental Vector Catalog
+
+Status: Complete.
+
+Delivered:
+
+- Added the official `pgvector` `0.3.x` Sequelize integration and migration
+  `0010_project_embedding_catalog.sql`.
+- Added class-based run, file, and chunk models with `vector(1024)` storage and an HNSW cosine
+  index.
+- Added one Sequelize repository with one-running-run enforcement, atomic current-catalog
+  publication, stable upserts, stale-row cleanup, failure preservation, and restart recovery.
+- Added an explicit embedding index service that requires coherent source, symbol, dependency, and
+  framework catalogs.
+- Reapplied ignore rules, hash-verified source rereads, enforced per-file and whole-project limits,
+  and embedded only transient inputs in batches of four.
+- Reused unchanged vectors without another embedding call and returned already-current catalogs
+  without contacting Ollama.
+- Added `POST` and `GET /projects/:projectId/embeddings/index`.
+- Added `pnpm embedding:catalog:verify`, which passed against local PostgreSQL with 1,024 dimensions,
+  stable reuse, recovery, and project-cascade cleanup.
+- Persisted no source chunk text, embedding input, absolute path, or full vector in an API response.
+
+Milestone 5.4 adds bounded cosine semantic search over the current fresh catalog.

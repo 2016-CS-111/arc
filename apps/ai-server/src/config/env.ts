@@ -38,6 +38,10 @@ const rawEnvSchema = z.object({
   ARC_OLLAMA_EMBEDDING_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1_024),
   ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  ARC_PROJECT_EMBEDDING_MAX_SOURCE_BYTES: z.coerce.number().int().positive().default(8_192),
+  ARC_PROJECT_EMBEDDING_MAX_CHUNKS_PER_FILE: z.coerce.number().int().positive().default(500),
+  ARC_PROJECT_EMBEDDING_MAX_TOTAL_CHUNKS: z.coerce.number().int().positive().default(50_000),
+  ARC_PROJECT_EMBEDDING_BATCH_SIZE: z.coerce.number().int().positive().default(4),
   ARC_PROJECT_SCAN_MAX_FILES: z.coerce.number().int().positive().max(100_000).default(20_000),
   ARC_PROJECT_SCAN_MAX_TOTAL_BYTES: z.coerce.number().int().positive().max(1_099_511_627_776).default(2_147_483_648),
   ARC_PROJECT_SCAN_MAX_DEPTH: z.coerce.number().int().positive().max(100).default(32),
@@ -104,6 +108,12 @@ export interface AppConfig {
     readonly model?: string;
     readonly dimensions: number;
     readonly timeoutMs: number;
+  };
+  readonly projectEmbedding: {
+    readonly maxSourceBytes: number;
+    readonly maxChunksPerFile: number;
+    readonly maxTotalChunks: number;
+    readonly batchSize: number;
   };
   readonly projectScan: {
     readonly maxFiles: number;
@@ -186,6 +196,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     database,
     embedding,
     ollama,
+    projectEmbedding: {
+      maxSourceBytes: parsed.ARC_PROJECT_EMBEDDING_MAX_SOURCE_BYTES,
+      maxChunksPerFile: parsed.ARC_PROJECT_EMBEDDING_MAX_CHUNKS_PER_FILE,
+      maxTotalChunks: parsed.ARC_PROJECT_EMBEDDING_MAX_TOTAL_CHUNKS,
+      batchSize: parsed.ARC_PROJECT_EMBEDDING_BATCH_SIZE,
+    },
     projectScan: {
       maxFiles: parsed.ARC_PROJECT_SCAN_MAX_FILES,
       maxTotalBytes: parsed.ARC_PROJECT_SCAN_MAX_TOTAL_BYTES,

@@ -117,10 +117,17 @@ local embedding and PostgreSQL vector foundations with:
 ```sh
 pnpm embedding:smoke
 pnpm pgvector:smoke
+pnpm embedding:catalog:verify
 ```
 
 The pgvector smoke applies pending migrations and uses only a temporary 1,024-dimensional table.
-Project vectors are not persisted until Milestone 5.3.
+The catalog verifier publishes temporary durable vectors, verifies reuse/recovery, and removes its
+temporary project. Project embedding indexes are available through:
+
+```txt
+POST /projects/:projectId/embeddings/index
+GET  /projects/:projectId/embeddings/index
+```
 
 Milestone 2.2 adds the backend-only Socket.IO chat gateway at the `/chat` namespace. With the
 backend already running, verify the complete local streaming protocol:

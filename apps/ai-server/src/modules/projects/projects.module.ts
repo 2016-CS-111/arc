@@ -3,8 +3,10 @@ import { Module, type Provider } from "@nestjs/common";
 import { DATABASE } from "../../database/database.constants.js";
 import { DatabaseModule } from "../../database/database.module.js";
 import type { ArcDatabase } from "../../database/database.types.js";
+import { EmbeddingsModule } from "../embeddings/embeddings.module.js";
 import type { IgnoreRulesFileReader } from "./application/ignore-rules-file.reader.js";
 import { ProjectDependencyGraphService } from "./application/project-dependency-graph.service.js";
+import { ProjectEmbeddingIndexService } from "./application/project-embedding-index.service.js";
 import type { ProjectDependencyIndexRepository } from "./application/project-dependency-index.repository.js";
 import { ProjectDependencyIndexService } from "./application/project-dependency-index.service.js";
 import { ProjectIgnorePolicyService } from "./application/project-ignore-policy.service.js";
@@ -22,6 +24,7 @@ import { ProjectSymbolIndexService } from "./application/project-symbol-index.se
 import { ProjectFrameworkIndexService } from "./application/project-framework-index.service.js";
 import { ProjectFrameworkCatalogService } from "./application/project-framework-catalog.service.js";
 import type { ProjectFrameworkIndexRepository } from "./domain/project-framework-index.types.js";
+import type { ProjectEmbeddingIndexRepository } from "./domain/project-embedding-index.types.js";
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
 import { SourceLanguageClassifier } from "./application/source-language.classifier.js";
 import type { SourceTextReader } from "./application/source-text.reader.js";
@@ -38,12 +41,14 @@ import { SequelizeProjectRepository } from "./infrastructure/sequelize-project.r
 import { SequelizeProjectSourceIndexRepository } from "./infrastructure/sequelize-project-source-index.repository.js";
 import { SequelizeProjectSymbolIndexRepository } from "./infrastructure/sequelize-project-symbol-index.repository.js";
 import { SequelizeProjectFrameworkIndexRepository } from "./infrastructure/sequelize-project-framework-index.repository.js";
+import { SequelizeProjectEmbeddingIndexRepository } from "./infrastructure/sequelize-project-embedding-index.repository.js";
 import { TreeSitterSymbolExtractor } from "./infrastructure/tree-sitter/tree-sitter-symbol.extractor.js";
 import { TreeSitterDependencyExtractor } from "./infrastructure/tree-sitter/tree-sitter-dependency.extractor.js";
 import { TypeScriptProjectModuleResolver } from "./infrastructure/typescript/typescript-project-module.resolver.js";
 import {
   IGNORE_RULES_FILE_READER,
   PROJECT_DEPENDENCY_INDEX_REPOSITORY,
+  PROJECT_EMBEDDING_INDEX_REPOSITORY,
   PROJECT_INVENTORY_REPOSITORY,
   PROJECT_MODULE_RESOLVER,
   PROJECT_REPOSITORY,
@@ -57,6 +62,7 @@ import {
   WORKSPACE_ROOT_RESOLVER,
 } from "./projects.constants.js";
 import { ProjectsController } from "./presentation/projects.controller.js";
+import { ProjectEmbeddingsController } from "./presentation/project-embeddings.controller.js";
 
 const projectRepositoryProvider: Provider<ProjectRepository> = {
   provide: PROJECT_REPOSITORY,
@@ -117,6 +123,13 @@ const projectFrameworkIndexRepositoryProvider: Provider<ProjectFrameworkIndexRep
     new SequelizeProjectFrameworkIndexRepository(database),
 };
 
+const projectEmbeddingIndexRepositoryProvider: Provider<ProjectEmbeddingIndexRepository> = {
+  provide: PROJECT_EMBEDDING_INDEX_REPOSITORY,
+  inject: [DATABASE],
+  useFactory: (database: ArcDatabase): ProjectEmbeddingIndexRepository =>
+    new SequelizeProjectEmbeddingIndexRepository(database),
+};
+
 const sourceSymbolExtractorProvider: Provider<SourceSymbolExtractor> = {
   provide: SOURCE_SYMBOL_EXTRACTOR,
   useClass: TreeSitterSymbolExtractor,
@@ -133,8 +146,8 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
 };
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [ProjectsController],
+  imports: [DatabaseModule, EmbeddingsModule],
+  controllers: [ProjectsController, ProjectEmbeddingsController],
   providers: [
     projectRepositoryProvider,
     projectInventoryRepositoryProvider,
@@ -142,6 +155,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     projectSourceIndexRepositoryProvider,
     projectSymbolIndexRepositoryProvider,
     projectFrameworkIndexRepositoryProvider,
+    projectEmbeddingIndexRepositoryProvider,
     workspaceRootResolverProvider,
     ignoreRulesFileReaderProvider,
     repositoryInventoryWalkerProvider,
@@ -160,6 +174,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
+    ProjectEmbeddingIndexService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -174,6 +189,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
+    ProjectEmbeddingIndexService,
   ],
 })
 export class ProjectsModule {}

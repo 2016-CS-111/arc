@@ -20,6 +20,12 @@ describe("loadConfig", () => {
       dimensions: 1_024,
       timeoutMs: 300_000,
     });
+    expect(config.projectEmbedding).toEqual({
+      batchSize: 4,
+      maxChunksPerFile: 500,
+      maxSourceBytes: 8_192,
+      maxTotalChunks: 50_000,
+    });
     expect(config.projectScan).toEqual({
       batchSize: 500,
       maxDepth: 32,
@@ -78,6 +84,10 @@ describe("loadConfig", () => {
       ARC_OLLAMA_EMBEDDING_DIMENSIONS: "768",
       ARC_OLLAMA_EMBEDDING_MODEL: "bge-m3",
       ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: "90000",
+      ARC_PROJECT_EMBEDDING_BATCH_SIZE: "2",
+      ARC_PROJECT_EMBEDDING_MAX_CHUNKS_PER_FILE: "25",
+      ARC_PROJECT_EMBEDDING_MAX_SOURCE_BYTES: "4096",
+      ARC_PROJECT_EMBEDDING_MAX_TOTAL_CHUNKS: "500",
       ARC_OLLAMA_READINESS_TIMEOUT_MS: "2500",
       ARC_OLLAMA_REQUEST_TIMEOUT_MS: "120000",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
@@ -139,6 +149,12 @@ describe("loadConfig", () => {
       dimensions: 768,
       model: "bge-m3",
       timeoutMs: 90_000,
+    });
+    expect(config.projectEmbedding).toEqual({
+      batchSize: 2,
+      maxChunksPerFile: 25,
+      maxSourceBytes: 4_096,
+      maxTotalChunks: 500,
     });
     expect(config.projectScan).toEqual({
       batchSize: 250,

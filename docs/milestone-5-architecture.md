@@ -1,6 +1,6 @@
 # Milestone 5 Architecture: Embeddings and Semantic Retrieval
 
-Status: Approved. Milestones 5.1 and 5.2 complete.
+Status: Approved. Milestones 5.1 through 5.3 complete.
 
 ## Goal
 
@@ -212,15 +212,15 @@ Migration `0010_project_embeddings.sql` will add:
 - Relative path, language, source hash, and chunk hash.
 - Exclusive byte/line range.
 - Optional owning symbol ID.
-- Bounded metadata search document derived only from path/language/symbol/framework metadata.
 - `vector(1024)` embedding.
 
 Indexes:
 
 - Stable unique identities.
 - Project/run/path/range lookup.
-- GIN metadata search.
 - HNSW cosine vector search.
+
+The metadata search document and GIN index are added with metadata hybrid search in Milestone 5.5.
 
 The repository will use the official `pgvector` Sequelize integration while preserving Arc's
 class-based Sequelize models and transaction patterns.
@@ -310,6 +310,8 @@ Status: Complete.
 
 ### 5.3 Durable Incremental Vector Catalog
 
+Status: Complete.
+
 - Add the official `pgvector` Node package.
 - Add embedding run/file/chunk migration and class-based Sequelize models.
 - Add atomic publication, vector reuse, limits, failure preservation, and restart recovery.
@@ -387,8 +389,28 @@ External prerequisites completed:
 - Added focused tests for symbols, fallback coverage, UTF-8 ranges, limits, stable identities, and
   source drift.
 
-Ignore-policy reapplication, whole-project chunk limits, batching, and atomic publication belong to
-the Milestone 5.3 indexing orchestrator.
+Ignore-policy reapplication, whole-project chunk limits, batching, and atomic publication are owned
+by the Milestone 5.3 indexing orchestrator.
+
+## Milestone 5.3 Delivered
+
+- Added the official `pgvector` `0.3.x` Sequelize integration.
+- Added migration `0010_project_embedding_catalog.sql` with run, current file, and current chunk
+  tables plus a 1,024-dimensional HNSW cosine index.
+- Added three class-based Sequelize models and one compact repository.
+- Required one coherent source, symbol, dependency, and framework provenance chain.
+- Reapplied the ignore policy, reread and hash-verified source, chunked transiently, embedded in
+  batches of four, and rechecked upstream provenance before publication.
+- Reused vectors by stable chunk identity, exact input hash, provider, model, dimensions, input
+  format, and chunker identity.
+- Published files/chunks and removed stale rows in one transaction; failed runs leave the previous
+  current catalog intact.
+- Added restart recovery and explicit `POST`/`GET /projects/:projectId/embeddings/index` endpoints.
+- Added `pnpm embedding:catalog:verify` for local migration, vector persistence, reuse, stable
+  upsert, recovery, privacy-boundary, cascade-cleanup, and 1,024-dimension verification.
+
+No source text or embedding input is persisted. Semantic queries and public chunk reads remain
+Milestone 5.4.
 
 ## Acceptance
 

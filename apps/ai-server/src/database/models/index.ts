@@ -20,9 +20,15 @@ import { ProjectFrameworkScopeModel } from "./project-framework-scope.model.js";
 import { ProjectFrameworkFileModel } from "./project-framework-file.model.js";
 import { ProjectFrameworkEntityModel } from "./project-framework-entity.model.js";
 import { ProjectFrameworkRelationshipModel } from "./project-framework-relationship.model.js";
+import { ProjectEmbeddingChunkModel } from "./project-embedding-chunk.model.js";
+import { ProjectEmbeddingFileModel } from "./project-embedding-file.model.js";
+import { ProjectEmbeddingIndexRunModel } from "./project-embedding-index-run.model.js";
 
 export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
+    projectEmbeddingIndexRuns: ProjectEmbeddingIndexRunModel.initialize(sequelize),
+    projectEmbeddingFiles: ProjectEmbeddingFileModel.initialize(sequelize),
+    projectEmbeddingChunks: ProjectEmbeddingChunkModel.initialize(sequelize),
     projectFrameworkIndexRuns: ProjectFrameworkIndexRunModel.initialize(sequelize),
     projectFrameworkScopes: ProjectFrameworkScopeModel.initialize(sequelize),
     projectFrameworkFiles: ProjectFrameworkFileModel.initialize(sequelize),
@@ -52,6 +58,33 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.chatMessages.belongsTo(models.chatSessions, {
     as: "session",
     foreignKey: "sessionId",
+  });
+  models.projects.hasMany(models.projectEmbeddingIndexRuns, {
+    as: "embeddingIndexRuns",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.projectEmbeddingIndexRuns.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
+  });
+  models.projectEmbeddingIndexRuns.hasMany(models.projectEmbeddingFiles, {
+    as: "files",
+    foreignKey: "embeddingIndexRunId",
+    onDelete: "CASCADE",
+  });
+  models.projectEmbeddingFiles.belongsTo(models.projectEmbeddingIndexRuns, {
+    as: "embeddingIndexRun",
+    foreignKey: "embeddingIndexRunId",
+  });
+  models.projectEmbeddingFiles.hasMany(models.projectEmbeddingChunks, {
+    as: "chunks",
+    foreignKey: "embeddingFileId",
+    onDelete: "CASCADE",
+  });
+  models.projectEmbeddingChunks.belongsTo(models.projectEmbeddingFiles, {
+    as: "file",
+    foreignKey: "embeddingFileId",
   });
   models.projects.hasMany(models.projectFrameworkIndexRuns, {
     as: "frameworkIndexRuns",

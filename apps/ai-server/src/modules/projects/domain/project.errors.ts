@@ -87,6 +87,41 @@ export class ProjectSourceChunkError extends Error {
   }
 }
 
+export class ProjectEmbeddingUpstreamCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires coherent source intelligence catalogs before embedding.`);
+    this.name = "ProjectEmbeddingUpstreamCatalogRequiredError";
+  }
+}
+
+export class ProjectEmbeddingUpstreamCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires fresh source intelligence catalogs before embedding.`);
+    this.name = "ProjectEmbeddingUpstreamCatalogStaleError";
+  }
+}
+
+export class ProjectEmbeddingIndexAlreadyRunningError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} already has a running embedding index.`);
+    this.name = "ProjectEmbeddingIndexAlreadyRunningError";
+  }
+}
+
+export class ProjectEmbeddingProviderUnavailableError extends Error {
+  public constructor() {
+    super("The configured local embedding provider is unavailable.");
+    this.name = "ProjectEmbeddingProviderUnavailableError";
+  }
+}
+
+export class ProjectEmbeddingIndexFailedError extends Error {
+  public constructor() {
+    super("Arc could not complete the project embedding index.");
+    this.name = "ProjectEmbeddingIndexFailedError";
+  }
+}
+
 export class ProjectSymbolIndexAlreadyRunningError extends Error {
   public constructor(projectId: string) {
     super(`Arc project ${projectId} already has a running symbol index.`);
