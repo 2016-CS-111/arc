@@ -161,7 +161,9 @@ export class SourceIntelligenceController implements vscode.Disposable {
   private async showCompletion(result: SourceIntelligenceRun): Promise<void> {
     const summary = `${String(result.symbol.symbolCount)} symbols, ${String(
       result.dependency.edgeCount,
-    )} dependency edges, and ${String(result.framework.entityCount)} framework entities`;
+    )} dependency edges, ${String(result.framework.entityCount)} framework entities, and ${String(
+      result.embedding.chunkCount,
+    )} semantic chunks`;
     if (result.limitedStages.length > 0) {
       await vscode.window.showWarningMessage(
         `Arc indexed ${summary} and reached configured limits in ${result.limitedStages.join(", ")}.`,
@@ -184,5 +186,7 @@ function progressMessage(stage: SourceIntelligenceStage): string {
       return "Resolving dependencies";
     case "frameworks":
       return "Understanding framework structure";
+    case "embeddings":
+      return "Embedding semantic chunks";
   }
 }

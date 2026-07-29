@@ -118,12 +118,13 @@ local embedding and PostgreSQL vector foundations with:
 pnpm embedding:smoke
 pnpm pgvector:smoke
 pnpm embedding:catalog:verify
+pnpm embedding:verify
 ```
 
 The pgvector smoke applies pending migrations and uses only a temporary 1,024-dimensional table.
-The catalog verifier publishes temporary durable vectors, verifies reuse, cosine search, path
-filtering, recovery, and cleanup. Project embedding indexes and semantic search are available
-through:
+The catalog verifier publishes temporary durable vectors and verifies reuse, invalidation,
+rollback, hybrid search, recovery, privacy, and cleanup. `embedding:verify` composes it with the
+local Ollama relevance check. Project embedding indexes and semantic search are available through:
 
 ```txt
 POST /projects/:projectId/embeddings/index
@@ -334,8 +335,8 @@ outside its backend scope. The complete design is in `docs/milestone-4.4-archite
 
 ## Source Intelligence Workflow
 
-Milestone 4.5 adds the explicit `Arc: Index Workspace Intelligence` command. It runs the durable
-pipeline in dependency order:
+Milestone 4.5 introduced the explicit `Arc: Index Workspace Intelligence` command, and Milestone
+5.6 adds embeddings as its sixth durable stage. It runs the pipeline in dependency order:
 
 ```txt
 Repository inventory
@@ -343,11 +344,12 @@ Source fingerprints
 Symbol catalog
 Dependency graph
 Framework catalog
+Embedding catalog
 ```
 
 The command is available from the Command Palette, the Arc chat-view title, and the clickable
 source-intelligence status item. A notification reports the current stage. The extension never
-parses source or infers completion locally; after indexing and after reload, it reads all five
+parses source or infers completion locally; after indexing and after reload, it reads all six
 backend status endpoints and requires exact catalog provenance before showing
 `Arc: Intelligence ready`.
 
@@ -355,6 +357,6 @@ Limited, stale, running, failed, and backend-unavailable states remain visible. 
 interrupted downstream stage preserves the previous complete backend catalogs. Indexing is always
 explicit: Arc does not add a watcher, timer, activation-time scan, or background retry.
 
-Run `pnpm source:intelligence:verify` for the complete Milestone 4 local PostgreSQL acceptance
-sequence. The command composes the source, symbol, dependency, and framework verification
-harnesses. See `docs/milestone-4.5-architecture.md` for the integration design.
+Run `pnpm source:intelligence:verify` for the complete local PostgreSQL and Ollama acceptance
+sequence. The command composes the source, symbol, dependency, framework, and embedding
+verification harnesses. See `docs/milestone-5-architecture.md` for the current integration design.

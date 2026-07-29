@@ -60,11 +60,22 @@ export function createSourceIntelligencePresentation(
   ) {
     return indexRequired("The framework catalog is missing or stale.");
   }
+  const embedding = intelligence.embedding.currentCatalog;
+  if (
+    embedding === null ||
+    embedding.stale ||
+    embedding.sourceIndexRunId !== source.sourceIndexId ||
+    embedding.symbolIndexRunId !== symbol.symbolIndexId ||
+    embedding.dependencyIndexRunId !== dependency.dependencyIndexId ||
+    embedding.frameworkIndexRunId !== framework.id
+  ) {
+    return indexRequired("The embedding catalog is missing or stale.");
+  }
 
   const limitedStages = runs.filter((run) => run.status === "limited").map((run) => stageLabel(run.stage));
   const counts = `${String(symbol.symbolCount)} symbols, ${String(dependency.edgeCount)} dependency edges, ${String(
     framework.entityCount,
-  )} framework entities`;
+  )} framework entities, ${String(embedding.chunkCount)} semantic chunks`;
   if (limitedStages.length > 0) {
     return {
       background: "warning",
@@ -75,7 +86,7 @@ export function createSourceIntelligencePresentation(
   return {
     background: null,
     text: "$(symbol-structure) Arc: Intelligence ready",
-    tooltip: `${counts}. Updated ${formatTimestamp(framework.completedAt)}.`,
+    tooltip: `${counts}. Updated ${formatTimestamp(embedding.completedAt)}.`,
   };
 }
 
@@ -96,6 +107,9 @@ function stageRuns(intelligence: ProjectSourceIntelligenceStatus): readonly Stag
     ...(intelligence.framework.latestRun === null
       ? []
       : [{ stage: "frameworks" as const, status: intelligence.framework.latestRun.status }]),
+    ...(intelligence.embedding.latestRun === null
+      ? []
+      : [{ stage: "embeddings" as const, status: intelligence.embedding.latestRun.status }]),
   ];
 }
 
@@ -119,6 +133,8 @@ function stageActivity(stage: SourceIntelligenceStage): string {
       return "resolving dependencies";
     case "frameworks":
       return "analyzing framework structure";
+    case "embeddings":
+      return "embedding semantic chunks";
   }
 }
 
@@ -134,6 +150,8 @@ function stageLabel(stage: SourceIntelligenceStage): string {
       return "dependency";
     case "frameworks":
       return "framework";
+    case "embeddings":
+      return "embedding";
   }
 }
 

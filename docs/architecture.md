@@ -558,12 +558,12 @@ cleanup, and project deletion against local PostgreSQL.
 ## Source Intelligence Integration
 
 Milestone 4.5 keeps orchestration in the VSCode Extension Host while each backend service remains
-independently callable. The explicit `Arc: Index Workspace Intelligence` command invokes inventory,
-source, symbol, dependency, and framework endpoints in dependency order. Notification progress is
-stage-based because each backend operation publishes atomically and does not expose partial
-records.
+independently callable. Milestone 5.6 extends `Arc: Index Workspace Intelligence` to invoke
+inventory, source, symbol, dependency, framework, and embedding endpoints in dependency order.
+Notification progress is stage-based because each backend operation publishes atomically and does
+not expose partial records.
 
-The extension does not introduce a second aggregate run table. Its status bar loads all five
+The extension does not introduce a second aggregate run table. Its status bar loads all six
 durable status resources and verifies the exact provenance chain before presenting a ready state.
 Running and failed records survive extension reloads; stale or missing catalogs present an explicit
 index-required state. Local in-memory duplicate suppression improves UX, while PostgreSQL
@@ -571,7 +571,7 @@ constraints remain the concurrency authority.
 
 No source content enters the extension. Indexing remains user initiated, with no watcher, timer,
 activation-time scan, hidden retry, or automatic refresh. `pnpm source:intelligence:verify`
-composes the four local PostgreSQL acceptance harnesses that cover the full pipeline.
+composes the complete local PostgreSQL and Ollama acceptance pipeline.
 
 ## Embeddings and Semantic Retrieval
 
@@ -585,8 +585,8 @@ Every index and query is bounded and tied to one exact source, symbol, dependenc
 provenance chain. A later context builder will re-read selected ranges and verify source hashes
 before adding any project content to a prompt.
 
-The compatibility, chunking, durable vector-catalog, bounded semantic-search, and metadata hybrid
-search gates are complete. VSCode integration and client acceptance remain. The complete design is in
+The compatibility, chunking, durable vector-catalog, bounded semantic-search, metadata hybrid
+search, VSCode integration, and local acceptance gates are complete. The complete design is in
 `docs/milestone-5-architecture.md`.
 
 ## Local Infrastructure

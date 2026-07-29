@@ -1,5 +1,6 @@
 import type {
   LatestProjectDependencyIndexResponse,
+  LatestProjectEmbeddingIndexResponse,
   LatestProjectFrameworkIndexResponse,
   LatestProjectSourceIndexResponse,
   LatestProjectSymbolIndexResponse,
@@ -15,6 +16,7 @@ const sourceId = "d87960c1-aa09-4201-bf2f-4249cf2c5bd3";
 const symbolId = "be1a41fc-efbf-43b8-90aa-420a6679f7af";
 const dependencyId = "e376bc64-df40-4bb1-9ca6-9007da173ae9";
 const frameworkId = "b2f4388a-fe91-4327-813a-489365c3ed4e";
+const embeddingId = "c04b1a41-fba2-4327-813a-489365c3ed4e";
 const timestamp = "2026-07-29T09:00:00.000Z";
 
 describe("createSourceIntelligencePresentation", () => {
@@ -33,9 +35,9 @@ describe("createSourceIntelligencePresentation", () => {
 
   it("restores running and failed durable states", () => {
     const running = readyStatus();
-    if (running.symbol.latestRun !== null) {
-      running.symbol.latestRun.status = "running";
-      running.symbol.latestRun.completedAt = null;
+    if (running.embedding.latestRun !== null) {
+      running.embedding.latestRun.status = "running";
+      running.embedding.latestRun.completedAt = null;
     }
     expect(createSourceIntelligencePresentation(running)).toMatchObject({
       background: null,
@@ -66,26 +68,43 @@ describe("createSourceIntelligencePresentation", () => {
       text: "$(symbol-structure) Arc: Intelligence ready",
     });
     expect(ready.tooltip).toContain("12 symbols, 3 dependency edges, 8 framework entities");
+    expect(ready.tooltip).toContain("18 semantic chunks");
+  });
+
+  it("requires exact embedding provenance", () => {
+    const mismatched = readyStatus();
+    if (mismatched.embedding.currentCatalog !== null) {
+      mismatched.embedding.currentCatalog.frameworkIndexRunId = "475a3c84-832a-4182-9276-654d9c237d68";
+    }
+
+    const presentation = createSourceIntelligencePresentation(mismatched);
+    expect(presentation).toMatchObject({
+      text: "$(warning) Arc: Index required",
+    });
+    expect(presentation.tooltip).toContain("embedding catalog");
   });
 
   it("surfaces configured limits from an otherwise fresh catalog", () => {
     const limited = readyStatus();
-    if (limited.dependency.latestRun !== null) {
-      limited.dependency.latestRun.status = "limited";
-      limited.dependency.latestRun.limitReasons = ["total_edges"];
+    if (limited.embedding.latestRun !== null && limited.embedding.currentCatalog !== null) {
+      limited.embedding.latestRun.status = "limited";
+      limited.embedding.latestRun.limitReasons = ["total_chunks"];
+      limited.embedding.currentCatalog.status = "limited";
+      limited.embedding.currentCatalog.limitReasons = ["total_chunks"];
     }
     const presentation = createSourceIntelligencePresentation(limited);
     expect(presentation).toMatchObject({
       background: "warning",
       text: "$(warning) Arc: Index limited",
     });
-    expect(presentation.tooltip).toContain("dependency");
+    expect(presentation.tooltip).toContain("embedding");
   });
 });
 
 function readyStatus(): ProjectSourceIntelligenceStatus {
   return {
     dependency: dependencyStatus(),
+    embedding: embeddingStatus(),
     framework: frameworkStatus(),
     inventory: {
       scan: {
@@ -104,6 +123,35 @@ function readyStatus(): ProjectSourceIntelligenceStatus {
     },
     source: sourceStatus(),
     symbol: symbolStatus(),
+  };
+}
+
+function embeddingStatus(): LatestProjectEmbeddingIndexResponse {
+  const index = {
+    id: embeddingId,
+    projectId,
+    sourceIndexRunId: sourceId,
+    symbolIndexRunId: symbolId,
+    dependencyIndexRunId: dependencyId,
+    frameworkIndexRunId: frameworkId,
+    status: "completed" as const,
+    provider: "ollama" as const,
+    model: "bge-m3",
+    dimensions: 1_024,
+    inputFormat: "arc-source-v1+plain-v1",
+    chunkerIdentity: "arc-source-chunker-v1",
+    fileCount: 4,
+    chunkCount: 18,
+    embeddedChunkCount: 18,
+    reusedChunkCount: 0,
+    limitReasons: [] as [],
+    errorCode: null,
+    startedAt: timestamp,
+    completedAt: timestamp,
+  };
+  return {
+    currentCatalog: { ...index, stale: false },
+    latestRun: index,
   };
 }
 

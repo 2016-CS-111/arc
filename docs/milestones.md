@@ -1119,7 +1119,7 @@ integration design is in `docs/milestone-4.5-architecture.md`.
 
 ## Milestone 5: Embeddings and Semantic Retrieval
 
-Status: In progress. Milestones 5.1 through 5.5 complete.
+Status: Complete.
 
 Goal: build a local incremental pgvector index and bounded semantic/hybrid retrieval without
 persisting raw source chunks or coupling retrieval directly to chat.
@@ -1245,4 +1245,24 @@ Delivered:
 - Verified symbol and overlapping framework-entity matches against local PostgreSQL while keeping
   source and query text out of storage and responses.
 
-Milestone 5.6 adds VSCode indexing/status integration and complete local acceptance.
+### Milestone 5.6: VSCode Integration and Acceptance
+
+Status: Complete.
+
+Delivered:
+
+- Added validated extension transport for embedding index and durable status endpoints.
+- Extended `Arc: Index Workspace Intelligence` to six explicit stages, with embeddings after the
+  framework catalog.
+- Added embedding progress, semantic chunk completion counts, limit reporting, and restart-safe
+  running/failed status.
+- Required a fresh embedding catalog with exact source, symbol, dependency, and framework
+  provenance before presenting `Arc: Intelligence ready`.
+- Added focused extension client, stage-order, freshness, provenance, running, failed, limited, and
+  presentation coverage.
+- Added `pnpm embedding:verify` and extended the composed source-intelligence acceptance through
+  local Ollama and PostgreSQL.
+- Verified BGE-M3 relevance ranking plus vector reuse, invalidation, atomic rollback preservation,
+  hybrid retrieval, recovery, privacy, and project cleanup.
+
+Milestone 5 is complete. Prompt context selection and source rehydration begin in Milestone 6.

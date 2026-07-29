@@ -1,21 +1,25 @@
 import {
   LatestProjectDependencyIndexResponseSchema,
+  LatestProjectEmbeddingIndexResponseSchema,
   LatestProjectFrameworkIndexResponseSchema,
   LatestProjectScanResponseSchema,
   LatestProjectSourceIndexResponseSchema,
   LatestProjectSymbolIndexResponseSchema,
   ProjectDependencyIndexSchema,
+  ProjectEmbeddingIndexSchema,
   ProjectFrameworkIndexSchema,
   ProjectScanSchema,
   ProjectSourceIndexSchema,
   ProjectSymbolIndexSchema,
   RegisterProjectResponseSchema,
   type LatestProjectDependencyIndexResponse,
+  type LatestProjectEmbeddingIndexResponse,
   type LatestProjectFrameworkIndexResponse,
   type LatestProjectScanResponse,
   type LatestProjectSourceIndexResponse,
   type LatestProjectSymbolIndexResponse,
   type ProjectDependencyIndex,
+  type ProjectEmbeddingIndex,
   type ProjectFrameworkIndex,
   type ProjectScan,
   type ProjectSourceIndex,
@@ -26,6 +30,7 @@ import {
 
 export interface ProjectSourceIntelligenceStatus {
   readonly dependency: LatestProjectDependencyIndexResponse;
+  readonly embedding: LatestProjectEmbeddingIndexResponse;
   readonly framework: LatestProjectFrameworkIndexResponse;
   readonly inventory: LatestProjectScanResponse;
   readonly source: LatestProjectSourceIndexResponse;
@@ -34,12 +39,14 @@ export interface ProjectSourceIntelligenceStatus {
 
 export interface ProjectClientPort {
   getLatestDependencyIndex(projectId: string): Promise<LatestProjectDependencyIndexResponse>;
+  getLatestEmbeddingIndex(projectId: string): Promise<LatestProjectEmbeddingIndexResponse>;
   getLatestFrameworkIndex(projectId: string): Promise<LatestProjectFrameworkIndexResponse>;
   getLatestScan(projectId: string): Promise<LatestProjectScanResponse>;
   getLatestSourceIndex(projectId: string): Promise<LatestProjectSourceIndexResponse>;
   getLatestSymbolIndex(projectId: string): Promise<LatestProjectSymbolIndexResponse>;
   getSourceIntelligenceStatus(projectId: string): Promise<ProjectSourceIntelligenceStatus>;
   indexProjectDependencies(projectId: string): Promise<ProjectDependencyIndex>;
+  indexProjectEmbeddings(projectId: string): Promise<ProjectEmbeddingIndex>;
   indexProjectFrameworks(projectId: string): Promise<ProjectFrameworkIndex>;
   indexProjectSource(projectId: string): Promise<ProjectSourceIndex>;
   indexProjectSymbols(projectId: string): Promise<ProjectSymbolIndex>;
@@ -152,6 +159,24 @@ export class ProjectClient implements ProjectClientPort {
     );
   }
 
+  public async indexProjectEmbeddings(projectId: string): Promise<ProjectEmbeddingIndex> {
+    return this.requestValidated(
+      `projects/${projectId}/embeddings/index`,
+      { method: "POST" },
+      ProjectEmbeddingIndexSchema,
+      "embedding index",
+    );
+  }
+
+  public async getLatestEmbeddingIndex(projectId: string): Promise<LatestProjectEmbeddingIndexResponse> {
+    return this.requestValidated(
+      `projects/${projectId}/embeddings/index`,
+      {},
+      LatestProjectEmbeddingIndexResponseSchema,
+      "embedding index status",
+    );
+  }
+
   public async indexProjectFrameworks(projectId: string): Promise<ProjectFrameworkIndex> {
     return this.requestValidated(
       `projects/${projectId}/frameworks/index`,
@@ -171,14 +196,15 @@ export class ProjectClient implements ProjectClientPort {
   }
 
   public async getSourceIntelligenceStatus(projectId: string): Promise<ProjectSourceIntelligenceStatus> {
-    const [inventory, source, symbol, dependency, framework] = await Promise.all([
+    const [inventory, source, symbol, dependency, framework, embedding] = await Promise.all([
       this.getLatestScan(projectId),
       this.getLatestSourceIndex(projectId),
       this.getLatestSymbolIndex(projectId),
       this.getLatestDependencyIndex(projectId),
       this.getLatestFrameworkIndex(projectId),
+      this.getLatestEmbeddingIndex(projectId),
     ]);
-    return { dependency, framework, inventory, source, symbol };
+    return { dependency, embedding, framework, inventory, source, symbol };
   }
 
   private async requestValidated<T>(

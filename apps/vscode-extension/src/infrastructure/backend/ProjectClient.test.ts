@@ -100,6 +100,28 @@ const frameworkIndex = {
   unsupportedFileCount: 0,
   warnings: [],
 };
+const embeddingIndex = {
+  id: "c04b1a41-fba2-4327-813a-489365c3ed4e",
+  projectId: project.id,
+  sourceIndexRunId: sourceIndex.id,
+  symbolIndexRunId: symbolIndex.id,
+  dependencyIndexRunId: dependencyIndex.id,
+  frameworkIndexRunId: frameworkIndex.id,
+  status: "completed",
+  provider: "ollama",
+  model: "bge-m3",
+  dimensions: 1_024,
+  inputFormat: "arc-source-v1+plain-v1",
+  chunkerIdentity: "arc-source-chunker-v1",
+  fileCount: 20,
+  chunkCount: 120,
+  embeddedChunkCount: 120,
+  reusedChunkCount: 0,
+  limitReasons: [],
+  errorCode: null,
+  startedAt: timestamp,
+  completedAt: timestamp,
+};
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -202,25 +224,33 @@ describe("ProjectClient", () => {
       currentCatalog: { ...frameworkIndex, stale: false },
       latestRun: frameworkIndex,
     };
+    const embeddingStatus = {
+      currentCatalog: { ...embeddingIndex, stale: false },
+      latestRun: embeddingIndex,
+    };
     const fetchImplementation = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(response(sourceIndex))
       .mockResolvedValueOnce(response(symbolIndex))
       .mockResolvedValueOnce(response(dependencyIndex))
       .mockResolvedValueOnce(response(frameworkIndex))
+      .mockResolvedValueOnce(response(embeddingIndex))
       .mockResolvedValueOnce(response({ scan }))
       .mockResolvedValueOnce(response(sourceStatus))
       .mockResolvedValueOnce(response(symbolStatus))
       .mockResolvedValueOnce(response(dependencyStatus))
-      .mockResolvedValueOnce(response(frameworkStatus));
+      .mockResolvedValueOnce(response(frameworkStatus))
+      .mockResolvedValueOnce(response(embeddingStatus));
     const client = new ProjectClient("http://127.0.0.1:7331", fetchImplementation);
 
     await expect(client.indexProjectSource(project.id)).resolves.toEqual(sourceIndex);
     await expect(client.indexProjectSymbols(project.id)).resolves.toEqual(symbolIndex);
     await expect(client.indexProjectDependencies(project.id)).resolves.toEqual(dependencyIndex);
     await expect(client.indexProjectFrameworks(project.id)).resolves.toEqual(frameworkIndex);
+    await expect(client.indexProjectEmbeddings(project.id)).resolves.toEqual(embeddingIndex);
     await expect(client.getSourceIntelligenceStatus(project.id)).resolves.toMatchObject({
       dependency: dependencyStatus,
+      embedding: embeddingStatus,
       framework: frameworkStatus,
       inventory: { scan },
       source: sourceStatus,
@@ -231,11 +261,13 @@ describe("ProjectClient", () => {
       [`http://127.0.0.1:7331/projects/${project.id}/symbols/index`, "POST"],
       [`http://127.0.0.1:7331/projects/${project.id}/dependencies/index`, "POST"],
       [`http://127.0.0.1:7331/projects/${project.id}/frameworks/index`, "POST"],
+      [`http://127.0.0.1:7331/projects/${project.id}/embeddings/index`, "POST"],
       [`http://127.0.0.1:7331/projects/${project.id}/inventory/scan`, "GET"],
       [`http://127.0.0.1:7331/projects/${project.id}/sources/index`, "GET"],
       [`http://127.0.0.1:7331/projects/${project.id}/symbols/index`, "GET"],
       [`http://127.0.0.1:7331/projects/${project.id}/dependencies/index`, "GET"],
       [`http://127.0.0.1:7331/projects/${project.id}/frameworks/index`, "GET"],
+      [`http://127.0.0.1:7331/projects/${project.id}/embeddings/index`, "GET"],
     ]);
   });
 

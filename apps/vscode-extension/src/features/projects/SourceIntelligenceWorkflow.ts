@@ -1,12 +1,20 @@
 import type {
   ProjectDependencyIndex,
+  ProjectEmbeddingIndex,
   ProjectFrameworkIndex,
   ProjectScan,
   ProjectSourceIndex,
   ProjectSymbolIndex,
 } from "@arc/contracts";
 
-export const sourceIntelligenceStages = ["inventory", "source", "symbols", "dependencies", "frameworks"] as const;
+export const sourceIntelligenceStages = [
+  "inventory",
+  "source",
+  "symbols",
+  "dependencies",
+  "frameworks",
+  "embeddings",
+] as const;
 
 export type SourceIntelligenceStage = (typeof sourceIntelligenceStages)[number];
 
@@ -18,6 +26,7 @@ export interface SourceIntelligenceProgress {
 
 export interface SourceIntelligenceRun {
   readonly dependency: ProjectDependencyIndex;
+  readonly embedding: ProjectEmbeddingIndex;
   readonly framework: ProjectFrameworkIndex;
   readonly inventory: ProjectScan;
   readonly limitedStages: readonly SourceIntelligenceStage[];
@@ -27,6 +36,7 @@ export interface SourceIntelligenceRun {
 
 export interface SourceIntelligenceIndexClient {
   indexProjectDependencies(projectId: string): Promise<ProjectDependencyIndex>;
+  indexProjectEmbeddings(projectId: string): Promise<ProjectEmbeddingIndex>;
   indexProjectFrameworks(projectId: string): Promise<ProjectFrameworkIndex>;
   indexProjectSource(projectId: string): Promise<ProjectSourceIndex>;
   indexProjectSymbols(projectId: string): Promise<ProjectSymbolIndex>;
@@ -72,7 +82,11 @@ export class SourceIntelligenceWorkflow {
     const framework = await this.projectClient.indexProjectFrameworks(projectId);
     this.validate("frameworks", framework.status, limitedStages);
 
-    return { dependency, framework, inventory, limitedStages, source, symbol };
+    this.report(onProgress, "embeddings");
+    const embedding = await this.projectClient.indexProjectEmbeddings(projectId);
+    this.validate("embeddings", embedding.status, limitedStages);
+
+    return { dependency, embedding, framework, inventory, limitedStages, source, symbol };
   }
 
   private report(onProgress: (progress: SourceIntelligenceProgress) => void, stage: SourceIntelligenceStage): void {

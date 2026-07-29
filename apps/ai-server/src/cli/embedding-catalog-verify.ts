@@ -3,6 +3,7 @@ import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 
 import { createConsoleLogger } from "@arc/shared";
+import { QueryTypes } from "sequelize";
 
 import { loadConfig } from "../config/env.js";
 import { createDatabase } from "../database/database.sequelize.js";
@@ -321,6 +322,155 @@ async function main(): Promise<void> {
     });
     assert(secondChunk?.id === firstChunk.id, "Stable chunk publication should preserve the database identity.");
 
+    const rollbackRun = await repository.beginIndex({
+      projectId,
+      sourceIndexRunId,
+      symbolIndexRunId,
+      dependencyIndexRunId,
+      frameworkIndexRunId,
+      provider: "ollama",
+      model: "bge-m3",
+      dimensions: vectorDimensions,
+      inputFormat: "arc-source-v1+plain-v1",
+      chunkerIdentity: "arc-source-chunker-v1",
+    });
+    let publicationRolledBack = false;
+    try {
+      await repository.publishIndex({
+        projectId,
+        embeddingIndexId: rollbackRun.id,
+        provider: "ollama",
+        model: "bge-m3",
+        dimensions: vectorDimensions,
+        inputFormat: "arc-source-v1+plain-v1",
+        chunkerIdentity: "arc-source-chunker-v1",
+        embeddedChunkCount: 1,
+        reusedChunkCount: 0,
+        limitReasons: [],
+        files: [
+          {
+            sourceFileId,
+            relativePath: "src/example.ts",
+            sourceContentHash: "e".repeat(64),
+            language: "typescript",
+            status: "indexed",
+            chunks: [
+              {
+                identityKey,
+                contentHash: "f".repeat(64),
+                inputHash,
+                ownerSymbolId: null,
+                ownerSymbolIdentityKey: "4".repeat(64),
+                ownerSymbolKind: "class",
+                ownerSymbolName: "RegistrationService",
+                ownerSymbolQualifiedName: "RegistrationService",
+                range: {
+                  startByte: 0,
+                  endByte: 10,
+                  startLine: 0,
+                  startColumnByte: 0,
+                  endLine: 0,
+                  endColumnByte: 10,
+                },
+                embedding: [1, 0],
+              },
+            ],
+          },
+        ],
+      });
+    } catch {
+      publicationRolledBack = true;
+    }
+    assert(publicationRolledBack, "An invalid vector should roll back publication.");
+    assert(
+      (await repository.getCurrentCatalogRun(projectId))?.id === secondRun.id,
+      "Failed publication should preserve the current catalog.",
+    );
+    assert(
+      (await database.models.projectEmbeddingChunks.findOne({ where: { projectId, identityKey } }))
+        ?.embeddingIndexRunId === secondRun.id,
+      "Failed publication should preserve the current chunk.",
+    );
+    await repository.failIndex(projectId, rollbackRun.id, "embedding_persistence_error");
+
+    const changedIdentityKey = "5".repeat(64);
+    const changedRun = await repository.beginIndex({
+      projectId,
+      sourceIndexRunId,
+      symbolIndexRunId,
+      dependencyIndexRunId,
+      frameworkIndexRunId,
+      provider: "ollama",
+      model: "bge-m3",
+      dimensions: vectorDimensions,
+      inputFormat: "arc-source-v1+plain-v1",
+      chunkerIdentity: "arc-source-chunker-v1",
+    });
+    await repository.publishIndex({
+      projectId,
+      embeddingIndexId: changedRun.id,
+      provider: "ollama",
+      model: "bge-m3",
+      dimensions: vectorDimensions,
+      inputFormat: "arc-source-v1+plain-v1",
+      chunkerIdentity: "arc-source-chunker-v1",
+      embeddedChunkCount: 1,
+      reusedChunkCount: 0,
+      limitReasons: [],
+      files: [
+        {
+          sourceFileId,
+          relativePath: "src/example.ts",
+          sourceContentHash: "6".repeat(64),
+          language: "typescript",
+          status: "indexed",
+          chunks: [
+            {
+              identityKey: changedIdentityKey,
+              contentHash: "7".repeat(64),
+              inputHash: "8".repeat(64),
+              ownerSymbolId: null,
+              ownerSymbolIdentityKey: null,
+              ownerSymbolKind: null,
+              ownerSymbolName: null,
+              ownerSymbolQualifiedName: null,
+              range: {
+                startByte: 0,
+                endByte: 10,
+                startLine: 0,
+                startColumnByte: 0,
+                endLine: 0,
+                endColumnByte: 10,
+              },
+              embedding: vector,
+            },
+          ],
+        },
+      ],
+    });
+    assert(
+      (await database.models.projectEmbeddingChunks.count({ where: { projectId, identityKey } })) === 0,
+      "Changed chunks should remove their stale identity.",
+    );
+    assert(
+      (await database.models.projectEmbeddingChunks.count({
+        where: { projectId, identityKey: changedIdentityKey },
+      })) === 1,
+      "Changed chunks should publish their new identity.",
+    );
+
+    const columns = await database.sequelize.query<{ readonly columnName: string }>(
+      `SELECT column_name AS "columnName"
+       FROM information_schema.columns
+       WHERE table_schema = current_schema()
+         AND table_name = 'project_embedding_chunks'`,
+      { type: QueryTypes.SELECT },
+    );
+    const columnNames = new Set(columns.map((column) => column.columnName));
+    for (const forbidden of ["source_text", "chunk_text", "embedding_input", "query_text"]) {
+      assert(!columnNames.has(forbidden), `Embedding storage must not contain ${forbidden}.`);
+    }
+
     await repository.beginIndex({
       projectId,
       sourceIndexRunId,
@@ -348,6 +498,8 @@ async function main(): Promise<void> {
     logger.info("Durable embedding catalog verification passed", {
       dimensions: vectorDimensions,
       frameworkLexicalScore: frameworkMatches[0].score,
+      invalidationVerified: true,
+      rollbackVerified: publicationRolledBack,
       reusedChunkCount: 1,
       semanticScore: searchResults[0].score,
       symbolLexicalScore: symbolMatches[0].score,

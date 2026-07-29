@@ -1,6 +1,6 @@
 # Milestone 5 Architecture: Embeddings and Semantic Retrieval
 
-Status: Approved. Milestones 5.1 through 5.5 complete.
+Status: Complete.
 
 ## Goal
 
@@ -334,6 +334,8 @@ Status: Complete.
 
 ### 5.6 VSCode Integration and Acceptance
 
+Status: Complete.
+
 - Add embeddings as the sixth explicit source-intelligence stage.
 - Restore durable embedding status in the extension.
 - Add local PostgreSQL/Ollama acceptance covering reuse, invalidation, search quality, rollback,
@@ -440,6 +442,20 @@ No source text or embedding input is persisted.
 - Returned fused, dense, and lexical scores and ranks plus the explicit candidate and result limits.
 - Extended `pnpm embedding:catalog:verify` to prove symbol and framework metadata matches against
   local PostgreSQL.
+
+## Milestone 5.6 Delivered
+
+- Added validated embedding index/status methods to the extension backend client.
+- Added embeddings as the sixth explicit `Arc: Index Workspace Intelligence` stage after framework
+  indexing.
+- Restored running, failed, limited, stale, and ready embedding states from durable backend records.
+- Required exact source, symbol, dependency, framework, and embedding provenance before showing
+  `Arc: Intelligence ready`.
+- Added semantic chunk counts to completion and status presentation.
+- Added `pnpm embedding:verify` and extended `pnpm source:intelligence:verify` through the embedding
+  gate.
+- Verified local BGE-M3 relevance ranking and PostgreSQL reuse, stable identity, invalidation,
+  rollback preservation, dense/metadata search, recovery, privacy, and cascade cleanup.
 
 ## Acceptance
 

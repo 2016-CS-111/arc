@@ -1,5 +1,6 @@
 import type {
   ProjectDependencyIndex,
+  ProjectEmbeddingIndex,
   ProjectFrameworkIndex,
   ProjectScan,
   ProjectSourceIndex,
@@ -26,9 +27,10 @@ describe("SourceIntelligenceWorkflow", () => {
       new SourceIntelligenceWorkflow(client).run(projectId, ({ stage }) => progress.push(stage)),
     ).resolves.toMatchObject({
       limitedStages: ["dependencies"],
+      embedding: { status: "completed" },
       framework: { status: "completed" },
     });
-    expect(calls).toEqual(["inventory", "source", "symbols", "dependencies", "frameworks"]);
+    expect(calls).toEqual(["inventory", "source", "symbols", "dependencies", "frameworks", "embeddings"]);
     expect(progress).toEqual(calls);
   });
 
@@ -50,6 +52,7 @@ function createClient(
   calls: string[],
   options: {
     readonly dependencyStatus?: ProjectDependencyIndex["status"];
+    readonly embeddingStatus?: ProjectEmbeddingIndex["status"];
     readonly symbolStatus?: ProjectSymbolIndex["status"];
   } = {},
 ): SourceIntelligenceIndexClient {
@@ -57,6 +60,10 @@ function createClient(
     indexProjectDependencies: vi.fn(() => {
       calls.push("dependencies");
       return Promise.resolve(dependencyIndex(options.dependencyStatus ?? "completed"));
+    }),
+    indexProjectEmbeddings: vi.fn(() => {
+      calls.push("embeddings");
+      return Promise.resolve(embeddingIndex(options.embeddingStatus ?? "completed"));
     }),
     indexProjectFrameworks: vi.fn(() => {
       calls.push("frameworks");
@@ -179,5 +186,30 @@ function frameworkIndex(): ProjectFrameworkIndex {
     unresolvedRelationshipCount: 0,
     unsupportedFileCount: 0,
     warnings: [],
+  };
+}
+
+function embeddingIndex(status: ProjectEmbeddingIndex["status"]): ProjectEmbeddingIndex {
+  return {
+    id: "c04b1a41-fba2-4327-813a-489365c3ed4e",
+    projectId,
+    sourceIndexRunId: sourceIndex().id,
+    symbolIndexRunId: symbolIndex("completed").id,
+    dependencyIndexRunId: dependencyIndex("completed").id,
+    frameworkIndexRunId: frameworkIndex().id,
+    status,
+    provider: "ollama",
+    model: "bge-m3",
+    dimensions: 1_024,
+    inputFormat: "arc-source-v1+plain-v1",
+    chunkerIdentity: "arc-source-chunker-v1",
+    fileCount: 4,
+    chunkCount: 18,
+    embeddedChunkCount: 18,
+    reusedChunkCount: 0,
+    limitReasons: [],
+    errorCode: status === "failed" ? "embedding_failed" : null,
+    startedAt: timestamp,
+    completedAt: status === "running" ? null : timestamp,
   };
 }
