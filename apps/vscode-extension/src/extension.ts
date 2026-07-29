@@ -6,6 +6,7 @@ import { ChatSessionController } from "./features/chat/ChatSessionController.js"
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
 import { ProjectInventoryController } from "./features/projects/ProjectInventoryController.js";
 import { RegisterWorkspaceCommand } from "./features/projects/RegisterWorkspaceCommand.js";
+import { SourceIntelligenceController } from "./features/projects/SourceIntelligenceController.js";
 import { WorkspaceFolderSelector } from "./features/projects/WorkspaceFolderSelector.js";
 import { WorkspaceProjectStore } from "./features/projects/WorkspaceProjectStore.js";
 import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
@@ -22,8 +23,11 @@ export function activate(context: vscode.ExtensionContext): void {
   const projectStore = new WorkspaceProjectStore(context.workspaceState);
   const folderSelector = new WorkspaceFolderSelector();
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
+  const sourceIntelligenceController = new SourceIntelligenceController(projectClient, projectStore, folderSelector);
   const registerWorkspaceCommand = new RegisterWorkspaceCommand(projectClient, projectStore, folderSelector, (folder) =>
-    projectInventoryController.refresh(folder),
+    Promise.all([projectInventoryController.refresh(folder), sourceIntelligenceController.refresh(folder)]).then(
+      () => undefined,
+    ),
   );
   const chatViewProvider = new ArcChatViewProvider(context.extensionUri, backendConfig, chatSession);
 
@@ -32,6 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
     chatViewProvider,
     projectInventoryController,
     registerWorkspaceCommand,
+    sourceIntelligenceController,
     vscode.window.registerWebviewViewProvider(ArcChatViewProvider.viewType, chatViewProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

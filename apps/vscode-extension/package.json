@@ -14,6 +14,7 @@
   ],
   "activationEvents": [
     "onCommand:arc.openChat",
+    "onCommand:arc.indexWorkspace",
     "onCommand:arc.registerWorkspace",
     "onCommand:arc.scanWorkspace",
     "onView:arc.chat"
@@ -53,8 +54,23 @@
         "command": "arc.scanWorkspace",
         "title": "Arc: Scan Workspace",
         "category": "Arc"
+      },
+      {
+        "command": "arc.indexWorkspace",
+        "title": "Arc: Index Workspace Intelligence",
+        "category": "Arc",
+        "icon": "$(symbol-structure)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "arc.indexWorkspace",
+          "when": "view == arc.chat",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "Arc",
       "properties": {

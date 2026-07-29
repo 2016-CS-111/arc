@@ -152,7 +152,7 @@ The backend validates and canonicalizes the selected local directory and returns
 UUID when that directory is registered again.
 
 Registration stores only the workspace name, canonical root path, identity, and timestamps. It
-offers an explicit `Scan now` action but never starts filesystem work silently.
+offers an explicit `Index now` action but never starts filesystem work silently.
 
 The ignore policy combines built-in safety and generated-file rules, root and nested `.gitignore`
 files, and an optional root `.arcignore`. Arc-specific rules are additional exclusions and cannot
@@ -205,7 +205,7 @@ Configure source limits with `ARC_PROJECT_SOURCE_MAX_FILE_BYTES`,
 `ARC_PROJECT_SOURCE_MAX_TOTAL_BYTES`, and `ARC_PROJECT_SOURCE_BATCH_SIZE`. Run
 `pnpm source:index:verify` to apply pending migrations and verify source safety, stable identities,
 catalog freshness, atomic rollback, and restart recovery against local PostgreSQL. Milestone 4.1
-does not add a VSCode source-index command; client integration remains Milestone 4.5.
+does not add a standalone VSCode source-index command; the integrated workflow is described below.
 
 ## Symbol Catalog
 
@@ -233,7 +233,7 @@ arbitrary snippets. Configure extraction with `ARC_PROJECT_SYMBOL_MAX_SYMBOLS_PE
 unchanged reuse without source reads, changed-file replacement, stable symbol UUIDs, parser-version
 invalidation, syntax-error and unsupported-file outcomes, source-drift rejection, total limits,
 atomic rollback, restart recovery, privacy, and cleanup against local PostgreSQL. VSCode controls
-remain Milestone 4.5.
+are provided by the integrated source-intelligence workflow below.
 
 ## Dependency Graph
 
@@ -267,7 +267,8 @@ are configured with `ARC_PROJECT_DEPENDENCY_GRAPH_MAX_DEPTH`,
 `pnpm dependency:index:verify` creates a temporary project and verifies all supported dialects,
 incremental re-resolution, stable edge and binding UUIDs, deterministic cycle-safe traversal,
 limits, stale rejection, atomic rollback, restart recovery, privacy, and cleanup against local
-PostgreSQL. VSCode dependency controls remain Milestone 4.5.
+PostgreSQL. VSCode dependency controls are provided by the integrated source-intelligence workflow
+below.
 
 ## Framework Understanding
 
@@ -306,4 +307,31 @@ independent truncation state.
 Run `pnpm framework:index:verify` to exercise all five framework adapters, incremental evidence
 reuse and invalidation, bounded deterministic queries, rollback, recovery, privacy, and cleanup
 against local PostgreSQL. Milestone 4.4 is complete; automatic indexing and VSCode controls remain
-Milestone 4.5. The complete design is in `docs/milestone-4.4-architecture.md`.
+outside its backend scope. The complete design is in `docs/milestone-4.4-architecture.md`.
+
+## Source Intelligence Workflow
+
+Milestone 4.5 adds the explicit `Arc: Index Workspace Intelligence` command. It runs the durable
+pipeline in dependency order:
+
+```txt
+Repository inventory
+Source fingerprints
+Symbol catalog
+Dependency graph
+Framework catalog
+```
+
+The command is available from the Command Palette, the Arc chat-view title, and the clickable
+source-intelligence status item. A notification reports the current stage. The extension never
+parses source or infers completion locally; after indexing and after reload, it reads all five
+backend status endpoints and requires exact catalog provenance before showing
+`Arc: Intelligence ready`.
+
+Limited, stale, running, failed, and backend-unavailable states remain visible. A failed or
+interrupted downstream stage preserves the previous complete backend catalogs. Indexing is always
+explicit: Arc does not add a watcher, timer, activation-time scan, or background retry.
+
+Run `pnpm source:intelligence:verify` for the complete Milestone 4 local PostgreSQL acceptance
+sequence. The command composes the source, symbol, dependency, and framework verification
+harnesses. See `docs/milestone-4.5-architecture.md` for the integration design.

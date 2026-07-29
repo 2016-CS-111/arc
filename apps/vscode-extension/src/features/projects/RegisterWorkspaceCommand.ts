@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 import type { ProjectClientPort } from "../../infrastructure/backend/ProjectClient.js";
-import { ProjectInventoryController } from "./ProjectInventoryController.js";
+import { SourceIntelligenceController } from "./SourceIntelligenceController.js";
 import type { WorkspaceFolderSelector } from "./WorkspaceFolderSelector.js";
 import type { WorkspaceProjectStore } from "./WorkspaceProjectStore.js";
 
@@ -44,10 +44,10 @@ export class RegisterWorkspaceCommand implements vscode.Disposable {
       const action = result.created ? "registered" : "reconnected to";
       const nextAction = await vscode.window.showInformationMessage(
         `Arc ${action} ${result.project.name}.`,
-        "Scan now",
+        "Index now",
       );
-      if (nextAction === "Scan now") {
-        await vscode.commands.executeCommand(ProjectInventoryController.commandId, folder);
+      if (nextAction === "Index now") {
+        await vscode.commands.executeCommand(SourceIntelligenceController.commandId, folder);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Workspace registration failed.";

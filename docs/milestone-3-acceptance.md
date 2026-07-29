@@ -51,12 +51,12 @@ Continue in the window titled `Extension Development Host`.
 
 1. Open the Arc repository folder.
 2. Run `Arc: Register Workspace` from the Command Palette.
-3. Choose `Scan now` in the registration notification.
-4. Confirm an `Arc: Scanning` progress notification and spinning status-bar item appear.
+3. Decline `Index now` in the registration notification, then run `Arc: Scan Workspace`.
+4. Confirm an `Arc: Scanning` progress notification and spinning inventory status-bar item appear.
 5. Confirm the terminal notification and status bar report the inventoried file count.
 
-Registration remains explicit. Declining `Scan now` stores the project identity without starting a
-scan.
+Registration remains explicit. Declining `Index now` stores the project identity without starting
+indexing.
 
 ## Rescan And Restore
 
@@ -84,7 +84,7 @@ may complete too quickly for a reliable manual restart.
 | Area           | Expected result                                                                 |
 | -------------- | ------------------------------------------------------------------------------- |
 | Identity       | Re-registering a canonical workspace reuses its project UUID                    |
-| Initial scan   | Registration offers an explicit `Scan now` action                               |
+| Initial scan   | `Arc: Scan Workspace` starts an explicit metadata-only scan                     |
 | Rescan         | `Arc: Scan Workspace` runs against the selected registered folder               |
 | Progress       | Notification and status bar show an active scan                                 |
 | Terminal state | Completed, limited, failed, and interrupted states remain distinguishable       |

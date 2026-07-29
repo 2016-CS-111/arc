@@ -612,7 +612,7 @@ recoverable workspace workflow.
 
 Included:
 
-- Registration notification with an explicit `Scan now` action.
+- Registration notification with an explicit action, upgraded to `Index now` in Milestone 4.5.
 - `Arc: Scan Workspace` for initial scans and rescans of the selected registered folder.
 - Shared active-folder selection for single-root and multi-root workspaces.
 - Validated backend project identities stored per VSCode workspace folder.
@@ -640,7 +640,7 @@ filesystem watching, and automatic background indexing remain outside this miles
 
 ## Milestone 4: Source Intelligence
 
-Status: In progress.
+Status: Complete.
 
 Goal: transform the safe repository inventory into structured, freshness-aware source intelligence
 without sending the repository to the model.
@@ -802,7 +802,7 @@ Delivered:
 
 Milestone 4.2 is complete. Symbol names, kinds, hierarchy, ranges, freshness, and incremental
 publication are now durable backend capabilities. Import resolution begins in Milestone 4.3;
-VSCode source-intelligence controls remain Milestone 4.5.
+VSCode source-intelligence controls are delivered in Milestone 4.5.
 
 ### Milestone 4.3: Import and Dependency Graph
 
@@ -920,7 +920,7 @@ Delivered:
   and resolver smokes, webview type-check, and production builds.
 
 Milestone 4.3 is complete. Framework interpretation begins in Milestone 4.4; VSCode dependency
-controls remain Milestone 4.5.
+controls are delivered in Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 
@@ -1091,7 +1091,28 @@ complete design is in `docs/milestone-4.4-architecture.md`.
 
 ### Milestone 4.5: Source Intelligence Integration and Acceptance
 
-Status: Planned.
+Status: Complete.
 
 Goal: add explicit VSCode indexing controls, progress, durable status, and final Milestone 4
 acceptance.
+
+Delivered:
+
+- `Arc: Index Workspace Intelligence` in the Command Palette, Arc chat-view title, and a clickable
+  status-bar item.
+- A class-based extension workflow that explicitly runs inventory, source, symbol, dependency, and
+  framework indexing in dependency order and stops on failed or nonterminal results.
+- Validated extension client methods for every index and durable status endpoint.
+- Five-stage progress notification, duplicate-run prevention, local-workspace and registration
+  guards, limited completion summaries, and safe backend error presentation.
+- Restart-safe status restoration from all five durable backend records with exact
+  inventory/source/symbol/dependency/framework provenance checks.
+- Distinct ready, required/stale, running, limited, failed, and unavailable presentations.
+- `Index now` registration handoff without automatic filesystem work, background retries, or file
+  watching.
+- Focused transport, ordering, failure, freshness, provenance, and presentation tests.
+- `pnpm source:intelligence:verify`, composing every local PostgreSQL acceptance harness from
+  source fingerprints through framework catalogs.
+
+Milestone 4 is complete. Embeddings and semantic retrieval begin in Milestone 5. The complete
+integration design is in `docs/milestone-4.5-architecture.md`.

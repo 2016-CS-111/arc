@@ -1,15 +1,48 @@
 import {
+  LatestProjectDependencyIndexResponseSchema,
+  LatestProjectFrameworkIndexResponseSchema,
   LatestProjectScanResponseSchema,
+  LatestProjectSourceIndexResponseSchema,
+  LatestProjectSymbolIndexResponseSchema,
+  ProjectDependencyIndexSchema,
+  ProjectFrameworkIndexSchema,
   ProjectScanSchema,
+  ProjectSourceIndexSchema,
+  ProjectSymbolIndexSchema,
   RegisterProjectResponseSchema,
+  type LatestProjectDependencyIndexResponse,
+  type LatestProjectFrameworkIndexResponse,
   type LatestProjectScanResponse,
+  type LatestProjectSourceIndexResponse,
+  type LatestProjectSymbolIndexResponse,
+  type ProjectDependencyIndex,
+  type ProjectFrameworkIndex,
   type ProjectScan,
+  type ProjectSourceIndex,
+  type ProjectSymbolIndex,
   type RegisterProjectRequest,
   type RegisterProjectResponse,
 } from "@arc/contracts";
 
+export interface ProjectSourceIntelligenceStatus {
+  readonly dependency: LatestProjectDependencyIndexResponse;
+  readonly framework: LatestProjectFrameworkIndexResponse;
+  readonly inventory: LatestProjectScanResponse;
+  readonly source: LatestProjectSourceIndexResponse;
+  readonly symbol: LatestProjectSymbolIndexResponse;
+}
+
 export interface ProjectClientPort {
+  getLatestDependencyIndex(projectId: string): Promise<LatestProjectDependencyIndexResponse>;
+  getLatestFrameworkIndex(projectId: string): Promise<LatestProjectFrameworkIndexResponse>;
   getLatestScan(projectId: string): Promise<LatestProjectScanResponse>;
+  getLatestSourceIndex(projectId: string): Promise<LatestProjectSourceIndexResponse>;
+  getLatestSymbolIndex(projectId: string): Promise<LatestProjectSymbolIndexResponse>;
+  getSourceIntelligenceStatus(projectId: string): Promise<ProjectSourceIntelligenceStatus>;
+  indexProjectDependencies(projectId: string): Promise<ProjectDependencyIndex>;
+  indexProjectFrameworks(projectId: string): Promise<ProjectFrameworkIndex>;
+  indexProjectSource(projectId: string): Promise<ProjectSourceIndex>;
+  indexProjectSymbols(projectId: string): Promise<ProjectSymbolIndex>;
   registerProject(request: RegisterProjectRequest): Promise<RegisterProjectResponse>;
   scanProject(projectId: string): Promise<ProjectScan>;
 }
@@ -62,6 +95,103 @@ export class ProjectClient implements ProjectClientPort {
       throw new ProjectClientError("Arc backend returned an invalid project scan status response.");
     }
 
+    return result.data;
+  }
+
+  public async indexProjectSource(projectId: string): Promise<ProjectSourceIndex> {
+    return this.requestValidated(
+      `projects/${projectId}/sources/index`,
+      { method: "POST" },
+      ProjectSourceIndexSchema,
+      "source index",
+    );
+  }
+
+  public async getLatestSourceIndex(projectId: string): Promise<LatestProjectSourceIndexResponse> {
+    return this.requestValidated(
+      `projects/${projectId}/sources/index`,
+      {},
+      LatestProjectSourceIndexResponseSchema,
+      "source index status",
+    );
+  }
+
+  public async indexProjectSymbols(projectId: string): Promise<ProjectSymbolIndex> {
+    return this.requestValidated(
+      `projects/${projectId}/symbols/index`,
+      { method: "POST" },
+      ProjectSymbolIndexSchema,
+      "symbol index",
+    );
+  }
+
+  public async getLatestSymbolIndex(projectId: string): Promise<LatestProjectSymbolIndexResponse> {
+    return this.requestValidated(
+      `projects/${projectId}/symbols/index`,
+      {},
+      LatestProjectSymbolIndexResponseSchema,
+      "symbol index status",
+    );
+  }
+
+  public async indexProjectDependencies(projectId: string): Promise<ProjectDependencyIndex> {
+    return this.requestValidated(
+      `projects/${projectId}/dependencies/index`,
+      { method: "POST" },
+      ProjectDependencyIndexSchema,
+      "dependency index",
+    );
+  }
+
+  public async getLatestDependencyIndex(projectId: string): Promise<LatestProjectDependencyIndexResponse> {
+    return this.requestValidated(
+      `projects/${projectId}/dependencies/index`,
+      {},
+      LatestProjectDependencyIndexResponseSchema,
+      "dependency index status",
+    );
+  }
+
+  public async indexProjectFrameworks(projectId: string): Promise<ProjectFrameworkIndex> {
+    return this.requestValidated(
+      `projects/${projectId}/frameworks/index`,
+      { method: "POST" },
+      ProjectFrameworkIndexSchema,
+      "framework index",
+    );
+  }
+
+  public async getLatestFrameworkIndex(projectId: string): Promise<LatestProjectFrameworkIndexResponse> {
+    return this.requestValidated(
+      `projects/${projectId}/frameworks/index`,
+      {},
+      LatestProjectFrameworkIndexResponseSchema,
+      "framework index status",
+    );
+  }
+
+  public async getSourceIntelligenceStatus(projectId: string): Promise<ProjectSourceIntelligenceStatus> {
+    const [inventory, source, symbol, dependency, framework] = await Promise.all([
+      this.getLatestScan(projectId),
+      this.getLatestSourceIndex(projectId),
+      this.getLatestSymbolIndex(projectId),
+      this.getLatestDependencyIndex(projectId),
+      this.getLatestFrameworkIndex(projectId),
+    ]);
+    return { dependency, framework, inventory, source, symbol };
+  }
+
+  private async requestValidated<T>(
+    path: string,
+    options: RequestInit,
+    schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } },
+    responseName: string,
+  ): Promise<T> {
+    const payload = await this.requestJson(path, options, responseName);
+    const result = schema.safeParse(payload);
+    if (!result.success) {
+      throw new ProjectClientError(`Arc backend returned an invalid ${responseName} response.`);
+    }
     return result.data;
   }
 

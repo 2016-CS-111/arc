@@ -34,6 +34,7 @@
     "ollama:smoke": "pnpm --filter @arc/ai-server ollama:smoke",
     "project:verify": "pnpm --filter @arc/ai-server project:verify",
     "source:index:verify": "pnpm --filter @arc/ai-server source:index:verify",
+    "source:intelligence:verify": "pnpm source:index:verify && pnpm symbol:index:verify && pnpm dependency:index:verify && pnpm framework:index:verify",
     "symbol:index:verify": "pnpm --filter @arc/ai-server symbol:index:verify",
     "tree-sitter:smoke": "pnpm --filter @arc/ai-server tree-sitter:smoke",
     "tree-sitter:smoke:compiled": "pnpm --filter @arc/ai-server tree-sitter:smoke:compiled",

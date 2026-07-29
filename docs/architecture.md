@@ -316,8 +316,9 @@ incremental watching and content indexing remain later concerns.
 
 Milestone 3.4 composes registration and inventory without moving backend ownership into VSCode.
 After explicit registration, the extension stores the validated project identity by workspace URI
-and offers a separate `Scan now` action. `Arc: Scan Workspace` invokes the same path for later
-rescans. Multi-root selection prefers the active editor's folder and otherwise asks the user.
+and originally offered a separate `Scan now` action. Milestone 4.5 upgrades that handoff to
+`Index now`; `Arc: Scan Workspace` remains available for metadata-only rescans. Multi-root
+selection prefers the active editor's folder and otherwise asks the user.
 
 The Extension Host owns an indeterminate progress notification and a clickable status-bar item. It
 does not infer scan results locally: completed, limited, failed, and interrupted presentations are
@@ -326,8 +327,8 @@ the backend for the latest durable scan and restores that presentation.
 
 ```mermaid
 flowchart LR
-  Register["Register workspace"] --> Choice{"Scan now?"}
-  Choice -->|Yes| Scan["Arc: Scan Workspace"]
+  Register["Register workspace"] --> Choice{"Index now?"}
+  Choice -->|Yes| Scan["Arc: Index Workspace Intelligence"]
   Choice -->|No| Identity["Identity only"]
   Scan --> Progress["VSCode progress and status"]
   Progress --> Backend["Backend inventory service"]
@@ -553,6 +554,24 @@ the exact source, symbol, dependency, and framework snapshot both before and aft
 `pnpm framework:index:verify` proves the five framework adapters, nested-package conventions,
 zero-read evidence reuse, selective invalidation, stable identities, rollback, recovery, privacy,
 cleanup, and project deletion against local PostgreSQL.
+
+## Source Intelligence Integration
+
+Milestone 4.5 keeps orchestration in the VSCode Extension Host while each backend service remains
+independently callable. The explicit `Arc: Index Workspace Intelligence` command invokes inventory,
+source, symbol, dependency, and framework endpoints in dependency order. Notification progress is
+stage-based because each backend operation publishes atomically and does not expose partial
+records.
+
+The extension does not introduce a second aggregate run table. Its status bar loads all five
+durable status resources and verifies the exact provenance chain before presenting a ready state.
+Running and failed records survive extension reloads; stale or missing catalogs present an explicit
+index-required state. Local in-memory duplicate suppression improves UX, while PostgreSQL
+constraints remain the concurrency authority.
+
+No source content enters the extension. Indexing remains user initiated, with no watcher, timer,
+activation-time scan, hidden retry, or automatic refresh. `pnpm source:intelligence:verify`
+composes the four local PostgreSQL acceptance harnesses that cover the full pipeline.
 
 ## Local Infrastructure
 
