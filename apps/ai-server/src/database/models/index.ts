@@ -95,6 +95,15 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
     as: "file",
     foreignKey: "frameworkFileId",
   });
+  models.projectFrameworkScopes.hasMany(models.projectFrameworkEntities, {
+    as: "entities",
+    foreignKey: "scopeId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkEntities.belongsTo(models.projectFrameworkScopes, {
+    as: "scope",
+    foreignKey: "scopeId",
+  });
   models.projectFrameworkEntities.hasMany(models.projectFrameworkRelationships, {
     as: "outgoingRelationships",
     foreignKey: "sourceEntityId",
@@ -107,6 +116,15 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.projectFrameworkRelationships.belongsTo(models.projectFrameworkEntities, {
     as: "targetEntity",
     foreignKey: "targetEntityId",
+  });
+  models.projectFrameworkScopes.hasMany(models.projectFrameworkRelationships, {
+    as: "relationships",
+    foreignKey: "scopeId",
+    onDelete: "CASCADE",
+  });
+  models.projectFrameworkRelationships.belongsTo(models.projectFrameworkScopes, {
+    as: "scope",
+    foreignKey: "scopeId",
   });
   models.projects.hasMany(models.projectScans, {
     as: "scans",

@@ -108,6 +108,49 @@ function createFile(): ProjectFrameworkFileModel {
   } as ProjectFrameworkFileModel;
 }
 
+function createCatalogEntity(id = sourceEntityId, identityKey = sourceIdentity): ProjectFrameworkEntityModel {
+  return {
+    attributes: { kind: "express_application", localName: "app" },
+    certainty: "declared",
+    entityKind: "application",
+    evidenceKind: "call_expression",
+    framework: "express",
+    frameworkFileId: fileId,
+    frameworkIndexRunId: frameworkIndexId,
+    id,
+    identityKey,
+    name: "app",
+    projectId,
+    range: null,
+    relativePath: "src/main.ts",
+    scopeId,
+    sourceFileId,
+    symbolId: null,
+  } as ProjectFrameworkEntityModel;
+}
+
+function createCatalogRelationship(id = relationshipId): ProjectFrameworkRelationshipModel {
+  return {
+    attributes: { dynamicPath: false, kind: "express_router_mount", paths: ["/api"] },
+    certainty: "unresolved",
+    dependencyEdgeId: null,
+    evidenceKind: "call_expression",
+    framework: "express",
+    frameworkIndexRunId: frameworkIndexId,
+    id,
+    identityKey: "9".repeat(64),
+    projectId,
+    range: null,
+    relationshipKind: "mounts_router",
+    scopeId,
+    sourceEntityId,
+    sourceFileId,
+    symbolId: null,
+    targetEntityId: null,
+    targetName: "apiRouter",
+  } as ProjectFrameworkRelationshipModel;
+}
+
 function createDatabase(run: ProjectFrameworkIndexRunModel) {
   const create = vi.fn(() => Promise.resolve(run));
   const findRun = vi.fn(() => Promise.resolve(run));
@@ -123,10 +166,24 @@ function createDatabase(run: ProjectFrameworkIndexRunModel) {
     .mockResolvedValueOnce([{ id: sourceEntityId } as ProjectFrameworkEntityModel, true])
     .mockResolvedValueOnce([{ id: targetEntityId } as ProjectFrameworkEntityModel, true]);
   const destroyEntities = vi.fn(() => Promise.resolve(0));
+  const findEntities = vi.fn((options?: unknown) => {
+    void options;
+    return Promise.resolve([
+      createCatalogEntity(),
+      createCatalogEntity("6aa7f930-c311-42f2-aac6-a91267a5dc62", targetIdentity),
+    ]);
+  });
   const upsertRelationship = vi.fn(() =>
     Promise.resolve([{ id: relationshipId } as ProjectFrameworkRelationshipModel, true]),
   );
   const destroyRelationships = vi.fn(() => Promise.resolve(0));
+  const findRelationships = vi.fn((options?: unknown) => {
+    void options;
+    return Promise.resolve([
+      createCatalogRelationship(),
+      createCatalogRelationship("f507dbed-0a0a-4286-a501-001249863220"),
+    ]);
+  });
   const transactionValue = { LOCK: { UPDATE: "UPDATE" } } as unknown as Transaction;
   const transaction = vi.fn((operation: (value: Transaction) => Promise<unknown>) => operation(transactionValue));
   const database = {
@@ -140,6 +197,7 @@ function createDatabase(run: ProjectFrameworkIndexRunModel) {
       projectFiles: {} as ArcDatabase["models"]["projectFiles"],
       projectFrameworkEntities: {
         destroy: destroyEntities,
+        findAll: findEntities,
         upsert: upsertEntity,
       } as unknown as ArcDatabase["models"]["projectFrameworkEntities"],
       projectFrameworkFiles: {
@@ -154,6 +212,7 @@ function createDatabase(run: ProjectFrameworkIndexRunModel) {
       } as unknown as ArcDatabase["models"]["projectFrameworkIndexRuns"],
       projectFrameworkRelationships: {
         destroy: destroyRelationships,
+        findAll: findRelationships,
         upsert: upsertRelationship,
       } as unknown as ArcDatabase["models"]["projectFrameworkRelationships"],
       projectFrameworkScopes: {
@@ -179,6 +238,8 @@ function createDatabase(run: ProjectFrameworkIndexRunModel) {
     destroyRelationships,
     destroyScopes,
     findRun,
+    findEntities,
+    findRelationships,
     save: (run as unknown as { save: ReturnType<typeof vi.fn> }).save,
     transaction,
     transactionValue,
@@ -389,5 +450,59 @@ describe("SequelizeProjectFrameworkIndexRepository", () => {
       expect.objectContaining({ errorCode: "index_interrupted", status: "failed" }),
       { where: { status: "running" } },
     );
+  });
+
+  it("reads deterministic limit-plus-one catalog pages and independent relationship truncation", async () => {
+    const { run } = createRun("completed");
+    const fixture = createDatabase(run);
+    const repository = new SequelizeProjectFrameworkIndexRepository(fixture.database);
+
+    await expect(
+      repository.listCatalog({
+        entityKinds: ["application"],
+        frameworkIndexId,
+        frameworks: ["express"],
+        includeRelationships: true,
+        maxEntities: 1,
+        maxRelationships: 1,
+        path: "src/main.ts",
+        projectId,
+        scopePath: ".",
+      }),
+    ).resolves.toMatchObject({
+      entities: [{ id: sourceEntityId, path: "src/main.ts" }],
+      entityTruncated: true,
+      relationships: [{ id: relationshipId, sourceEntityId }],
+      relationshipTruncated: true,
+      scopes: [{ id: scopeId, rootPath: "." }],
+    });
+    expect(fixture.findEntities.mock.calls[0]?.[0]).toMatchObject({
+      limit: 2,
+      where: {
+        frameworkIndexRunId: frameworkIndexId,
+        projectId,
+        relativePath: "src/main.ts",
+      },
+    });
+    expect(fixture.findRelationships.mock.calls[0]?.[0]).toMatchObject({
+      limit: 2,
+      where: {
+        frameworkIndexRunId: frameworkIndexId,
+        projectId,
+      },
+    });
+
+    await expect(
+      repository.listCatalog({
+        entityKinds: [],
+        frameworkIndexId,
+        frameworks: [],
+        includeRelationships: false,
+        maxEntities: 10,
+        maxRelationships: 10,
+        projectId,
+      }),
+    ).resolves.toMatchObject({ relationships: [], relationshipTruncated: false });
+    expect(fixture.findRelationships).toHaveBeenCalledOnce();
   });
 });

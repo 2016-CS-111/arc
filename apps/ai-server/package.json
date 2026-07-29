@@ -15,6 +15,7 @@
     "dev": "tsx watch src/main.ts",
     "framework-evidence:smoke": "tsx src/cli/framework-evidence-smoke.ts",
     "framework-evidence:smoke:compiled": "node dist/cli/framework-evidence-smoke.js",
+    "framework:index:verify": "tsx src/cli/framework-index-verify.ts",
     "ollama:smoke": "tsx src/cli/ollama-smoke.ts",
     "project:verify": "tsx src/cli/project-inventory-verify.ts",
     "source:index:verify": "tsx src/cli/source-index-verify.ts",

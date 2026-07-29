@@ -158,3 +158,24 @@ export class ProjectFrameworkIndexFailedError extends Error {
     this.name = "ProjectFrameworkIndexFailedError";
   }
 }
+
+export class ProjectFrameworkCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a completed framework index.`);
+    this.name = "ProjectFrameworkCatalogRequiredError";
+  }
+}
+
+export class ProjectFrameworkCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires a fresh framework index.`);
+    this.name = "ProjectFrameworkCatalogStaleError";
+  }
+}
+
+export class ProjectFrameworkCatalogQueryFailedError extends Error {
+  public constructor() {
+    super("Arc could not read the project framework catalog.");
+    this.name = "ProjectFrameworkCatalogQueryFailedError";
+  }
+}

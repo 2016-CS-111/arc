@@ -288,6 +288,7 @@ Milestone 4.4.6 adds explicit durable framework indexing and status:
 ```txt
 POST /projects/:projectId/frameworks/index
 GET  /projects/:projectId/frameworks/index
+GET  /projects/:projectId/frameworks/catalog
 ```
 
 The backend requires one coherent source/symbol/dependency snapshot, caches bounded normalized
@@ -297,6 +298,12 @@ relationships; failed and interrupted runs preserve the prior catalog.
 
 Apply migrations `0007_project_framework_catalog.sql` and
 `0008_project_framework_evidence_cache.sql` before using these endpoints. Framework limits use the
-`ARC_PROJECT_FRAMEWORK_*` settings in `.env.example`. The public bounded catalog query, local
-PostgreSQL acceptance CLI, and VSCode controls remain later gates. The complete design is in
-`docs/milestone-4.4-architecture.md`.
+`ARC_PROJECT_FRAMEWORK_*` settings in `.env.example`. Catalog reads accept repeated or
+comma-separated `framework` and `kind` filters, optional `path` and `scope`, `includeRelations`,
+`maxEntities`, and `maxRelationships`. Reads reject missing or stale upstream provenance and expose
+independent truncation state.
+
+Run `pnpm framework:index:verify` to exercise all five framework adapters, incremental evidence
+reuse and invalidation, bounded deterministic queries, rollback, recovery, privacy, and cleanup
+against local PostgreSQL. Milestone 4.4 is complete; automatic indexing and VSCode controls remain
+Milestone 4.5. The complete design is in `docs/milestone-4.4-architecture.md`.

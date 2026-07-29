@@ -70,6 +70,18 @@ describe("TreeSitterNextFrameworkAnalyzer", () => {
     expect(privateFile.entities).toEqual([]);
   });
 
+  it("recognizes route conventions inside a monorepo package", () => {
+    const page = analyzeNext(
+      "packages/web/app/dashboard/page.tsx",
+      `export default function Dashboard() { return <main />; }`,
+    );
+
+    expect(page.entities[0]).toMatchObject({
+      attributes: { kind: "next_page", routePattern: "/dashboard", router: "app" },
+      entityKind: "page",
+    });
+  });
+
   it("retains intercepting routes as unresolved and keeps identities stable after source movement", () => {
     const source = `export default function Photo() { return <Image />; }`;
     const first = analyzeNext("app/feed/(.)photo/page.tsx", source);

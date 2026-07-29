@@ -1,7 +1,12 @@
 import type {
+  ProjectFrameworkCatalogEntity,
+  ProjectFrameworkCatalogRelationship,
+  ProjectFrameworkCatalogScope,
   ProjectFrameworkIndex,
   ProjectFrameworkIndexLimitReason,
   ProjectFrameworkIndexWarning,
+  ProjectFrameworkEntityKind,
+  ProjectFrameworkKind,
 } from "@arc/contracts";
 import type {
   ProjectFrameworkEntityFact,
@@ -58,6 +63,24 @@ export interface ReusableProjectFrameworkCatalog {
   readonly scopes: readonly ProjectFrameworkScope[];
   readonly files: readonly ProjectFrameworkFileOutcome[];
 }
+export interface ListProjectFrameworkCatalogInput {
+  readonly projectId: string;
+  readonly frameworkIndexId: string;
+  readonly frameworks: readonly ProjectFrameworkKind[];
+  readonly entityKinds: readonly ProjectFrameworkEntityKind[];
+  readonly path?: string;
+  readonly scopePath?: string;
+  readonly includeRelationships: boolean;
+  readonly maxEntities: number;
+  readonly maxRelationships: number;
+}
+export interface ProjectFrameworkCatalogRecords {
+  readonly scopes: readonly ProjectFrameworkCatalogScope[];
+  readonly entities: readonly ProjectFrameworkCatalogEntity[];
+  readonly relationships: readonly ProjectFrameworkCatalogRelationship[];
+  readonly entityTruncated: boolean;
+  readonly relationshipTruncated: boolean;
+}
 export interface ProjectFrameworkIndexRepository {
   beginIndex(input: BeginProjectFrameworkIndexInput): Promise<ProjectFrameworkIndex>;
   publishIndex(input: PublishProjectFrameworkIndexInput): Promise<ProjectFrameworkIndex>;
@@ -69,5 +92,6 @@ export interface ProjectFrameworkIndexRepository {
   getLatestRun(projectId: string): Promise<ProjectFrameworkIndex | null>;
   getCurrentCatalogRun(projectId: string): Promise<ProjectFrameworkIndex | null>;
   getCurrentReusableCatalog(projectId: string): Promise<ReusableProjectFrameworkCatalog | null>;
+  listCatalog(input: ListProjectFrameworkCatalogInput): Promise<ProjectFrameworkCatalogRecords>;
   recoverInterruptedIndexes(): Promise<number>;
 }

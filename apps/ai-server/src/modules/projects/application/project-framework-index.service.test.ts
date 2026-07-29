@@ -235,6 +235,7 @@ function createFixture(options: { readonly sourceCatalog?: ProjectSourceCatalogS
     getCurrentCatalogRun: vi.fn(() => Promise.resolve(currentFrameworkRun)),
     getCurrentReusableCatalog: vi.fn(() => Promise.resolve(reusableCatalog)),
     getLatestRun: vi.fn(() => Promise.resolve(currentFrameworkRun)),
+    listCatalog: vi.fn(),
     publishIndex,
     recoverInterruptedIndexes,
   } satisfies ProjectFrameworkIndexRepository;

@@ -27,6 +27,7 @@
     "format:check": "prettier --check .",
     "framework-evidence:smoke": "pnpm --filter @arc/ai-server framework-evidence:smoke",
     "framework-evidence:smoke:compiled": "pnpm --filter @arc/ai-server framework-evidence:smoke:compiled",
+    "framework:index:verify": "pnpm --filter @arc/ai-server framework:index:verify",
     "lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" --max-warnings=0",
     "module-resolution:smoke": "pnpm --filter @arc/ai-server module-resolution:smoke",
     "module-resolution:smoke:compiled": "pnpm --filter @arc/ai-server module-resolution:smoke:compiled",

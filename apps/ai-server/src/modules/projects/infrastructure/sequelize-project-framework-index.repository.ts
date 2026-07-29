@@ -1,9 +1,17 @@
-import { ProjectFrameworkIndexSchema, type ProjectFrameworkIndex } from "@arc/contracts";
-import { Op, UniqueConstraintError, type Transaction } from "sequelize";
+import {
+  ProjectFrameworkEntitySchema,
+  ProjectFrameworkIndexSchema,
+  ProjectFrameworkRelationshipSchema,
+  ProjectFrameworkScopeSchema,
+  type ProjectFrameworkIndex,
+} from "@arc/contracts";
+import { col, literal, Op, UniqueConstraintError, type Transaction, type WhereOptions } from "sequelize";
 import type { ArcDatabase } from "../../../database/database.types.js";
 import type { ProjectFrameworkIndexRunModel } from "../../../database/models/project-framework-index-run.model.js";
 import type {
   BeginProjectFrameworkIndexInput,
+  ListProjectFrameworkCatalogInput,
+  ProjectFrameworkCatalogRecords,
   ProjectFrameworkIndexRepository,
   PublishProjectFrameworkIndexInput,
   ReusableProjectFrameworkCatalog,
@@ -268,6 +276,148 @@ export class SequelizeProjectFrameworkIndexRepository implements ProjectFramewor
         };
       }),
     };
+  }
+  public async listCatalog(input: ListProjectFrameworkCatalogInput): Promise<ProjectFrameworkCatalogRecords> {
+    const scopeWhere: WhereOptions = {
+      projectId: input.projectId,
+      frameworkIndexRunId: input.frameworkIndexId,
+      ...(input.frameworks.length === 0 ? {} : { framework: { [Op.in]: input.frameworks } }),
+      ...(input.scopePath === undefined ? {} : { rootPath: input.scopePath }),
+    };
+    const entityRows = await this.database.models.projectFrameworkEntities.findAll({
+      include: [
+        {
+          as: "scope",
+          attributes: [],
+          model: this.database.models.projectFrameworkScopes,
+          required: true,
+          where: scopeWhere,
+        },
+      ],
+      limit: input.maxEntities + 1,
+      order: [
+        [col("scope.root_path"), "ASC"],
+        ["framework", "ASC"],
+        ["relativePath", "ASC"],
+        [literal(`COALESCE(("projectFrameworkEntities"."range" ->> 'startByte')::bigint, -1)`), "ASC"],
+        ["entityKind", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        projectId: input.projectId,
+        frameworkIndexRunId: input.frameworkIndexId,
+        ...(input.frameworks.length === 0 ? {} : { framework: { [Op.in]: input.frameworks } }),
+        ...(input.entityKinds.length === 0 ? {} : { entityKind: { [Op.in]: input.entityKinds } }),
+        ...(input.path === undefined ? {} : { relativePath: input.path }),
+      },
+    });
+    const entityTruncated = entityRows.length > input.maxEntities;
+    const selectedEntityRows = entityRows.slice(0, input.maxEntities);
+    const entities = selectedEntityRows.map((row) =>
+      ProjectFrameworkEntitySchema.parse({
+        attributes: row.attributes,
+        certainty: row.certainty,
+        entityKind: row.entityKind,
+        evidenceKind: row.evidenceKind,
+        framework: row.framework,
+        id: row.id,
+        identityKey: row.identityKey,
+        name: row.name,
+        path: row.relativePath,
+        range: row.range,
+        scopeId: row.scopeId,
+        sourceFileId: row.sourceFileId,
+        symbolId: row.symbolId,
+      }),
+    );
+    const entityIds = entities.map((entity) => entity.id);
+    const scopeIds = [...new Set(entities.map((entity) => entity.scopeId))];
+    const scopeRows =
+      scopeIds.length === 0
+        ? []
+        : await this.database.models.projectFrameworkScopes.findAll({
+            order: [
+              ["rootPath", "ASC"],
+              ["framework", "ASC"],
+              ["id", "ASC"],
+            ],
+            where: {
+              frameworkIndexRunId: input.frameworkIndexId,
+              id: { [Op.in]: scopeIds },
+              projectId: input.projectId,
+            },
+          });
+    const scopes = scopeRows.map((row) =>
+      ProjectFrameworkScopeSchema.parse({
+        contextHash: row.contextHash,
+        framework: row.framework,
+        id: row.id,
+        packageName: row.packageName,
+        rootPath: row.rootPath,
+        scopeKey: row.scopeKey,
+      }),
+    );
+    if (!input.includeRelationships || entityIds.length === 0) {
+      return {
+        entities,
+        entityTruncated,
+        relationships: [],
+        relationshipTruncated: false,
+        scopes,
+      };
+    }
+    const relationshipRows = await this.database.models.projectFrameworkRelationships.findAll({
+      include: [
+        {
+          as: "scope",
+          attributes: [],
+          model: this.database.models.projectFrameworkScopes,
+          required: true,
+        },
+        {
+          as: "sourceEntity",
+          attributes: [],
+          model: this.database.models.projectFrameworkEntities,
+          required: true,
+        },
+      ],
+      limit: input.maxRelationships + 1,
+      order: [
+        [col("scope.root_path"), "ASC"],
+        ["framework", "ASC"],
+        [col("sourceEntity.relative_path"), "ASC"],
+        [literal(`COALESCE(("projectFrameworkRelationships"."range" ->> 'startByte')::bigint, -1)`), "ASC"],
+        ["relationshipKind", "ASC"],
+        ["id", "ASC"],
+      ],
+      where: {
+        projectId: input.projectId,
+        frameworkIndexRunId: input.frameworkIndexId,
+        sourceEntityId: { [Op.in]: entityIds },
+        ...(input.frameworks.length === 0 ? {} : { framework: { [Op.in]: input.frameworks } }),
+      },
+    });
+    const relationshipTruncated = relationshipRows.length > input.maxRelationships;
+    const relationships = relationshipRows.slice(0, input.maxRelationships).map((row) =>
+      ProjectFrameworkRelationshipSchema.parse({
+        attributes: row.attributes,
+        certainty: row.certainty,
+        dependencyEdgeId: row.dependencyEdgeId,
+        evidenceKind: row.evidenceKind,
+        framework: row.framework,
+        id: row.id,
+        identityKey: row.identityKey,
+        range: row.range,
+        relationshipKind: row.relationshipKind,
+        scopeId: row.scopeId,
+        sourceEntityId: row.sourceEntityId,
+        sourceFileId: row.sourceFileId,
+        symbolId: row.symbolId,
+        targetEntityId: row.targetEntityId,
+        targetName: row.targetName,
+      }),
+    );
+    return { entities, entityTruncated, relationships, relationshipTruncated, scopes };
   }
   public async recoverInterruptedIndexes(): Promise<number> {
     const [count] = await this.database.models.projectFrameworkIndexRuns.update(

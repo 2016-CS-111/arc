@@ -24,6 +24,7 @@ import type { ProjectRegistrationService } from "../application/project-registra
 import type { ProjectSourceIndexService } from "../application/project-source-index.service.js";
 import type { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
 import type { ProjectFrameworkIndexService } from "../application/project-framework-index.service.js";
+import type { ProjectFrameworkCatalogService } from "../application/project-framework-catalog.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -35,6 +36,9 @@ import {
   ProjectDependencyIndexFailedError,
   ProjectDependencyPathNotFoundError,
   ProjectFrameworkIndexAlreadyRunningError,
+  ProjectFrameworkCatalogQueryFailedError,
+  ProjectFrameworkCatalogRequiredError,
+  ProjectFrameworkCatalogStaleError,
   ProjectFrameworkIndexFailedError,
   ProjectFrameworkUpstreamCatalogRequiredError,
   ProjectFrameworkUpstreamCatalogStaleError,
@@ -557,6 +561,81 @@ describe("ProjectsController", () => {
     await expect(controller.indexFrameworks(registration.project.id)).rejects.toBeInstanceOf(expectedError);
   });
 
+  it("validates and delegates bounded framework catalog queries", async () => {
+    const getFrameworkCatalog = vi.fn(() =>
+      Promise.resolve({
+        entities: [],
+        frameworkIndex: completedFrameworkIndex,
+        projectId: registration.project.id,
+        relationships: [],
+        scopes: [],
+        truncated: { entities: false, relationships: false },
+      }),
+    );
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      getFrameworkCatalog,
+    );
+
+    await expect(
+      controller.getFrameworkCatalog(registration.project.id, {
+        framework: "express,sequelize",
+        includeRelations: "true",
+        kind: ["application", "model"],
+      }),
+    ).resolves.toMatchObject({ entities: [], relationships: [] });
+    expect(getFrameworkCatalog).toHaveBeenCalledWith(
+      registration.project.id,
+      expect.objectContaining({
+        framework: ["express", "sequelize"],
+        includeRelations: true,
+        kind: ["application", "model"],
+      }),
+    );
+    await expect(
+      controller.getFrameworkCatalog(registration.project.id, { maxEntities: "5001" }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it.each([
+    [new InvalidProjectPathError(), BadRequestException],
+    [new ProjectNotFoundError(registration.project.id), NotFoundException],
+    [new ProjectFrameworkCatalogRequiredError(registration.project.id), ConflictException],
+    [new ProjectFrameworkCatalogStaleError(registration.project.id), ConflictException],
+    [new ProjectFrameworkCatalogQueryFailedError(), ServiceUnavailableException],
+  ])("maps framework catalog errors to stable HTTP responses", async (error, expectedError) => {
+    const controller = createController(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(() => Promise.reject(error)),
+    );
+
+    await expect(controller.getFrameworkCatalog(registration.project.id, {})).rejects.toBeInstanceOf(expectedError);
+  });
+
   it("validates dependency graph queries and returns the bounded graph", async () => {
     const getGraph = vi.fn(() => Promise.resolve(dependencyGraph));
     const controller = createController(
@@ -633,6 +712,7 @@ function createController(
   getGraph: ReturnType<typeof vi.fn> = vi.fn(),
   indexFrameworks: ReturnType<typeof vi.fn> = vi.fn(),
   getLatestFrameworks: ReturnType<typeof vi.fn> = vi.fn(),
+  getFrameworkCatalog: ReturnType<typeof vi.fn> = vi.fn(),
 ): ProjectsController {
   return new ProjectsController(
     { register } as unknown as ProjectRegistrationService,
@@ -646,5 +726,6 @@ function createController(
     } as unknown as ProjectDependencyIndexService,
     { getGraph } as unknown as ProjectDependencyGraphService,
     { getLatest: getLatestFrameworks, index: indexFrameworks } as unknown as ProjectFrameworkIndexService,
+    { getCatalog: getFrameworkCatalog } as unknown as ProjectFrameworkCatalogService,
   );
 }

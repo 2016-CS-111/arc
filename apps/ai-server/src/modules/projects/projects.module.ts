@@ -19,6 +19,7 @@ import { ProjectSourceIndexService } from "./application/project-source-index.se
 import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
 import { ProjectSymbolIndexService } from "./application/project-symbol-index.service.js";
 import { ProjectFrameworkIndexService } from "./application/project-framework-index.service.js";
+import { ProjectFrameworkCatalogService } from "./application/project-framework-catalog.service.js";
 import type { ProjectFrameworkIndexRepository } from "./domain/project-framework-index.types.js";
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
 import { SourceLanguageClassifier } from "./application/source-language.classifier.js";
@@ -156,6 +157,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
+    ProjectFrameworkCatalogService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -168,6 +170,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSourceIndexService,
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
+    ProjectFrameworkCatalogService,
   ],
 })
 export class ProjectsModule {}

@@ -5,6 +5,8 @@ import {
   LatestProjectSourceIndexResponseSchema,
   LatestProjectSymbolIndexResponseSchema,
   LatestProjectFrameworkIndexResponseSchema,
+  ProjectFrameworkCatalogQuerySchema,
+  ProjectFrameworkCatalogResponseSchema,
   ProjectDependencyGraphQuerySchema,
   ProjectDependencyGraphResponseSchema,
   ProjectIdSchema,
@@ -16,6 +18,8 @@ import {
   type LatestProjectSymbolIndexResponse,
   type LatestProjectFrameworkIndexResponse,
   type ProjectFrameworkIndex,
+  type ProjectFrameworkCatalogQuery,
+  type ProjectFrameworkCatalogResponse,
   type ProjectIgnoreDecision,
   type ProjectDependencyGraphQuery,
   type ProjectDependencyGraphResponse,
@@ -49,6 +53,7 @@ import { ProjectRegistrationService } from "../application/project-registration.
 import { ProjectSourceIndexService } from "../application/project-source-index.service.js";
 import { ProjectSymbolIndexService } from "../application/project-symbol-index.service.js";
 import { ProjectFrameworkIndexService } from "../application/project-framework-index.service.js";
+import { ProjectFrameworkCatalogService } from "../application/project-framework-catalog.service.js";
 import {
   IgnoreRulesFileTooLargeError,
   InvalidProjectPathError,
@@ -61,6 +66,9 @@ import {
   ProjectDependencyPathNotFoundError,
   ProjectFrameworkIndexAlreadyRunningError,
   ProjectFrameworkIndexFailedError,
+  ProjectFrameworkCatalogQueryFailedError,
+  ProjectFrameworkCatalogRequiredError,
+  ProjectFrameworkCatalogStaleError,
   ProjectFrameworkUpstreamCatalogRequiredError,
   ProjectFrameworkUpstreamCatalogStaleError,
   ProjectNotFoundError,
@@ -94,6 +102,8 @@ export class ProjectsController {
     private readonly projectDependencyGraphService: ProjectDependencyGraphService,
     @Inject(ProjectFrameworkIndexService)
     private readonly projectFrameworkIndexService: ProjectFrameworkIndexService,
+    @Inject(ProjectFrameworkCatalogService)
+    private readonly projectFrameworkCatalogService: ProjectFrameworkCatalogService,
   ) {}
 
   @Post(":projectId/frameworks/index")
@@ -129,6 +139,22 @@ export class ProjectsController {
     } catch (error) {
       if (error instanceof ProjectNotFoundError) throw new NotFoundException(error.message);
       throw error;
+    }
+  }
+
+  @Get(":projectId/frameworks/catalog")
+  public async getFrameworkCatalog(
+    @Param("projectId") projectIdValue: unknown,
+    @Query() queryValue: unknown,
+  ): Promise<ProjectFrameworkCatalogResponse> {
+    const projectId = this.parseProjectId(projectIdValue);
+    const query = this.parseFrameworkCatalogQuery(queryValue);
+    try {
+      return ProjectFrameworkCatalogResponseSchema.parse(
+        await this.projectFrameworkCatalogService.getCatalog(projectId, query),
+      );
+    } catch (error) {
+      this.mapFrameworkCatalogError(error);
     }
   }
 
@@ -321,6 +347,14 @@ export class ProjectsController {
     return parsed.data;
   }
 
+  private parseFrameworkCatalogQuery(payload: unknown): ProjectFrameworkCatalogQuery {
+    const parsed = ProjectFrameworkCatalogQuerySchema.safeParse(payload);
+    if (!parsed.success) {
+      throw new BadRequestException("Arc framework catalog query is invalid.");
+    }
+    return parsed.data;
+  }
+
   private mapInventoryError(error: unknown): never {
     if (error instanceof ProjectNotFoundError) {
       throw new NotFoundException(error.message);
@@ -399,6 +433,22 @@ export class ProjectsController {
       throw new ServiceUnavailableException(error.message);
     }
 
+    throw error;
+  }
+
+  private mapFrameworkCatalogError(error: unknown): never {
+    if (error instanceof InvalidProjectPathError) {
+      throw new BadRequestException(error.message);
+    }
+    if (error instanceof ProjectNotFoundError) {
+      throw new NotFoundException(error.message);
+    }
+    if (error instanceof ProjectFrameworkCatalogRequiredError || error instanceof ProjectFrameworkCatalogStaleError) {
+      throw new ConflictException(error.message);
+    }
+    if (error instanceof ProjectFrameworkCatalogQueryFailedError) {
+      throw new ServiceUnavailableException(error.message);
+    }
     throw error;
   }
 }

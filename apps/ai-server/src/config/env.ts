@@ -77,6 +77,8 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES: z.coerce.number().int().positive().max(10_000).default(100),
   ARC_PROJECT_FRAMEWORK_BATCH_SIZE: z.coerce.number().int().positive().max(2_000).default(500),
   ARC_PROJECT_FRAMEWORK_YIELD_EVERY_FILES: z.coerce.number().int().positive().max(1_000).default(25),
+  ARC_PROJECT_FRAMEWORK_CATALOG_MAX_ENTITIES: z.coerce.number().int().positive().max(5_000).default(500),
+  ARC_PROJECT_FRAMEWORK_CATALOG_MAX_RELATIONSHIPS: z.coerce.number().int().positive().max(10_000).default(1_000),
 });
 
 export interface AppConfig {
@@ -141,6 +143,8 @@ export interface AppConfig {
     readonly maxCollectionEntries: number;
     readonly batchSize: number;
     readonly yieldEveryFiles: number;
+    readonly catalogMaxEntities: number;
+    readonly catalogMaxRelationships: number;
   };
 }
 
@@ -202,6 +206,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     },
     projectFramework: {
       batchSize: parsed.ARC_PROJECT_FRAMEWORK_BATCH_SIZE,
+      catalogMaxEntities: parsed.ARC_PROJECT_FRAMEWORK_CATALOG_MAX_ENTITIES,
+      catalogMaxRelationships: parsed.ARC_PROJECT_FRAMEWORK_CATALOG_MAX_RELATIONSHIPS,
       maxCollectionEntries: parsed.ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES,
       maxEntitiesPerFile: parsed.ARC_PROJECT_FRAMEWORK_MAX_ENTITIES_PER_FILE,
       maxEvidencePerFile: parsed.ARC_PROJECT_FRAMEWORK_MAX_EVIDENCE_PER_FILE,

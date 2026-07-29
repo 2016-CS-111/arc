@@ -393,7 +393,7 @@ class FrameworkAnalysisBuilder {
 
 function readNextConvention(relativePath: string): NextConvention | null {
   const path = relativePath.replaceAll("\\", "/").replace(/^\/+/, "");
-  const match = /^(?:src\/)?(app|pages)\/(.+)\.[cm]?[jt]sx?$/u.exec(path);
+  const match = /(?:^|\/)(?:src\/)?(app|pages)\/(.+)\.[cm]?[jt]sx?$/u.exec(path);
   if (match === null) return null;
   const root = match[1];
   const stem = match[2];

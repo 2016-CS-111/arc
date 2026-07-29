@@ -544,8 +544,15 @@ against new symbol/dependency rows without reading or parsing unchanged source.
 
 One transaction upserts stable identities, removes stale framework rows, and completes the run.
 Publication failure preserves the previous catalog; interrupted runs are failed during backend
-bootstrap. Explicit index and status endpoints expose bounded lifecycle contracts, while the
-catalog query remains the separate Milestone 4.4.7 gate.
+bootstrap. Explicit index and status endpoints expose bounded lifecycle contracts.
+
+Milestone 4.4.7 exposes the fresh catalog through a strict bounded query contract. Sequelize
+projects only normalized scopes, entities, relationships, evidence, and immutable provenance in
+deterministic order, with independent entity and relationship truncation. The application verifies
+the exact source, symbol, dependency, and framework snapshot both before and after each read.
+`pnpm framework:index:verify` proves the five framework adapters, nested-package conventions,
+zero-read evidence reuse, selective invalidation, stable identities, rollback, recovery, privacy,
+cleanup, and project deletion against local PostgreSQL.
 
 ## Local Infrastructure
 

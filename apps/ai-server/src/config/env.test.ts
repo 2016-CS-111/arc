@@ -51,6 +51,8 @@ describe("loadConfig", () => {
     });
     expect(config.projectFramework).toEqual({
       batchSize: 500,
+      catalogMaxEntities: 500,
+      catalogMaxRelationships: 1_000,
       maxCollectionEntries: 100,
       maxEntitiesPerFile: 1_000,
       maxEvidencePerFile: 2_000,
@@ -100,6 +102,8 @@ describe("loadConfig", () => {
       ARC_PROJECT_DEPENDENCY_MAX_TOTAL_EDGES: "5000",
       ARC_PROJECT_DEPENDENCY_YIELD_EVERY_FILES: "5",
       ARC_PROJECT_FRAMEWORK_BATCH_SIZE: "100",
+      ARC_PROJECT_FRAMEWORK_CATALOG_MAX_ENTITIES: "250",
+      ARC_PROJECT_FRAMEWORK_CATALOG_MAX_RELATIONSHIPS: "750",
       ARC_PROJECT_FRAMEWORK_MAX_COLLECTION_ENTRIES: "20",
       ARC_PROJECT_FRAMEWORK_MAX_ENTITIES_PER_FILE: "200",
       ARC_PROJECT_FRAMEWORK_MAX_EVIDENCE_PER_FILE: "300",
@@ -159,6 +163,8 @@ describe("loadConfig", () => {
     });
     expect(config.projectFramework).toEqual({
       batchSize: 100,
+      catalogMaxEntities: 250,
+      catalogMaxRelationships: 750,
       maxCollectionEntries: 20,
       maxEntitiesPerFile: 200,
       maxEvidencePerFile: 300,

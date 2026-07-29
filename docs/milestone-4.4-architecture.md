@@ -1,6 +1,6 @@
 # Milestone 4.4 Architecture: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 through 4.4.6 are complete; Milestone 4.4.7 is next.
+Status: Complete. Milestones 4.4.1 through 4.4.7 are implemented and verified.
 
 ## Goal
 
@@ -821,18 +821,21 @@ Status: Complete.
 
 ### 4.4.7 Framework Catalog Query and Acceptance
 
-Status: Planned.
+Status: Complete.
 
-- Add strict bounded catalog query/response contracts and the fresh catalog endpoint.
-- Add `pnpm framework:index:verify` against local PostgreSQL.
-- Prove a multi-package NestJS/Express/Next.js/React/Sequelize fixture, deterministic queries,
-  relinking without reparsing, stale rejection, limits, rollback, recovery, privacy, and cleanup.
-- Run full tests, lint, formatting, TypeScript build, webview type-check/build, native parser
-  smokes, and local PostgreSQL verification.
+- Added strict bounded query/response contracts and
+  `GET /projects/:projectId/frameworks/catalog`.
+- Added deterministic Sequelize projection and ordering with server-side ceilings, independent
+  entity/relationship truncation, framework/entity-kind/path/scope filters, and optional
+  relationships.
+- Requires exact current source, symbol, dependency, and framework provenance before and after
+  each read; missing, replacing, stale, and query-failure states have typed boundaries.
+- Added `pnpm framework:index:verify` against local PostgreSQL.
+- Proves a multi-package NestJS/Express/Next.js/React/Sequelize fixture, nested Next.js package
+  conventions, deterministic queries, zero-read evidence reuse, selective invalidation, stale
+  rejection, limits, stable identities, rollback, recovery, privacy, cleanup, and cascade
+  deletion.
 - No VSCode framework UI or automatic indexing.
-
-Each implementation gate requires explicit approval and must compile and pass independently before
-the next gate begins.
 
 ## Acceptance Gate
 

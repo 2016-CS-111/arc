@@ -924,7 +924,7 @@ controls remain Milestone 4.5.
 
 ### Milestone 4.4: Framework Understanding
 
-Status: In progress. Milestones 4.4.1 and 4.4.2 are complete.
+Status: Complete.
 
 Goal: combine fresh source, symbol, and dependency catalogs into an evidence-backed understanding
 of NestJS, Express, Next.js, React, and Sequelize project structures.
@@ -1065,14 +1065,29 @@ No public framework catalog query, acceptance CLI, automatic indexing, or VSCode
 
 #### Milestone 4.4.7: Framework Catalog Query and Acceptance
 
-Status: Planned.
+Status: Complete.
 
 Goal: expose bounded fresh framework-catalog queries and prove multi-framework behavior,
 incremental relinking, identity, atomicity, privacy, recovery, and cleanup against local
 PostgreSQL.
 
-Each sub-milestone requires explicit approval and must compile and pass independently. The complete
-design is in `docs/milestone-4.4-architecture.md`.
+Delivered:
+
+- Strict discriminated catalog contracts for scopes, framework entities, relationships, evidence,
+  certainty, bounded filters, truncation, and exact framework-index provenance.
+- `GET /projects/:projectId/frameworks/catalog` with framework, entity-kind, path, scope, relation,
+  entity-limit, and relationship-limit filters; application and database ceilings prevent
+  unbounded reads.
+- Deterministic database ordering and projection, response validation, current-catalog freshness
+  checks before and after reads, and typed missing/stale/query-failure responses.
+- Monorepo-aware Next.js App and Pages Router convention matching inside detected package scopes.
+- `pnpm framework:index:verify`, which proves all five framework adapters, deterministic and
+  truncated reads, stale rejection, zero-read unchanged evidence reuse, selective invalidation,
+  stable identities, atomic rollback, restart recovery, privacy, stale cleanup, and project
+  deletion against local PostgreSQL.
+
+Milestone 4.4 is complete. Automatic indexing and framework UI remain outside this milestone. The
+complete design is in `docs/milestone-4.4-architecture.md`.
 
 ### Milestone 4.5: Source Intelligence Integration and Acceptance
 
