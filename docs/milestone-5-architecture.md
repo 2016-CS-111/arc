@@ -473,14 +473,8 @@ No source text or embedding input is persisted.
 - Project deletion removes all vector rows.
 - The full workspace, compiled backend, local PostgreSQL, local Ollama, and VSCode gates pass.
 
-## Future Boundary
+## Next Boundary
 
-Milestone 6 builds the context selector:
-
-- Rehydrate only selected ranges.
-- Verify source hashes again.
-- Enforce model token budgets.
-- Combine semantic, graph, framework, open-editor, and conversation signals.
-- Attach bounded project context to chat requests.
-
-Milestone 5 does not alter prompts or send retrieval results to the chat model.
+Milestone 6 now consumes these results through bounded semantic selection, hash-verified range
+rehydration, conversation and project budgets, and backend-owned prompt assembly. Active-editor and
+graph expansion are not required for the completed Arc MVP.

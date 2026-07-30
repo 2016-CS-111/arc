@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { ConversationsModule } from "../conversations/conversations.module.js";
+import { ContextModule } from "../context/context.module.js";
 import { InferenceModule } from "../inference/inference.module.js";
 import { LoggerModule } from "../logger/logger.module.js";
 import { ActiveGenerationRegistry } from "./application/active-generation.registry.js";
@@ -9,7 +10,7 @@ import { SendChatMessageService } from "./application/send-chat-message.service.
 import { ChatGateway } from "./presentation/chat.gateway.js";
 
 @Module({
-  imports: [ConversationsModule, InferenceModule, LoggerModule],
+  imports: [ContextModule, ConversationsModule, InferenceModule, LoggerModule],
   providers: [ActiveGenerationRegistry, DurableChatService, SendChatMessageService, ChatGateway],
 })
 export class ChatModule {}

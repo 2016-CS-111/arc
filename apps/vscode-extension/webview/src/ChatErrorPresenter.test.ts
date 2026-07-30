@@ -27,6 +27,13 @@ describe("ChatErrorPresenter", () => {
         retryable: true,
       }),
     ).toBe("Connection to Arc was lost. Reconnect before sending a new prompt.");
+    expect(
+      presenter.getMessage({
+        code: "context_window_exceeded",
+        message: "internal estimate exceeded",
+        retryable: false,
+      }),
+    ).toBe("This prompt is too large for the configured local model context window.");
   });
 
   it("does not expose an unknown internal error message", () => {

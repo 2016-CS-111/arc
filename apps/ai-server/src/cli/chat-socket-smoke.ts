@@ -7,6 +7,7 @@ import {
   ChatCompletedEventSchema,
   ChatDeltaEventSchema,
   ChatErrorEventSchema,
+  ProjectIdSchema,
 } from "@arc/contracts";
 import { io, type Socket } from "socket.io-client";
 
@@ -27,6 +28,9 @@ async function main(): Promise<void> {
       .join(" ")
       .trim() || defaultPrompt;
   const baseUrl = `http://${config.host}:${String(config.port)}`;
+  const projectIdValue = process.env.ARC_CHAT_SMOKE_PROJECT_ID?.trim();
+  const projectId =
+    projectIdValue === undefined || projectIdValue.length === 0 ? undefined : ProjectIdSchema.parse(projectIdValue);
   const socket = io(`${baseUrl}/chat`, {
     reconnection: false,
     timeout: 10_000,
@@ -35,7 +39,7 @@ async function main(): Promise<void> {
 
   try {
     await waitForConnection(socket);
-    await streamResponse(socket, requestId, sessionId, prompt, logger, cancelOnAcceptance);
+    await streamResponse(socket, requestId, sessionId, prompt, logger, cancelOnAcceptance, projectId);
   } finally {
     socket.disconnect();
   }
@@ -74,6 +78,7 @@ function streamResponse(
   prompt: string,
   logger: ReturnType<typeof createConsoleLogger>,
   cancelOnAcceptance: boolean,
+  projectId?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -152,6 +157,7 @@ function streamResponse(
       requestId,
       sessionId,
       content: prompt,
+      ...(projectId === undefined ? {} : { projectId }),
     });
   });
 }

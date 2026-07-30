@@ -41,6 +41,7 @@ export class ProjectSemanticSearchService {
   public async search(
     projectId: string,
     request: ProjectSemanticSearchRequest,
+    signal?: AbortSignal,
   ): Promise<ProjectSemanticSearchResponse> {
     const catalog = await this.getFreshCatalog(projectId);
     const pathPrefix = request.pathPrefix === undefined ? undefined : this.pathNormalizer.normalize(request.pathPrefix);
@@ -48,10 +49,14 @@ export class ProjectSemanticSearchService {
 
     let vector: readonly number[];
     try {
-      const result = await this.embeddingModel.embed({
-        purpose: "query",
+      const embeddingRequest = {
+        purpose: "query" as const,
         inputs: [request.query],
-      });
+      };
+      const result =
+        signal === undefined
+          ? await this.embeddingModel.embed(embeddingRequest)
+          : await this.embeddingModel.embed(embeddingRequest, signal);
       if (
         result.model !== catalog.model ||
         result.dimensions !== catalog.dimensions ||

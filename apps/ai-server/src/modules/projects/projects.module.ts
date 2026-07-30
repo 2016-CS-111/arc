@@ -18,6 +18,7 @@ import { ProjectRegistrationService } from "./application/project-registration.s
 import type { ProjectRepository } from "./application/project.repository.js";
 import type { ProjectSourceIndexRepository } from "./application/project-source-index.repository.js";
 import { ProjectSourceIndexService } from "./application/project-source-index.service.js";
+import { ProjectSourceRangeService } from "./application/project-source-range.service.js";
 import { ProjectSemanticSearchService } from "./application/project-semantic-search.service.js";
 import { ProjectSourceChunker } from "./application/project-source-chunker.js";
 import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
@@ -172,6 +173,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectDependencyGraphService,
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
+    ProjectSourceRangeService,
     ProjectSourceChunker,
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
@@ -188,6 +190,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectDependencyGraphService,
     ProjectDependencyIndexService,
     ProjectSourceIndexService,
+    ProjectSourceRangeService,
     ProjectSourceChunker,
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,

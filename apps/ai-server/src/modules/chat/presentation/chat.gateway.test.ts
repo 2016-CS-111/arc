@@ -2,6 +2,7 @@ import type { ChatError, ChatSendCommand, ConversationMessage } from "@arc/contr
 import type { Logger } from "@arc/shared";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ChatPromptService } from "../../context/application/chat-prompt.service.js";
 import type { ChatModelPort } from "../../inference/application/chat-model.port.js";
 import { ChatModelError } from "../../inference/domain/chat-model.errors.js";
 import type { ChatModelEvent, ChatModelRequest, ChatModelStatus } from "../../inference/domain/chat-model.types.js";
@@ -185,13 +186,28 @@ function createGateway(
   chatModel: ChatModelPort,
   durableChatService: InMemoryDurableChatService,
   gatewayLogger: Logger = logger,
+  chatPromptService: ChatPromptService = createPassThroughPromptService(),
 ): ChatGateway {
   return new ChatGateway(
     new ActiveGenerationRegistry(),
     durableChatService as unknown as DurableChatService,
+    chatPromptService,
     new SendChatMessageService(chatModel),
     gatewayLogger,
   );
+}
+
+function createPassThroughPromptService(): ChatPromptService {
+  return {
+    build: vi.fn((request: { readonly messages: ChatModelRequest["messages"] }) =>
+      Promise.resolve({
+        estimatedHistoryTokens: 0,
+        estimatedInputTokens: 0,
+        estimatedProjectTokens: 0,
+        messages: request.messages,
+      }),
+    ),
+  } as unknown as ChatPromptService;
 }
 
 describe("ChatGateway", () => {
@@ -243,6 +259,71 @@ describe("ChatGateway", () => {
       expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:delta", "chat:completed"]);
     });
     expect(modelCalls).toBe(1);
+  });
+
+  it("passes the project ID to prompt assembly before invoking the model", async () => {
+    const durableChatService = new InMemoryDurableChatService();
+    const buildPrompt = vi.fn((request: { readonly messages: ChatModelRequest["messages"] }) =>
+      Promise.resolve({
+        estimatedHistoryTokens: 0,
+        estimatedInputTokens: 0,
+        estimatedProjectTokens: 0,
+        messages: request.messages,
+      }),
+    );
+    const chatPromptService = { build: buildPrompt } as unknown as ChatPromptService;
+    const chatModel = createChatModel(async function* (): AsyncGenerator<ChatModelEvent> {
+      await Promise.resolve();
+      yield { type: "completed" };
+    });
+    const gateway = createGateway(chatModel, durableChatService, logger, chatPromptService);
+    const socket = createSocket();
+
+    gateway.handleChatSend(socket, {
+      ...command,
+      projectId: "2d2e5770-f08e-48d5-871b-36bf734f535c",
+    });
+
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toContain("chat:completed");
+    });
+    expect(buildPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: "2d2e5770-f08e-48d5-871b-36bf734f535c",
+      }),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("persists cancellation while prompt context is still being prepared", async () => {
+    const durableChatService = new InMemoryDurableChatService();
+    const chatModel = createChatModel(async function* (): AsyncGenerator<ChatModelEvent> {
+      await Promise.resolve();
+      yield { type: "completed" };
+    });
+    const chatPromptService = {
+      build: vi.fn(async (_request: unknown, signal: AbortSignal): Promise<never> => {
+        await new Promise<void>((resolve) => {
+          signal.addEventListener("abort", resolve, { once: true });
+        });
+        throw new ChatModelError("GENERATION_CANCELLED", "Generation was cancelled.");
+      }),
+    } as unknown as ChatPromptService;
+    const gateway = createGateway(chatModel, durableChatService, logger, chatPromptService);
+    const socket = createSocket();
+
+    gateway.handleChatSend(socket, command);
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted"]);
+    });
+    gateway.handleChatCancel(socket, {
+      requestId: command.requestId,
+      sessionId: command.sessionId,
+    });
+
+    await vi.waitFor(() => {
+      expect(socket.emitted.map((entry) => entry.event)).toEqual(["chat:accepted", "chat:cancelled"]);
+    });
   });
 
   it("rejects a concurrent request and persists cancellation after the active request is stopped", async () => {

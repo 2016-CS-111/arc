@@ -136,6 +136,10 @@ export class OllamaChatModelAdapter implements ChatModelPort {
           body: JSON.stringify({
             model,
             messages: request.messages,
+            options: {
+              num_ctx: this.config.chatContext.contextWindowTokens,
+              num_predict: this.config.chatContext.outputReserveTokens,
+            },
             stream: true,
           }),
         },

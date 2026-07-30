@@ -8,6 +8,7 @@ import type {
   DurableChatService,
 } from "../../../../ai-server/src/modules/chat/application/durable-chat.service.js";
 import { SendChatMessageService } from "../../../../ai-server/src/modules/chat/application/send-chat-message.service.js";
+import type { ChatPromptService } from "../../../../ai-server/src/modules/context/application/chat-prompt.service.js";
 import { ChatModelError } from "../../../../ai-server/src/modules/inference/domain/chat-model.errors.js";
 import type {
   ChatModelEvent,
@@ -138,6 +139,15 @@ class InProcessGatewayTransport implements ChatTransportPort {
     this.gateway = new ChatGateway(
       new ActiveGenerationRegistry(),
       new InMemoryDurableChatService() as unknown as DurableChatService,
+      {
+        build: (request) =>
+          Promise.resolve({
+            estimatedHistoryTokens: 0,
+            estimatedInputTokens: 0,
+            estimatedProjectTokens: 0,
+            messages: request.messages,
+          }),
+      } as ChatPromptService,
       new SendChatMessageService(chatModel),
       logger,
     );

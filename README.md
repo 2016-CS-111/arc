@@ -6,7 +6,8 @@ Arc is a self-hosted AI software engineering platform built as three independent
 2. A local NestJS AI backend server.
 3. Local AI infrastructure such as Ollama, PostgreSQL, pgvector, and Redis.
 
-Milestone 1 establishes the TypeScript monorepo foundation and a runnable backend health check.
+Milestones 1 through 6 complete the Arc MVP: durable local chat, project registration, source
+intelligence, semantic retrieval, and grounded project context.
 
 ## Workspace
 
@@ -146,6 +147,25 @@ pnpm chat:cancel-smoke
 
 `chat:cancel-smoke` cancels as soon as the gateway accepts the request and exits successfully only
 when it receives the correlated cancellation event.
+
+Milestone 6 adds grounded project chat. The extension sends the registered project UUID with each
+prompt; the backend performs hybrid retrieval, hash-verifies selected source ranges, applies one
+model-input budget, and falls back to ordinary chat when context is unavailable. Configure it with:
+
+```txt
+ARC_CHAT_CONTEXT_WINDOW_TOKENS=8192
+ARC_CHAT_OUTPUT_RESERVE_TOKENS=2048
+ARC_CHAT_PROJECT_CONTEXT_TOKENS=3072
+ARC_CHAT_HISTORY_TOKENS=2560
+ARC_CHAT_CONTEXT_RESULT_LIMIT=12
+ARC_CHAT_CONTEXT_MAX_SNIPPET_BYTES=8192
+```
+
+To exercise socket chat against an already indexed project:
+
+```sh
+ARC_CHAT_SMOKE_PROJECT_ID=<project-uuid> pnpm chat:socket-smoke "Explain this project."
+```
 
 For manual development, run these from separate terminals:
 

@@ -224,6 +224,23 @@ describe("ChatSessionController", () => {
     ]);
   });
 
+  it("adds the currently registered project ID to each send", () => {
+    const transport = new FakeChatTransport();
+    const controller = new ChatSessionController({
+      projectIdProvider: () => "2d2e5770-f08e-48d5-871b-36bf734f535c",
+      session: createSession(),
+      transport,
+    });
+
+    controller.connect();
+    controller.submit("Explain this project");
+
+    expect(transport.sent[0]).toMatchObject({
+      content: "Explain this project",
+      projectId: "2d2e5770-f08e-48d5-871b-36bf734f535c",
+    });
+  });
+
   it("forwards cancellation and waits for the backend cancellation event", () => {
     const transport = new FakeChatTransport();
     const controller = new ChatSessionController({ session: createSession(), transport });

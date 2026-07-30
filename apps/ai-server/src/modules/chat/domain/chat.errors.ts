@@ -1,5 +1,6 @@
 import type { ChatError, ChatErrorCode } from "@arc/contracts";
 
+import { ChatContextWindowExceededError } from "../../context/domain/chat-context.errors.js";
 import { ChatModelError } from "../../inference/domain/chat-model.errors.js";
 
 export function createChatError(code: ChatErrorCode, message: string, retryable: boolean): ChatError {
@@ -11,6 +12,14 @@ export function createChatError(code: ChatErrorCode, message: string, retryable:
 }
 
 export function toChatError(error: unknown): ChatError {
+  if (error instanceof ChatContextWindowExceededError) {
+    return createChatError(
+      "context_window_exceeded",
+      "The message is too large for Arc's configured local model context window.",
+      false,
+    );
+  }
+
   if (!(error instanceof ChatModelError)) {
     return createChatError("generation_failed", "The local model could not complete the request.", true);
   }

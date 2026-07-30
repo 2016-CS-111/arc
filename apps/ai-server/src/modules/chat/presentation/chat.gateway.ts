@@ -20,6 +20,8 @@ import {
 } from "@nestjs/websockets";
 
 import { ARC_LOGGER } from "../../logger/logger.constants.js";
+import { ChatPromptService } from "../../context/application/chat-prompt.service.js";
+import type { ChatModelMessage } from "../../inference/domain/chat-model.types.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
 import { ChatGenerationLifecycleLogger } from "../application/chat-generation-lifecycle.logger.js";
 import { DurableChatService, type DurableChatPreparation } from "../application/durable-chat.service.js";
@@ -40,6 +42,8 @@ export class ChatGateway implements OnGatewayDisconnect {
     private readonly activeGenerationRegistry: ActiveGenerationRegistry,
     @Inject(DurableChatService)
     private readonly durableChatService: DurableChatService,
+    @Inject(ChatPromptService)
+    private readonly chatPromptService: ChatPromptService,
     @Inject(SendChatMessageService)
     private readonly sendChatMessageService: SendChatMessageService,
     @Inject(ARC_LOGGER) private readonly logger: Logger,
@@ -151,12 +155,33 @@ export class ChatGateway implements OnGatewayDisconnect {
         return;
       }
 
-      await this.streamResponse(client, command, preparation, signal, lifecycle);
+      const prompt = await this.chatPromptService.build(
+        {
+          messages: preparation.modelMessages,
+          ...(command.projectId === undefined ? {} : { projectId: command.projectId }),
+          requestId: command.requestId,
+          sessionId: command.sessionId,
+        },
+        signal,
+      );
+      await this.streamResponse(client, command, preparation, prompt.messages, signal, lifecycle);
     } catch (error) {
       const chatError = toChatError(error);
-      await this.persistFailure(command, "", chatError);
-      this.emitError(client, command.requestId, command.sessionId, chatError);
-      lifecycle.failed(chatError.code);
+      if (chatError.code === "generation_cancelled") {
+        await this.persistCancellation(command, "");
+        client.emit(
+          "chat:cancelled",
+          ChatCancelledEventSchema.parse({
+            requestId: command.requestId,
+            sessionId: command.sessionId,
+          }),
+        );
+        lifecycle.cancelled();
+      } else {
+        await this.persistFailure(command, "", chatError);
+        this.emitError(client, command.requestId, command.sessionId, chatError);
+        lifecycle.failed(chatError.code);
+      }
     } finally {
       this.activeGenerationRegistry.complete(scope);
     }
@@ -166,13 +191,14 @@ export class ChatGateway implements OnGatewayDisconnect {
     client: ChatSocket,
     command: ChatSendCommand,
     preparation: Extract<DurableChatPreparation, { readonly type: "new" }>,
+    modelMessages: readonly ChatModelMessage[],
     signal: AbortSignal,
     lifecycle: ChatGenerationLifecycleLogger,
   ): Promise<void> {
     let assistantContent = preparation.assistantMessage.content;
 
     try {
-      for await (const event of this.sendChatMessageService.stream(preparation.modelMessages, signal)) {
+      for await (const event of this.sendChatMessageService.stream(modelMessages, signal)) {
         if (event.type === "delta") {
           assistantContent += event.content;
           const persisted = await this.durableChatService.stream(

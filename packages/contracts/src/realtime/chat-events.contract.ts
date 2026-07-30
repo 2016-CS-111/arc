@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { ProjectIdSchema } from "../api/project.contract.js";
+
 const ChatIdentifierSchema = z.string().min(1).max(160);
 const ChatSessionIdSchema = z.string().uuid();
 
@@ -7,6 +9,7 @@ export const ChatSendCommandSchema = z.object({
   requestId: ChatIdentifierSchema,
   sessionId: ChatSessionIdSchema,
   content: z.string().trim().min(1).max(20_000),
+  projectId: ProjectIdSchema.optional(),
 });
 
 export const ChatCancelCommandSchema = z.object({
@@ -23,6 +26,7 @@ export const ChatErrorCodeSchema = z.enum([
   "model_missing",
   "generation_timeout",
   "generation_cancelled",
+  "context_window_exceeded",
   "generation_failed",
 ]);
 

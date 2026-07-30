@@ -20,6 +20,14 @@ function createConfig(model: string | null = defaultModel): AppConfig {
     host: "127.0.0.1",
     port: 7331,
     corsOrigin: "*",
+    chatContext: {
+      contextWindowTokens: 8_192,
+      historyTokens: 2_560,
+      maxSnippetBytes: 8_192,
+      outputReserveTokens: 2_048,
+      projectContextTokens: 3_072,
+      resultLimit: 12,
+    },
     ollama: {
       baseUrl: "http://127.0.0.1:11434",
       requestTimeoutMs: 30_000,
@@ -146,6 +154,15 @@ describe("OllamaChatModelAdapter", () => {
         },
       },
     ]);
+    const body = fetchMock.mock.calls[0]?.[1]?.body;
+    expect(typeof body).toBe("string");
+    const requestBody = JSON.parse(body as string) as Record<string, unknown>;
+    expect(requestBody).toMatchObject({
+      options: {
+        num_ctx: 8_192,
+        num_predict: 2_048,
+      },
+    });
   });
 
   it("turns a mid-stream Ollama error into a typed request failure", async () => {

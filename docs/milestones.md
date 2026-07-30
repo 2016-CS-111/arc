@@ -1266,3 +1266,302 @@ Delivered:
   hybrid retrieval, recovery, privacy, and project cleanup.
 
 Milestone 5 is complete. Prompt context selection and source rehydration begin in Milestone 6.
+
+## Milestone 6: Grounded Project Chat
+
+Status: Complete.
+
+Goal: add bounded, relevant, hash-verified project context to the existing durable local chat
+without adding persistence for source text, retrieval-query copies, or assembled prompts.
+
+Architecture:
+
+- The VSCode extension adds the registered project ID to each chat request.
+- The backend owns retrieval, source rehydration, context selection, budgeting, and prompt assembly.
+- Selected ranges are re-read through the registered root and accepted only when source hashes
+  still match.
+- Repository content is treated as untrusted reference data.
+- Project context and completed conversation history share one deterministic model-input budget.
+- Context failure falls back to ordinary chat; it does not break durable streaming.
+
+Delivered:
+
+- Bounded context-window, output-reserve, project-context, history, retrieval, and snippet
+  configuration with explicit Ollama `num_ctx` and `num_predict`.
+- Class-based deterministic history budgeting and prompt assembly.
+- Backend-only, hash-verified UTF-8 source-range rehydration with one read per selected file,
+  overlap removal, exact chunk verification, and transient snippets.
+- Existing BGE-M3 hybrid search composed with deterministic ranked selection and safe fallback.
+- Optional registered `projectId` transport from VSCode without client-supplied paths or source.
+- Durable replay, streaming, persistence, and cancellation preserved across retrieval and model
+  generation.
+- Safe oversized-context presentation and metadata-only lifecycle logging.
+- Full 421-test suite, lint, TypeScript build, compiled NestJS startup, and live local acceptance.
+- Live acceptance selected three verified snippets and made Qwen 2.5 Coder return the exact value
+  from a temporary indexed project; all temporary PostgreSQL rows were removed.
+
+Milestones 1 through 6 and the Arc chat MVP are complete. The complete design and delivery record
+are in `docs/milestone-6-architecture.md`.
+
+## Fixed Future Roadmap
+
+This is the complete top-level ARC roadmap. It contains 20 major milestones:
+
+- Milestones 1-6: complete chat, project intelligence, retrieval, and grounded context.
+- Milestones 7-16: planned core self-hosted AI software engineer.
+- Milestones 17-20: optional platform expansion.
+
+Future implementation may divide these milestones into the numbered gates already listed below,
+but it must not add another top-level milestone without explicit user approval.
+
+## Milestone 7: Tool Runtime and Permissions
+
+Status: Planned.
+
+Goal: let the model request typed backend tools through one cancellable, permission-aware runtime
+without giving it direct Node.js, filesystem, Git, or shell access.
+
+Fixed gates:
+
+- 7.1 Shared tool-call, result, error, progress, and approval contracts.
+- 7.2 Class-based tool registry, dispatcher, lifecycle, cancellation, timeout, and output limits.
+- 7.3 Workspace/project scope validation and per-tool permission policy.
+- 7.4 Ollama tool-call adapter plus deterministic fallback parsing for models without native tools.
+- 7.5 Durable chat integration, metadata-only audit events, loop limits, and acceptance.
+
+Exit: a chat turn can execute registered harmless fixture tools safely; no real workspace mutation
+is enabled yet.
+
+## Milestone 8: Read-Only Workspace and Git Tools
+
+Status: Planned.
+
+Goal: give Arc bounded inspection tools before enabling any mutation.
+
+Fixed gates:
+
+- 8.1 List directories and read bounded text ranges through registered project roots.
+- 8.2 Exact text, regex, filename, symbol, and semantic search with deterministic limits.
+- 8.3 Read-only Git status, diff, log, show, branch, and blame adapters.
+- 8.4 Tool-result context budgeting, source citations, and compact chat presentation.
+- 8.5 Symlink, binary, ignored-path, large-file, repository-boundary, cancellation, and privacy
+  acceptance.
+
+Exit: Arc can investigate a project and Git history without changing files, refs, or processes.
+
+## Milestone 9: Safe File Editing and Diff Approval
+
+Status: Planned.
+
+Goal: support transparent file changes that are previewed and explicitly approved before apply.
+
+Fixed gates:
+
+- 9.1 Structured create, update, rename, move, and delete patch contracts.
+- 9.2 Hash-based conflict detection, path containment, ignore policy, and edit-size limits.
+- 9.3 VSCode multi-file diff preview with approve, reject, and partial-selection controls.
+- 9.4 Atomic apply, rollback on failure, and one-session undo records.
+- 9.5 Formatting hooks, changed-file validation, concurrent-edit handling, and acceptance.
+
+Exit: Arc can propose and safely apply reversible multi-file edits only after approval.
+
+## Milestone 10: Terminal, Task Runner, and Git Mutation
+
+Status: Planned.
+
+Goal: run approved development commands and intentional Git mutations through bounded local
+process adapters.
+
+Fixed gates:
+
+- 10.1 Structured command, working-directory, environment, approval, and result contracts.
+- 10.2 Process streaming, cancellation, timeout, output truncation, and process-tree cleanup.
+- 10.3 Presets for tests, lint, type-check, build, package scripts, and package-manager detection.
+- 10.4 Approved Git add, commit, branch, merge, restore, and stash operations with protected-command
+  policy.
+- 10.5 Separately gated Docker and arbitrary-shell execution.
+- 10.6 VSCode terminal/result presentation, audit metadata, failure recovery, and acceptance.
+
+Exit: Arc can run and report development tasks without hidden commands or unrestricted shell
+access.
+
+## Milestone 11: Local Long-Term Memory
+
+Status: Planned.
+
+Goal: remember useful architecture, conventions, business rules, and developer preferences locally
+without silently treating chat history as truth.
+
+Fixed gates:
+
+- 11.1 Typed user, project, architecture, convention, decision, and business-rule memory records.
+- 11.2 Explicit remember, update, forget, pin, expiry, provenance, and confidence lifecycle.
+- 11.3 Local embedding, hybrid retrieval, deduplication, contradiction handling, and prompt budget.
+- 11.4 VSCode memory inspection and management UI.
+- 11.5 Privacy, project isolation, stale-memory, deletion, export/import, and acceptance.
+
+Exit: Arc retrieves user-approved durable memories and users can inspect or delete every record.
+
+## Milestone 12: Advanced Project Intelligence
+
+Status: Planned.
+
+Goal: extend static understanding beyond imports and framework catalogs.
+
+Fixed gates:
+
+- 12.1 Incremental call, reference, inheritance, and implementation graphs.
+- 12.2 Database relationship graphs for Sequelize first, followed by PostgreSQL and MongoDB schema
+  adapters.
+- 12.3 Jobs, queues, workers, cron, ETL, GraphQL, REST client, configuration, and environment
+  inventories.
+- 12.4 README and architecture-document correlation with source-backed evidence.
+- 12.5 Additional language/parser adapter contract and prioritized language packs.
+- 12.6 Freshness, bounded graph queries, privacy, incremental reuse, and acceptance.
+
+Exit: Arc can answer cross-file flow and data-model questions from explicit, fresh provenance.
+
+## Milestone 13: Inline Completion
+
+Status: Planned.
+
+Goal: provide low-latency local code completion through VSCode's inline completion API.
+
+Fixed gates:
+
+- 13.1 Provider-neutral fill-in-the-middle completion port and model capability detection.
+- 13.2 Prefix, suffix, language, nearby-symbol, import, and bounded project context builder.
+- 13.3 Debounce, cancellation, cache, concurrency, stale-document, and latency controls.
+- 13.4 VSCode inline provider, enablement settings, accept/dismiss behavior, and local-only metrics.
+- 13.5 Quality corpus, latency targets for 3B and 7B profiles, privacy, and acceptance.
+
+Exit: Arc offers responsive, cancellable inline suggestions without blocking normal editing.
+
+## Milestone 14: Code Actions and Guided Refactors
+
+Status: Planned.
+
+Goal: expose focused explain, fix, refactor, test, and documentation workflows from editor context.
+
+Fixed gates:
+
+- 14.1 VSCode code-action contracts for selections, files, symbols, and diagnostics.
+- 14.2 Explain, fix diagnostic, simplify, extract, rename, add tests, and add documentation actions.
+- 14.3 Reuse grounded context, read-only tools, and safe editing rather than duplicate pipelines.
+- 14.4 Multi-file refactor planning, diff approval, validation commands, and undo.
+- 14.5 Availability rules, cancellation, stale-editor protection, and acceptance.
+
+Exit: common editor actions produce reviewable changes through the same safety model as chat.
+
+## Milestone 15: Autonomous Task Execution
+
+Status: Planned.
+
+Goal: execute bounded software tasks as visible plans with checkpoints, approvals, and stop
+conditions.
+
+Fixed gates:
+
+- 15.1 Task decomposition, dependency ordering, estimates, and user-editable plans.
+- 15.2 Sequential tool loop with state machine, budgets, checkpoints, pause, resume, and cancel.
+- 15.3 Edit, test, inspect failure, repair, and rerun cycle with strict iteration ceilings.
+- 15.4 Approval boundaries for writes, commands, Git mutations, Docker, and destructive actions.
+- 15.5 Durable task journal, restart recovery, final diff/test report, and rollback guidance.
+- 15.6 Loop, repetition, prompt-injection, partial-failure, and end-to-end acceptance.
+
+Exit: Arc can finish bounded development tasks without hiding work or running indefinitely.
+
+## Milestone 16: Production Hardening and Distribution
+
+Status: Planned.
+
+Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
+recover.
+
+Fixed gates:
+
+- 16.1 Threat model, permission profiles, audit review, dependency scanning, and secret redaction.
+- 16.2 Structured observability, health diagnostics, crash recovery, backup/restore, and retention.
+- 16.3 Retrieval, completion, edit, tool, and agent evaluation suites with performance budgets.
+- 16.4 Redis-backed queues/cache only where measured concurrency or recovery requires them.
+- 16.5 VSIX packaging, setup doctor, migration runner, model checks, and upgrade/uninstall flow.
+- 16.6 Intel and Apple Silicon macOS, Linux, and Windows compatibility matrix.
+- 16.7 Release checklist, signed artifacts, documentation, and final local-product acceptance.
+
+Exit: ARC can be installed and maintained as a production-quality self-hosted developer tool.
+
+## Optional Platform Expansion
+
+Milestones 17-20 are documented now for visibility but are not required for the single-user local
+product. They begin only after explicit approval.
+
+## Milestone 17: Multi-Model and Provider Routing
+
+Status: Optional.
+
+Goal: support Ollama, llama.cpp, and compatible local or explicitly configured remote providers.
+
+Fixed gates:
+
+- 17.1 Capability, context-window, tokenizer, tool, embedding, and fill-in-the-middle discovery.
+- 17.2 Per-workflow model profiles and hardware-aware routing.
+- 17.3 Warm-model, fallback, retry, cancellation, and cost/privacy policy.
+- 17.4 Benchmark-driven model selection UI and acceptance.
+
+Exit: provider changes do not alter chat, tool, completion, or agent application contracts.
+
+## Milestone 18: Extensibility, MCP, and Domain Adapters
+
+Status: Optional.
+
+Goal: add third-party capabilities without weakening the core permission boundary.
+
+Fixed gates:
+
+- 18.1 Versioned plugin, tool, analyzer, memory-source, and prompt-extension manifests.
+- 18.2 Sandboxed loading, declared permissions, compatibility checks, and disable/uninstall flow.
+- 18.3 MCP client support through the same registry, approval, timeout, and audit policies.
+- 18.4 Domain adapters for OCR, Puppeteer, Business Central, cloud APIs, and other explicit needs.
+- 18.5 Developer SDK, sample plugin, conformance suite, and acceptance.
+
+Exit: optional integrations are discoverable, removable, permission-scoped, and isolated.
+
+## Milestone 19: Next.js Dashboard and Headless Clients
+
+Status: Optional.
+
+Goal: expose backend administration and task workflows outside VSCode while keeping NestJS as the
+platform boundary.
+
+Fixed gates:
+
+- 19.1 Versioned client API and authentication suitable for local deployment.
+- 19.2 Next.js dashboard for projects, indexes, models, memories, tasks, permissions, and logs.
+- 19.3 Monaco-based review for prompts, plans, diffs, and task artifacts.
+- 19.4 CLI and headless automation client using the same contracts.
+- 19.5 Responsive, accessibility, security, and acceptance pass.
+
+Exit: web and CLI clients reuse backend behavior instead of reimplementing orchestration.
+
+## Milestone 20: Team and Remote Self-Hosting
+
+Status: Optional.
+
+Goal: extend ARC from one trusted local user to controlled multi-user deployment.
+
+Fixed gates:
+
+- 20.1 Users, workspaces, roles, authentication, sessions, and tenant isolation.
+- 20.2 Remote repository agents and encrypted transport.
+- 20.3 Shared versus private projects, memories, approvals, tasks, and audit records.
+- 20.4 PostgreSQL/Redis scaling, queues, rate limits, quotas, backup, and disaster recovery.
+- 20.5 Deployment manifests, secrets management, administrator controls, and security acceptance.
+
+Exit: multiple users can share one self-hosted ARC deployment without crossing project or
+permission boundaries.
+
+## Roadmap Boundary
+
+Milestone 20 is the fixed roadmap ceiling. Language packs, framework analyzers, domain integrations,
+and future UI improvements must fit inside Milestones 12, 18, or 19 rather than creating surprise
+top-level milestones.

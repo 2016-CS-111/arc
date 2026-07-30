@@ -3,6 +3,7 @@ import type { ChatClientError } from "../../src/features/chat/chatWebview.contra
 const errorMessages: Readonly<Record<string, string>> = {
   client_timeout: "Arc stopped waiting because no model activity was received.",
   connection_unavailable: "Connection to Arc was lost. Reconnect before sending a new prompt.",
+  context_window_exceeded: "This prompt is too large for the configured local model context window.",
   generation_cancelled: "Generation was cancelled.",
   generation_failed: "The local model could not complete the request.",
   generation_not_found: "That generation is no longer active.",

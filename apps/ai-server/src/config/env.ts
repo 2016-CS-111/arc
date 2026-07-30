@@ -16,7 +16,7 @@ const databaseUrlSchema = z
     return protocol === "postgres:" || protocol === "postgresql:";
   }, "ARC_DATABASE_URL must use the postgres or postgresql protocol.");
 
-const rawEnvSchema = z.object({
+const rawEnvObjectSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   ARC_SERVER_HOST: z.string().min(1).default("127.0.0.1"),
   ARC_SERVER_PORT: z.coerce.number().int().positive().max(65535).default(7331),
@@ -35,6 +35,12 @@ const rawEnvSchema = z.object({
   ARC_OLLAMA_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(900_000).default(300_000),
   ARC_OLLAMA_READINESS_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
+  ARC_CHAT_CONTEXT_WINDOW_TOKENS: z.coerce.number().int().min(2_048).max(131_072).default(8_192),
+  ARC_CHAT_OUTPUT_RESERVE_TOKENS: z.coerce.number().int().min(128).max(32_768).default(2_048),
+  ARC_CHAT_PROJECT_CONTEXT_TOKENS: z.coerce.number().int().nonnegative().max(65_536).default(3_072),
+  ARC_CHAT_HISTORY_TOKENS: z.coerce.number().int().nonnegative().max(65_536).default(2_560),
+  ARC_CHAT_CONTEXT_RESULT_LIMIT: z.coerce.number().int().min(1).max(50).default(12),
+  ARC_CHAT_CONTEXT_MAX_SNIPPET_BYTES: z.coerce.number().int().min(256).max(65_536).default(8_192),
   ARC_OLLAMA_EMBEDDING_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1_024),
   ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
@@ -88,6 +94,28 @@ const rawEnvSchema = z.object({
   ARC_PROJECT_FRAMEWORK_CATALOG_MAX_RELATIONSHIPS: z.coerce.number().int().positive().max(10_000).default(1_000),
 });
 
+const rawEnvSchema = rawEnvObjectSchema.superRefine((value, context) => {
+  const inputTokens = value.ARC_CHAT_CONTEXT_WINDOW_TOKENS - value.ARC_CHAT_OUTPUT_RESERVE_TOKENS;
+  if (inputTokens <= 0) {
+    context.addIssue({
+      code: "custom",
+      message: "ARC_CHAT_OUTPUT_RESERVE_TOKENS must be smaller than ARC_CHAT_CONTEXT_WINDOW_TOKENS.",
+      path: ["ARC_CHAT_OUTPUT_RESERVE_TOKENS"],
+    });
+    return;
+  }
+
+  for (const key of ["ARC_CHAT_PROJECT_CONTEXT_TOKENS", "ARC_CHAT_HISTORY_TOKENS"] as const) {
+    if (value[key] > inputTokens) {
+      context.addIssue({
+        code: "custom",
+        message: `${key} cannot exceed the available chat input budget.`,
+        path: [key],
+      });
+    }
+  }
+});
+
 export interface AppConfig {
   readonly nodeEnv: "development" | "test" | "production";
   readonly host: string;
@@ -103,6 +131,14 @@ export interface AppConfig {
     readonly model?: string;
     readonly requestTimeoutMs: number;
     readonly readinessTimeoutMs: number;
+  };
+  readonly chatContext: {
+    readonly contextWindowTokens: number;
+    readonly outputReserveTokens: number;
+    readonly projectContextTokens: number;
+    readonly historyTokens: number;
+    readonly resultLimit: number;
+    readonly maxSnippetBytes: number;
   };
   readonly embedding: {
     readonly model?: string;
@@ -193,6 +229,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     host: parsed.ARC_SERVER_HOST,
     port: parsed.ARC_SERVER_PORT,
     corsOrigin: parsed.ARC_CORS_ORIGIN,
+    chatContext: {
+      contextWindowTokens: parsed.ARC_CHAT_CONTEXT_WINDOW_TOKENS,
+      historyTokens: parsed.ARC_CHAT_HISTORY_TOKENS,
+      maxSnippetBytes: parsed.ARC_CHAT_CONTEXT_MAX_SNIPPET_BYTES,
+      outputReserveTokens: parsed.ARC_CHAT_OUTPUT_RESERVE_TOKENS,
+      projectContextTokens: parsed.ARC_CHAT_PROJECT_CONTEXT_TOKENS,
+      resultLimit: parsed.ARC_CHAT_CONTEXT_RESULT_LIMIT,
+    },
     database,
     embedding,
     ollama,

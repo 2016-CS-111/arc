@@ -16,6 +16,14 @@ describe("loadConfig", () => {
       sync: false,
       url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     });
+    expect(config.chatContext).toEqual({
+      contextWindowTokens: 8_192,
+      historyTokens: 2_560,
+      maxSnippetBytes: 8_192,
+      outputReserveTokens: 2_048,
+      projectContextTokens: 3_072,
+      resultLimit: 12,
+    });
     expect(config.embedding).toEqual({
       dimensions: 1_024,
       timeoutMs: 300_000,
@@ -90,6 +98,12 @@ describe("loadConfig", () => {
       ARC_PROJECT_EMBEDDING_MAX_TOTAL_CHUNKS: "500",
       ARC_OLLAMA_READINESS_TIMEOUT_MS: "2500",
       ARC_OLLAMA_REQUEST_TIMEOUT_MS: "120000",
+      ARC_CHAT_CONTEXT_WINDOW_TOKENS: "16384",
+      ARC_CHAT_OUTPUT_RESERVE_TOKENS: "4096",
+      ARC_CHAT_PROJECT_CONTEXT_TOKENS: "6144",
+      ARC_CHAT_HISTORY_TOKENS: "4096",
+      ARC_CHAT_CONTEXT_RESULT_LIMIT: "8",
+      ARC_CHAT_CONTEXT_MAX_SNIPPET_BYTES: "4096",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
       ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
@@ -144,6 +158,14 @@ describe("loadConfig", () => {
       connectTimeoutMs: 8_000,
       sync: true,
       url: "postgres://arc:arc@localhost:5433/arc_test",
+    });
+    expect(config.chatContext).toEqual({
+      contextWindowTokens: 16_384,
+      historyTokens: 4_096,
+      maxSnippetBytes: 4_096,
+      outputReserveTokens: 4_096,
+      projectContextTokens: 6_144,
+      resultLimit: 8,
     });
     expect(config.embedding).toEqual({
       dimensions: 768,
@@ -217,5 +239,15 @@ describe("loadConfig", () => {
 
   it("rejects an invalid database sync value", () => {
     expect(() => loadConfig({ ARC_DATABASE_SYNC: "sometimes" })).toThrow();
+  });
+
+  it("rejects chat allocations larger than the available input budget", () => {
+    expect(() =>
+      loadConfig({
+        ARC_CHAT_CONTEXT_WINDOW_TOKENS: "4096",
+        ARC_CHAT_OUTPUT_RESERVE_TOKENS: "2048",
+        ARC_CHAT_PROJECT_CONTEXT_TOKENS: "3072",
+      }),
+    ).toThrow();
   });
 });

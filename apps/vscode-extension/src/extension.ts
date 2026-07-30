@@ -15,13 +15,17 @@ import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTranspo
 
 export function activate(context: vscode.ExtensionContext): void {
   const backendConfig = readBackendConfig();
-  const chatSession = new ChatSessionController({
-    conversationClient: new ConversationClient(backendConfig.url),
-    transport: new SocketIoChatTransport(backendConfig.url),
-  });
   const projectClient = new ProjectClient(backendConfig.url);
   const projectStore = new WorkspaceProjectStore(context.workspaceState);
   const folderSelector = new WorkspaceFolderSelector();
+  const chatSession = new ChatSessionController({
+    conversationClient: new ConversationClient(backendConfig.url),
+    projectIdProvider: () => {
+      const folder = folderSelector.preferred();
+      return folder === undefined ? undefined : projectStore.get(folder.uri.toString())?.id;
+    },
+    transport: new SocketIoChatTransport(backendConfig.url),
+  });
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
   const sourceIntelligenceController = new SourceIntelligenceController(projectClient, projectStore, folderSelector);
   const registerWorkspaceCommand = new RegisterWorkspaceCommand(projectClient, projectStore, folderSelector, (folder) =>

@@ -88,8 +88,9 @@ are deferred to Milestone 2.5.
 Milestone 2.4.2 introduces a provider-neutral `ChatTransportPort` in the extension host and a
 Socket.IO implementation for the backend `/chat` namespace. The transport validates every backend
 event against the shared contracts before the session controller can use it. The session controller
-sends only the current user prompt and correlation identifiers; the backend owns retained context.
-It forwards normalized lifecycle updates to the webview.
+sends the current user prompt, correlation identifiers, and an optional registered project UUID;
+the backend owns retained conversation and project context. It forwards normalized lifecycle
+updates to the webview.
 
 The Socket.IO client connects lazily when the Arc view becomes ready and uses bounded automatic
 reconnection. A disconnect fails the active local generation with a retryable error; it never
@@ -589,10 +590,46 @@ The compatibility, chunking, durable vector-catalog, bounded semantic-search, me
 search, VSCode integration, and local acceptance gates are complete. The complete design is in
 `docs/milestone-5-architecture.md`.
 
+## Grounded Project Chat
+
+Milestone 6 connects semantic retrieval to the existing durable chat path without making source
+text durable. The extension sends only the registered project ID; the backend owns search,
+hash-verified range rehydration, deterministic context selection, and prompt assembly.
+
+```mermaid
+flowchart LR
+  Chat["Chat request + project ID"] --> Search["Bounded hybrid search"]
+  Search --> Read["Hash-verified range read"]
+  Read --> Context["Transient context budget"]
+  History["Completed conversation history"] --> Context
+  Context --> Model["Existing local chat model"]
+  Model --> Stream["Existing durable stream"]
+```
+
+Project snippets are untrusted reference data. Arc rechecks the current source catalog and source
+hash before inclusion, omits stale or unsafe candidates, and never accepts client-supplied source
+content or root paths. Project context, conversation history, and output headroom share an explicit
+model budget. Retrieval failure falls back to ordinary chat.
+
+No prompt body, retrieval-query copy, or source snippet is stored or logged. The completed
+implementation preserves context-free chat, durable replay, streaming, and cancellation. The
+design and delivery record are documented in `docs/milestone-6-architecture.md`.
+
 ## Local Infrastructure
 
 Infrastructure is added only when a milestone needs it. PostgreSQL, pgvector, Redis, Ollama, and
 embedding workers belong here, not inside the VSCode extension.
+
+## Fixed Product Roadmap
+
+The complete roadmap is defined in `docs/milestones.md` and capped at 20 major milestones.
+Milestones 1-6 are complete. Milestones 7-16 cover the core self-hosted AI software engineer:
+tools, inspection, safe edits, terminal execution, memory, advanced intelligence, inline
+completion, code actions, autonomous tasks, and production distribution.
+
+Milestones 17-20 are optional provider, plugin, web/client, and team expansion. They are not
+requirements for the single-user local product. New language or framework support must fit the
+existing adapter milestones rather than silently creating another top-level milestone.
 
 ## Boundary Rule
 

@@ -19,6 +19,7 @@ export interface ChatSessionEventSubscription {
 
 export interface ChatSessionControllerOptions {
   readonly conversationClient?: ConversationClientPort;
+  readonly projectIdProvider?: () => string | undefined;
   readonly session?: InMemoryChatSessionController;
   readonly transport: ChatTransportPort;
   readonly watchdog?: GenerationWatchdog;
@@ -170,8 +171,10 @@ export class ChatSessionController {
     });
 
     try {
+      const projectId = this.options.projectIdProvider?.();
       this.options.transport.send({
         content: submission.content,
+        ...(projectId === undefined ? {} : { projectId }),
         requestId: submission.requestId,
         sessionId: submission.session.sessionId,
       });
