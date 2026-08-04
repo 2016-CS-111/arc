@@ -1468,7 +1468,7 @@ Implementation:
 
 ## Milestone 13: Inline Completion
 
-Status: Planned.
+Status: Complete.
 
 Goal: provide low-latency local code completion through VSCode's inline completion API.
 
@@ -1481,6 +1481,14 @@ Fixed gates:
 - 13.5 Quality corpus, latency targets for 3B and 7B profiles, privacy, and acceptance.
 
 Exit: Arc offers responsive, cancellable inline suggestions without blocking normal editing.
+
+Implementation:
+
+- `POST /completions` uses a provider-neutral prefix/suffix port; the Ollama adapter calls local `/api/generate` with `suffix` and bounded output tokens.
+- `GET /completions/status` exposes fill-in-the-middle capability detection for the configured model.
+- The VS Code provider builds bounded prefix/suffix, import, declaration, language, path, project, and document-version context without transmitting source outside local Arc.
+- Per-document requests debounce, cancel previous work, reject stale document versions, cache exact request results, and retain only local latency/cancellation counters.
+- `arc.inlineCompletions.enabled`, `arc.inlineCompletions.debounceMs`, and `arc.inlineCompletions.maxTokens` are the user-facing controls. See `milestone-13-acceptance.md` for the 3B/7B local quality and latency profile.
 
 ## Milestone 14: Code Actions and Guided Refactors
 

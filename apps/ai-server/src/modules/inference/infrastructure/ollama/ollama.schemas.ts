@@ -20,6 +20,18 @@ export const OllamaShowResponseSchema = z
   })
   .passthrough();
 
+export const OllamaGenerateResponseSchema = z
+  .object({
+    done: z.boolean(),
+    eval_count: z.number().int().nonnegative().optional(),
+    model: z.string().min(1),
+    response: z.string().default(""),
+    total_duration: z.number().int().nonnegative().optional(),
+  })
+  .passthrough();
+
+export type OllamaGenerateResponse = z.infer<typeof OllamaGenerateResponseSchema>;
+
 const OllamaChatResponseSchema = z
   .object({
     created_at: z.string(),

@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { readBackendConfig } from "./config/backendConfig.js";
 import { ArcChatViewProvider } from "./features/chat/ArcChatViewProvider.js";
 import { ChatSessionController } from "./features/chat/ChatSessionController.js";
+import { ArcInlineCompletionProvider } from "./features/completions/ArcInlineCompletionProvider.js";
 import { EditDiffPreviewService } from "./features/edits/EditDiffPreviewService.js";
 import { TaskOutputService } from "./features/tasks/TaskOutputService.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
@@ -16,6 +17,7 @@ import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
 import { TaskProposalClient } from "./infrastructure/backend/TaskProposalClient.js";
 import { MemoryClient } from "./infrastructure/backend/MemoryClient.js";
+import { CompletionClient } from "./infrastructure/backend/CompletionClient.js";
 import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTransport.js";
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -37,6 +39,10 @@ export function activate(context: vscode.ExtensionContext): void {
     projectIdProvider,
     transport: new SocketIoChatTransport(backendConfig.url),
   });
+  const inlineCompletionProvider = new ArcInlineCompletionProvider(
+    new CompletionClient(backendConfig.url),
+    projectIdProvider,
+  );
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
   const sourceIntelligenceController = new SourceIntelligenceController(projectClient, projectStore, folderSelector);
   const registerWorkspaceCommand = new RegisterWorkspaceCommand(projectClient, projectStore, folderSelector, (folder) =>
@@ -65,6 +71,8 @@ export function activate(context: vscode.ExtensionContext): void {
     projectInventoryController,
     registerWorkspaceCommand,
     sourceIntelligenceController,
+    inlineCompletionProvider,
+    vscode.languages.registerInlineCompletionItemProvider({ scheme: "file" }, inlineCompletionProvider),
     vscode.window.registerWebviewViewProvider(ArcChatViewProvider.viewType, chatViewProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

@@ -1,4 +1,5 @@
 export * from "./api/chat.contract.js";
+export * from "./api/completion.contract.js";
 export * from "./api/conversation.contract.js";
 export * from "./api/edit.contract.js";
 export * from "./api/embedding-provider-status.contract.js";

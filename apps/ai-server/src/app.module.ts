@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { ConfigModule } from "./config/config.module.js";
+import { CompletionsModule } from "./modules/completions/completions.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { ChatModule } from "./modules/chat/chat.module.js";
 import { ConversationsModule } from "./modules/conversations/conversations.module.js";
@@ -21,6 +22,7 @@ import { TasksModule } from "./modules/tasks/tasks.module.js";
     LoggerModule,
     HealthModule,
     InferenceModule,
+    CompletionsModule,
     EmbeddingsModule,
     RealtimeModule,
     EditsModule,

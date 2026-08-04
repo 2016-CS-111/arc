@@ -35,6 +35,8 @@ const rawEnvObjectSchema = z.object({
   ARC_OLLAMA_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(900_000).default(300_000),
   ARC_OLLAMA_READINESS_TIMEOUT_MS: z.coerce.number().int().positive().max(30_000).default(5_000),
+  ARC_COMPLETION_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().max(120_000).default(20_000),
+  ARC_COMPLETION_MAX_TOKENS: z.coerce.number().int().positive().max(256).default(128),
   ARC_CHAT_CONTEXT_WINDOW_TOKENS: z.coerce.number().int().min(2_048).max(131_072).default(8_192),
   ARC_CHAT_OUTPUT_RESERVE_TOKENS: z.coerce.number().int().min(128).max(32_768).default(2_048),
   ARC_CHAT_PROJECT_CONTEXT_TOKENS: z.coerce.number().int().nonnegative().max(65_536).default(3_072),
@@ -145,6 +147,10 @@ export interface AppConfig {
     readonly requestTimeoutMs: number;
     readonly readinessTimeoutMs: number;
   };
+  readonly completion: {
+    readonly maxTokens: number;
+    readonly requestTimeoutMs: number;
+  };
   readonly chatContext: {
     readonly contextWindowTokens: number;
     readonly outputReserveTokens: number;
@@ -254,6 +260,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     sync: parsed.ARC_DATABASE_SYNC,
   };
 
+  const completion = {
+    maxTokens: parsed.ARC_COMPLETION_MAX_TOKENS,
+    requestTimeoutMs: parsed.ARC_COMPLETION_REQUEST_TIMEOUT_MS,
+  };
+
   const embedding = {
     dimensions: parsed.ARC_OLLAMA_EMBEDDING_DIMENSIONS,
     timeoutMs: parsed.ARC_OLLAMA_EMBEDDING_TIMEOUT_MS,
@@ -297,6 +308,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       maxSearchFiles: parsed.ARC_WORKSPACE_TOOL_MAX_SEARCH_FILES,
     },
     database,
+    completion,
     embedding,
     ollama,
     projectEmbedding: {
