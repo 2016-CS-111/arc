@@ -6,6 +6,7 @@ import type { ChatPromptService } from "../../context/application/chat-prompt.se
 import type { ChatModelPort } from "../../inference/application/chat-model.port.js";
 import { ChatModelError } from "../../inference/domain/chat-model.errors.js";
 import type { ChatModelEvent, ChatModelRequest, ChatModelStatus } from "../../inference/domain/chat-model.types.js";
+import type { ToolRuntimeService } from "../../tools/application/tool-runtime.service.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
 import type { DurableChatPreparation, DurableChatService } from "../application/durable-chat.service.js";
 import { SendChatMessageService } from "../application/send-chat-message.service.js";
@@ -192,7 +193,7 @@ function createGateway(
     new ActiveGenerationRegistry(),
     durableChatService as unknown as DurableChatService,
     chatPromptService,
-    new SendChatMessageService(chatModel),
+    new SendChatMessageService(chatModel, createToolRuntime()),
     gatewayLogger,
   );
 }
@@ -208,6 +209,16 @@ function createPassThroughPromptService(): ChatPromptService {
       }),
     ),
   } as unknown as ChatPromptService;
+}
+
+function createToolRuntime(): ToolRuntimeService {
+  return {
+    execute: async (): Promise<never> => {
+      throw new Error("Tool execution was not expected.");
+    },
+    getDefinitions: (): readonly [] => [],
+    getMaxCallsPerTurn: (): number => 4,
+  } as unknown as ToolRuntimeService;
 }
 
 describe("ChatGateway", () => {

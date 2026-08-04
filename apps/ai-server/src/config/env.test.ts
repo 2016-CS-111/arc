@@ -24,6 +24,11 @@ describe("loadConfig", () => {
       projectContextTokens: 3_072,
       resultLimit: 12,
     });
+    expect(config.tools).toEqual({
+      maxCallsPerTurn: 4,
+      maxResultChars: 8_192,
+      timeoutMs: 10_000,
+    });
     expect(config.embedding).toEqual({
       dimensions: 1_024,
       timeoutMs: 300_000,
@@ -104,6 +109,9 @@ describe("loadConfig", () => {
       ARC_CHAT_HISTORY_TOKENS: "4096",
       ARC_CHAT_CONTEXT_RESULT_LIMIT: "8",
       ARC_CHAT_CONTEXT_MAX_SNIPPET_BYTES: "4096",
+      ARC_TOOL_MAX_CALLS_PER_TURN: "3",
+      ARC_TOOL_TIMEOUT_MS: "5000",
+      ARC_TOOL_MAX_RESULT_CHARS: "4096",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
       ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
@@ -166,6 +174,11 @@ describe("loadConfig", () => {
       outputReserveTokens: 4_096,
       projectContextTokens: 6_144,
       resultLimit: 8,
+    });
+    expect(config.tools).toEqual({
+      maxCallsPerTurn: 3,
+      maxResultChars: 4_096,
+      timeoutMs: 5_000,
     });
     expect(config.embedding).toEqual({
       dimensions: 768,

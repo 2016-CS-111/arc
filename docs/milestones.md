@@ -1307,8 +1307,8 @@ are in `docs/milestone-6-architecture.md`.
 
 This is the complete top-level ARC roadmap. It contains 20 major milestones:
 
-- Milestones 1-6: complete chat, project intelligence, retrieval, and grounded context.
-- Milestones 7-16: planned core self-hosted AI software engineer.
+- Milestones 1-7: complete chat, project intelligence, grounded context, and the tool runtime.
+- Milestones 8-16: planned core self-hosted AI software engineer.
 - Milestones 17-20: optional platform expansion.
 
 Future implementation may divide these milestones into the numbered gates already listed below,
@@ -1316,7 +1316,7 @@ but it must not add another top-level milestone without explicit user approval.
 
 ## Milestone 7: Tool Runtime and Permissions
 
-Status: Planned.
+Status: Complete.
 
 Goal: let the model request typed backend tools through one cancellable, permission-aware runtime
 without giving it direct Node.js, filesystem, Git, or shell access.
@@ -1331,6 +1331,15 @@ Fixed gates:
 
 Exit: a chat turn can execute registered harmless fixture tools safely; no real workspace mutation
 is enabled yet.
+
+Delivered:
+
+- Shared tool call, result, error, progress, and approval contracts.
+- Class-based registry, cancellation-aware runtime, permission boundary, timeouts, output limits,
+  and metadata-only audit logging.
+- One harmless `arc.runtime_info` fixture tool; no filesystem, Git, terminal, or mutation tools.
+- Ollama native function schemas and streamed tool-call translation, plus strict fallback envelope
+  parsing and a bounded durable chat agent loop.
 
 ## Milestone 8: Read-Only Workspace and Git Tools
 

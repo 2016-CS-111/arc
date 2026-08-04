@@ -31,6 +31,20 @@ const OllamaChatResponseSchema = z
         content: z.string().default(""),
         role: z.string(),
         thinking: z.string().optional(),
+        tool_calls: z
+          .array(
+            z
+              .object({
+                function: z
+                  .object({
+                    arguments: z.record(z.unknown()),
+                    name: z.string().min(1).max(160),
+                  })
+                  .passthrough(),
+              })
+              .passthrough(),
+          )
+          .optional(),
       })
       .passthrough(),
     model: z.string().min(1),

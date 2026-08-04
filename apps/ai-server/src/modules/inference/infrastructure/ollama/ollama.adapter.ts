@@ -135,12 +135,13 @@ export class OllamaChatModelAdapter implements ChatModelPort {
           },
           body: JSON.stringify({
             model,
-            messages: request.messages,
+            messages: this.toOllamaMessages(request),
             options: {
               num_ctx: this.config.chatContext.contextWindowTokens,
               num_predict: this.config.chatContext.outputReserveTokens,
             },
             stream: true,
+            ...(request.tools === undefined || request.tools.length === 0 ? {} : { tools: request.tools }),
           }),
         },
         requestContext,
@@ -163,6 +164,7 @@ export class OllamaChatModelAdapter implements ChatModelPort {
       }
 
       let completed = false;
+      let toolCallCount = 0;
 
       for await (const record of parseOllamaNdjson(response.body)) {
         if (record.kind === "error") {
@@ -174,6 +176,20 @@ export class OllamaChatModelAdapter implements ChatModelPort {
           yield {
             type: "delta",
             content,
+          };
+        }
+
+        const toolCalls = record.response.message.tool_calls;
+        if (toolCalls !== undefined && toolCalls.length > 0) {
+          const calls = toolCalls.map((call, index) => ({
+            id: `ollama_${String(toolCallCount + index + 1)}`,
+            name: call.function.name,
+            arguments: call.function.arguments,
+          }));
+          toolCallCount += calls.length;
+          yield {
+            type: "tool_calls",
+            calls,
           };
         }
 
@@ -274,6 +290,26 @@ export class OllamaChatModelAdapter implements ChatModelPort {
       ...(response.done_reason === undefined ? {} : { finishReason: response.done_reason }),
       ...(usage === undefined ? {} : { usage }),
     };
+  }
+
+  private toOllamaMessages(request: ChatModelRequest): readonly Record<string, unknown>[] {
+    return request.messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+      ...(message.toolName === undefined ? {} : { tool_name: message.toolName }),
+      ...(message.toolCalls === undefined
+        ? {}
+        : {
+            tool_calls: message.toolCalls.map((call, index) => ({
+              type: "function",
+              function: {
+                index,
+                name: call.name,
+                arguments: call.arguments,
+              },
+            })),
+          }),
+    }));
   }
 
   private toUsage(response: OllamaChatResponse): ChatModelUsage | undefined {

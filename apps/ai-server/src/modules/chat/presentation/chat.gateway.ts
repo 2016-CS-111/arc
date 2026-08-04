@@ -198,7 +198,15 @@ export class ChatGateway implements OnGatewayDisconnect {
     let assistantContent = preparation.assistantMessage.content;
 
     try {
-      for await (const event of this.sendChatMessageService.stream(modelMessages, signal)) {
+      for await (const event of this.sendChatMessageService.stream(
+        {
+          messages: modelMessages,
+          requestId: command.requestId,
+          sessionId: command.sessionId,
+          ...(command.projectId === undefined ? {} : { projectId: command.projectId }),
+        },
+        signal,
+      )) {
         if (event.type === "delta") {
           assistantContent += event.content;
           const persisted = await this.durableChatService.stream(

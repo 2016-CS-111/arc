@@ -165,6 +165,54 @@ describe("OllamaChatModelAdapter", () => {
     });
   });
 
+  it("maps Ollama native tool calls and sends its function schemas", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      createNdjsonResponse([
+        {
+          model: "qwen2.5-coder:7b",
+          created_at: "2026-07-18T00:00:00Z",
+          message: {
+            role: "assistant",
+            content: "",
+            tool_calls: [{ function: { name: "arc.runtime_info", arguments: {} } }],
+          },
+          done: true,
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const adapter = new OllamaChatModelAdapter(createConfig(), logger);
+
+    await expect(
+      collectEvents(
+        adapter.streamChat({
+          messages: [{ role: "user", content: "What can Arc do?" }],
+          tools: [
+            {
+              type: "function",
+              function: {
+                name: "arc.runtime_info",
+                description: "Return runtime information.",
+                parameters: { type: "object", properties: {} },
+              },
+            },
+          ],
+        }),
+      ),
+    ).resolves.toEqual([
+      {
+        type: "tool_calls",
+        calls: [{ id: "ollama_1", name: "arc.runtime_info", arguments: {} }],
+      },
+      { type: "completed" },
+    ]);
+    const body = fetchMock.mock.calls[0]?.[1]?.body;
+    expect(typeof body).toBe("string");
+    expect(JSON.parse(body as string)).toMatchObject({
+      tools: [{ type: "function", function: { name: "arc.runtime_info" } }],
+    });
+  });
+
   it("turns a mid-stream Ollama error into a typed request failure", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
