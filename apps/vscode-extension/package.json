@@ -13,17 +13,64 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:arc.openChat"
+    "onCommand:arc.openChat",
+    "onCommand:arc.indexWorkspace",
+    "onCommand:arc.registerWorkspace",
+    "onCommand:arc.scanWorkspace",
+    "onView:arc.chat"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "arc",
+          "title": "Arc",
+          "icon": "media/arc.svg"
+        }
+      ]
+    },
+    "views": {
+      "arc": [
+        {
+          "type": "webview",
+          "id": "arc.chat",
+          "name": "Chat"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "arc.openChat",
         "title": "Arc: Open Chat",
         "category": "Arc"
+      },
+      {
+        "command": "arc.registerWorkspace",
+        "title": "Arc: Register Workspace",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.scanWorkspace",
+        "title": "Arc: Scan Workspace",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.indexWorkspace",
+        "title": "Arc: Index Workspace Intelligence",
+        "category": "Arc",
+        "icon": "$(symbol-structure)"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "arc.indexWorkspace",
+          "when": "view == arc.chat",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "Arc",
       "properties": {
@@ -36,13 +83,41 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsc -watch -p tsconfig.json",
+    "build": "concurrently --kill-others-on-fail --success=all \"pnpm run build:host\" \"pnpm run check:webview\" \"pnpm run build:webview\"",
+    "build:host": "tsc -p tsconfig.json",
+    "build:webview": "vite build --config vite.config.ts",
+    "check:webview": "tsc -p tsconfig.webview.json",
+    "dev": "pnpm run watch",
     "host": "pnpm --dir ../.. extension:host",
     "test": "vitest run",
-    "watch": "tsc -watch -p tsconfig.json"
+    "watch": "concurrently --kill-others-on-fail \"pnpm run watch:host\" \"pnpm run watch:webview\" \"pnpm run watch:webview-types\"",
+    "watch:host": "tsc -watch -p tsconfig.json",
+    "watch:webview": "vite build --config vite.config.ts --watch",
+    "watch:webview-types": "tsc -p tsconfig.webview.json --watch"
   },
   "devDependencies": {
-    "@arc/contracts": "workspace:*"
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.1.5"
+  },
+  "dependencies": {
+    "@arc/contracts": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^1.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^3.25.76"
   }
 }

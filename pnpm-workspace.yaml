@@ -4,5 +4,6 @@ packages:
 confirmModulesPurge: false
 allowBuilds:
   esbuild: true
-onlyBuiltDependencies:
-  - esbuild
+  tree-sitter: true
+  tree-sitter-javascript: true
+  tree-sitter-typescript: true

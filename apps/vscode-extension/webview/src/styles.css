@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-arc-accent: var(--vscode-textLink-foreground);
+  --color-arc-background: var(--vscode-sideBar-background);
+  --color-arc-border: var(--vscode-widget-border);
+  --color-arc-danger: var(--vscode-errorForeground);
+  --color-arc-focus: var(--vscode-focusBorder);
+  --color-arc-foreground: var(--vscode-sideBar-foreground);
+  --color-arc-hover: var(--vscode-toolbar-hoverBackground);
+  --color-arc-input: var(--vscode-input-background);
+  --color-arc-input-border: var(--vscode-input-border);
+  --color-arc-input-foreground: var(--vscode-input-foreground);
+  --color-arc-muted: var(--vscode-descriptionForeground);
+  --color-arc-surface: var(--vscode-editorWidget-background);
+  --color-arc-success: var(--vscode-testing-iconPassed);
+  --color-arc-user: var(--vscode-button-background);
+  --color-arc-user-foreground: var(--vscode-button-foreground);
+  --color-arc-warning: var(--vscode-editorWarning-foreground);
+  --font-sans: var(--vscode-font-family);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+  }
+
+  button {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .arc-markdown {
+    line-height: 1.25rem;
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .arc-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .arc-markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .arc-markdown p,
+  .arc-markdown ul,
+  .arc-markdown ol,
+  .arc-markdown blockquote,
+  .arc-markdown pre,
+  .arc-markdown table {
+    margin: 0.5rem 0;
+  }
+
+  .arc-markdown h1,
+  .arc-markdown h2,
+  .arc-markdown h3,
+  .arc-markdown h4,
+  .arc-markdown h5,
+  .arc-markdown h6 {
+    margin: 0.75rem 0 0.375rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .arc-markdown h1 {
+    font-size: 1.125rem;
+  }
+
+  .arc-markdown h2 {
+    font-size: 1rem;
+  }
+
+  .arc-markdown h3,
+  .arc-markdown h4,
+  .arc-markdown h5,
+  .arc-markdown h6 {
+    font-size: 0.875rem;
+  }
+
+  .arc-markdown ul,
+  .arc-markdown ol {
+    padding-left: 1.25rem;
+  }
+
+  .arc-markdown li + li {
+    margin-top: 0.125rem;
+  }
+
+  .arc-markdown a {
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .arc-markdown blockquote {
+    border-left: 2px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    margin-left: 0;
+    padding-left: 0.75rem;
+  }
+
+  .arc-markdown code {
+    background: var(--vscode-textCodeBlock-background);
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.8125rem;
+    padding: 0.0625rem 0.25rem;
+  }
+
+  .arc-markdown pre {
+    background: var(--vscode-textCodeBlock-background);
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.625rem;
+  }
+
+  .arc-markdown pre code {
+    background: transparent;
+    padding: 0;
+  }
+
+  .arc-code-block {
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .arc-code-block-header {
+    align-items: center;
+    background: var(--vscode-editorGroupHeader-tabsBackground);
+    border-bottom: 1px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    font-size: 0.6875rem;
+    height: 1.875rem;
+    justify-content: space-between;
+    padding: 0 0.25rem 0 0.625rem;
+  }
+
+  .arc-code-block pre {
+    border-radius: 0;
+    margin: 0;
+    width: 100%;
+  }
+
+  .arc-markdown .hljs-comment,
+  .arc-markdown .hljs-quote {
+    color: var(--vscode-descriptionForeground);
+  }
+
+  .arc-markdown .hljs-keyword,
+  .arc-markdown .hljs-selector-tag,
+  .arc-markdown .hljs-built_in,
+  .arc-markdown .hljs-type {
+    color: var(--vscode-symbolIcon-keywordForeground, #c586c0);
+  }
+
+  .arc-markdown .hljs-string,
+  .arc-markdown .hljs-attribute,
+  .arc-markdown .hljs-template-tag,
+  .arc-markdown .hljs-template-variable {
+    color: var(--vscode-symbolIcon-stringForeground, #ce9178);
+  }
+
+  .arc-markdown .hljs-number,
+  .arc-markdown .hljs-literal,
+  .arc-markdown .hljs-variable,
+  .arc-markdown .hljs-params {
+    color: var(--vscode-symbolIcon-numberForeground, #b5cea8);
+  }
+
+  .arc-markdown .hljs-title,
+  .arc-markdown .hljs-title.function_,
+  .arc-markdown .hljs-section {
+    color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+  }
+
+  .arc-markdown .hljs-meta,
+  .arc-markdown .hljs-symbol,
+  .arc-markdown .hljs-bullet {
+    color: var(--vscode-symbolIcon-operatorForeground, #d7ba7d);
+  }
+
+  .arc-markdown .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .arc-markdown .hljs-strong {
+    font-weight: 600;
+  }
+
+  .arc-markdown table {
+    border-collapse: collapse;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .arc-markdown th,
+  .arc-markdown td {
+    border: 1px solid var(--vscode-widget-border);
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+  }
+
+  .arc-markdown th {
+    background: var(--vscode-editorWidget-background);
+    font-weight: 600;
+  }
+
+  .arc-markdown input[type="checkbox"] {
+    accent-color: var(--vscode-checkbox-selectBorder);
+    margin: 0 0.375rem 0 0;
+    vertical-align: middle;
+  }
+}

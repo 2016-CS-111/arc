@@ -5,32 +5,25 @@ import { createConsoleLogger } from "@arc/shared";
 import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module.js";
-import { loadConfig } from "./config/env.js";
+import { APP_CONFIG } from "./config/config.constants.js";
+import type { AppConfig } from "./config/env.js";
 
-const config = loadConfig();
 const logger = createConsoleLogger("ai-server");
 
 function toLogContext(error: unknown): LogContext {
   if (error instanceof Error) {
-    return {
-      message: error.message,
-      name: error.name,
-    };
+    return { message: error.message, name: error.name };
   }
-
-  return {
-    error: String(error),
-  };
+  return { error: String(error) };
 }
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     logger: false,
   });
+  const config = app.get<AppConfig>(APP_CONFIG);
 
-  app.enableCors({
-    origin: config.corsOrigin,
-  });
+  app.enableCors({ origin: config.corsOrigin });
 
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     logger.info("Shutdown signal received", { signal });
