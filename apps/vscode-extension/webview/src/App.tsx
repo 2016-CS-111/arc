@@ -1,8 +1,11 @@
-import { Bot, LoaderCircle, RefreshCw, WifiOff } from "lucide-react";
+import { Bot, Brain, LoaderCircle, RefreshCw, WifiOff } from "lucide-react";
 import { type ReactElement, useCallback, useEffect, useReducer, useState } from "react";
+import { MemoryExportSchema } from "@arc/contracts";
 
 import {
   type ChatConnectionStatus,
+  type MemoryDraft,
+  type MemoryRecord,
   parseExtensionToWebviewMessage,
 } from "../../src/features/chat/chatWebview.contract.js";
 import { ChatDeltaBatcher } from "./ChatDeltaBatcher.js";
@@ -10,6 +13,7 @@ import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
 import { EditProposalPanel } from "./components/edits/EditProposalPanel.js";
 import { TaskProposalPanel } from "./components/tasks/TaskProposalPanel.js";
+import { MemoryPanel } from "./components/memories/MemoryPanel.js";
 import { SessionHistory } from "./components/chat/SessionHistory.js";
 import { IconButton } from "./components/ui/IconButton.js";
 import { StatusIndicator, type StatusTone } from "./components/ui/StatusIndicator.js";
@@ -19,6 +23,7 @@ import { postToExtension } from "./vscode.js";
 export function App() {
   const [state, dispatch] = useReducer(chatViewReducer, initialChatViewState);
   const [draft, setDraft] = useState("");
+  const [showMemories, setShowMemories] = useState(false);
 
   useEffect(() => {
     const deltaBatcher = new ChatDeltaBatcher((delta) => {
@@ -84,6 +89,18 @@ export function App() {
           return;
         case "tasks:error":
           dispatch({ message: message.message, type: "tasks:error" });
+          return;
+        case "memories:updated":
+          dispatch({ records: message.records, type: "memories:updated" });
+          return;
+        case "memories:proposal":
+          setShowMemories(true);
+          dispatch({ proposal: message.proposal, type: "memories:proposal" });
+          return;
+        case "memories:error":
+          dispatch({ message: message.message, type: "memories:error" });
+          return;
+        case "memories:exported":
           return;
         default:
           return;
@@ -186,6 +203,55 @@ export function App() {
     postToExtension({ proposalId, type: "tasks:show-output" });
   }, []);
 
+  const refreshMemories = useCallback((): void => {
+    postToExtension({ type: "memories:refresh" });
+  }, []);
+
+  const createMemory = useCallback((input: MemoryDraft): void => {
+    postToExtension({ input, type: "memories:create" });
+  }, []);
+
+  const updateMemory = useCallback(
+    (memoryId: string, input: { readonly content?: string; readonly pinned?: boolean }): void => {
+      postToExtension({ input, memoryId, type: "memories:update" });
+    },
+    [],
+  );
+
+  const forgetMemory = useCallback((memoryId: string): void => {
+    postToExtension({ memoryId, type: "memories:forget" });
+  }, []);
+
+  const approveMemory = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "memories:approve" });
+  }, []);
+
+  const rejectMemory = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "memories:reject" });
+  }, []);
+
+  const exportMemories = useCallback((): void => {
+    postToExtension({ type: "memories:export" });
+  }, []);
+
+  const importMemories = useCallback((value: string): void => {
+    try {
+      const parsed = MemoryExportSchema.safeParse(JSON.parse(value) as unknown);
+      if (!parsed.success) {
+        throw new Error("Arc memory import is invalid.");
+      }
+      postToExtension({
+        records: parsed.data.records.map(toMemoryDraft),
+        type: "memories:import",
+      });
+    } catch (error) {
+      dispatch({
+        message: error instanceof Error ? error.message : "Arc memory import is invalid.",
+        type: "memories:error",
+      });
+    }
+  }, []);
+
   return (
     <main className="flex h-screen overflow-hidden flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
@@ -200,6 +266,14 @@ export function App() {
             onClick={refreshStatus}
           >
             <RefreshCw aria-hidden="true" size={15} strokeWidth={1.8} />
+          </IconButton>
+          <IconButton
+            label={showMemories ? "Hide Arc memory" : "Show Arc memory"}
+            onClick={() => {
+              setShowMemories((value) => !value);
+            }}
+          >
+            <Brain aria-hidden="true" size={15} strokeWidth={1.8} />
           </IconButton>
         </div>
       </header>
@@ -249,6 +323,20 @@ export function App() {
         onShowOutput={showTaskOutput}
         proposal={state.taskProposal}
       />
+      <MemoryPanel
+        error={state.memoryError}
+        onApprove={approveMemory}
+        onCreate={createMemory}
+        onExport={exportMemories}
+        onForget={forgetMemory}
+        onImport={importMemories}
+        onRefresh={refreshMemories}
+        onReject={rejectMemory}
+        onUpdate={updateMemory}
+        proposal={state.memoryProposal}
+        records={state.memories}
+        visible={showMemories}
+      />
       <ChatComposer
         connectionReady={isConnectionReady}
         isGenerating={isGenerating}
@@ -259,6 +347,18 @@ export function App() {
       />
     </main>
   );
+}
+
+function toMemoryDraft(record: MemoryRecord): MemoryDraft {
+  return {
+    content: record.content,
+    confidence: record.confidence,
+    expiresAt: record.expiresAt,
+    kind: record.kind,
+    pinned: record.pinned,
+    ...(record.projectId === null ? {} : { projectId: record.projectId }),
+    scope: record.scope,
+  };
 }
 
 function StatusRow({

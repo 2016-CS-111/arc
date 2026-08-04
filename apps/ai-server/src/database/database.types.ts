@@ -2,6 +2,9 @@ import type {
   ChatError,
   ConversationMessageRole,
   ConversationMessageStatus,
+  MemoryKind,
+  MemoryProvenance,
+  MemoryScope,
   ProjectDependencyFileErrorCode,
   ProjectDependencyFileStatus,
   ProjectDependencyIndexErrorCode,
@@ -55,6 +58,7 @@ import type { ProjectFrameworkRelationshipModel } from "./models/project-framewo
 import type { ProjectEmbeddingChunkModel } from "./models/project-embedding-chunk.model.js";
 import type { ProjectEmbeddingFileModel } from "./models/project-embedding-file.model.js";
 import type { ProjectEmbeddingIndexRunModel } from "./models/project-embedding-index-run.model.js";
+import type { MemoryRecordModel } from "./models/memory-record.model.js";
 
 export interface ProjectEmbeddingIndexRunAttributes {
   readonly id: string;
@@ -213,6 +217,29 @@ export interface ChatMessageAttributes {
 }
 
 export type ChatMessageCreationAttributes = Optional<ChatMessageAttributes, "id" | "error" | "createdAt" | "updatedAt">;
+
+export interface MemoryRecordAttributes {
+  readonly id: string;
+  readonly scope: MemoryScope;
+  readonly projectId: string | null;
+  readonly kind: MemoryKind;
+  readonly content: string;
+  readonly contentHash: string;
+  readonly provenance: MemoryProvenance;
+  readonly confidence: number;
+  readonly pinned: boolean;
+  readonly expiresAt: Date | null;
+  readonly usedAt: Date | null;
+  readonly embedding: number[] | null;
+  readonly embeddingModel: string | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+export type MemoryRecordCreationAttributes = Optional<
+  MemoryRecordAttributes,
+  "id" | "confidence" | "pinned" | "expiresAt" | "usedAt" | "embedding" | "embeddingModel" | "createdAt" | "updatedAt"
+>;
 
 export interface ProjectAttributes {
   readonly id: string;
@@ -523,6 +550,7 @@ export interface ProjectSymbolAttributes {
 export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, "id" | "exported">;
 
 export interface ArcDatabaseModels {
+  readonly memoryRecords: ModelStatic<MemoryRecordModel>;
   readonly projectEmbeddingIndexRuns: ModelStatic<ProjectEmbeddingIndexRunModel>;
   readonly projectEmbeddingFiles: ModelStatic<ProjectEmbeddingFileModel>;
   readonly projectEmbeddingChunks: ModelStatic<ProjectEmbeddingChunkModel>;

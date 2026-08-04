@@ -108,6 +108,31 @@ describe("SocketIoChatTransport", () => {
     ]);
   });
 
+  it("relays a staged memory suggestion", () => {
+    const socket = new FakeSocketClient();
+    const transport = new SocketIoChatTransport("http://127.0.0.1:7331", () => socket);
+    const events: unknown[] = [];
+    transport.subscribe((event) => {
+      events.push(event);
+    });
+
+    transport.connect();
+    socket.emitFromServer("chat:memory-proposal", {
+      proposal: {
+        candidate: { content: "Use Sequelize.", kind: "convention", scope: "project" },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        id: "00000000-0000-4000-8000-000000000001",
+        memoryId: null,
+        requestId: "request-1",
+        sessionId: "0d2e5770-f08e-48d5-871b-36bf734f535c",
+        status: "pending",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    });
+
+    expect(events.at(-1)).toMatchObject({ type: "memory-proposal" });
+  });
+
   it("exposes bounded reconnect lifecycle states and supports an explicit retry", () => {
     const socket = new FakeSocketClient();
     const transport = new SocketIoChatTransport("http://127.0.0.1:7331", () => socket);

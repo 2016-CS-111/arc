@@ -38,9 +38,7 @@ describe("chatViewReducer", () => {
       ollama: null,
     };
 
-    expect(chatViewReducer(initialChatViewState, { snapshot, type: "status:received" })).toEqual({
-      snapshot,
-    });
+    expect(chatViewReducer(initialChatViewState, { snapshot, type: "status:received" })).toMatchObject({ snapshot });
   });
 
   it("applies a streaming lifecycle after hydration", () => {

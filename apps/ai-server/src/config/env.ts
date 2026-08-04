@@ -48,6 +48,7 @@ const rawEnvObjectSchema = z.object({
   ARC_EDIT_MAX_CONTENT_BYTES: z.coerce.number().int().min(1_024).max(262_144).default(6_000),
   ARC_TASK_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(900_000).default(300_000),
   ARC_TASK_MAX_OUTPUT_CHARS: z.coerce.number().int().min(256).max(65_536).default(12_000),
+  ARC_MEMORY_PROMPT_TOKENS: z.coerce.number().int().nonnegative().max(8_192).default(768),
   ARC_WORKSPACE_TOOL_MAX_ENTRIES: z.coerce.number().int().min(1).max(500).default(100),
   ARC_WORKSPACE_TOOL_MAX_READ_BYTES: z.coerce.number().int().min(256).max(65_536).default(8_192),
   ARC_WORKSPACE_TOOL_MAX_SEARCH_FILES: z.coerce.number().int().min(1).max(20_000).default(1_000),
@@ -165,6 +166,9 @@ export interface AppConfig {
     readonly maxOutputChars: number;
     readonly timeoutMs: number;
   };
+  readonly memory: {
+    readonly promptTokens: number;
+  };
   readonly workspaceTools: {
     readonly maxEntries: number;
     readonly maxReadBytes: number;
@@ -281,6 +285,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     tasks: {
       maxOutputChars: parsed.ARC_TASK_MAX_OUTPUT_CHARS,
       timeoutMs: parsed.ARC_TASK_TIMEOUT_MS,
+    },
+    memory: {
+      promptTokens: parsed.ARC_MEMORY_PROMPT_TOKENS,
     },
     workspaceTools: {
       maxEntries: parsed.ARC_WORKSPACE_TOOL_MAX_ENTRIES,

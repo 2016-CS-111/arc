@@ -1417,20 +1417,27 @@ Implementation:
 
 ## Milestone 11: Local Long-Term Memory
 
-Status: Planned.
+Status: Complete.
 
 Goal: remember useful architecture, conventions, business rules, and developer preferences locally
 without silently treating chat history as truth.
 
 Fixed gates:
 
-- 11.1 Typed user, project, architecture, convention, decision, and business-rule memory records.
-- 11.2 Explicit remember, update, forget, pin, expiry, provenance, and confidence lifecycle.
-- 11.3 Local embedding, hybrid retrieval, deduplication, contradiction handling, and prompt budget.
-- 11.4 VSCode memory inspection and management UI.
-- 11.5 Privacy, project isolation, stale-memory, deletion, export/import, and acceptance.
+- 11.1 Typed user, project, architecture, convention, decision, and business-rule records are stored in local PostgreSQL.
+- 11.2 Manual remember, edit, forget, pin, expiry, provenance, and confidence are explicit lifecycle fields.
+- 11.3 Ollama embeddings and PostgreSQL text search are rank-fused when available; text retrieval remains available without an embedding model.
+- 11.4 AI suggestions are staged through `arc.propose_memory` and require explicit approval before persistence.
+- 11.5 The VSCode panel lists user plus current-project records, exposes stale records for deletion, and supports clipboard export/import.
 
 Exit: Arc retrieves user-approved durable memories and users can inspect or delete every record.
+
+Implementation:
+
+- `memory_records` keeps global preferences separate from project facts; a project lookup never retrieves another project's records.
+- Exact duplicate content updates the existing record. Potentially conflicting records remain visible, and the prompt states that the current user request takes precedence.
+- Prompt attachment is bounded by `ARC_MEMORY_PROMPT_TOKENS`; expired records are excluded unless pinned.
+- Apply `0012_memory_records.sql` with `pnpm db:migrate` after pulling this milestone.
 
 ## Milestone 12: Advanced Project Intelligence
 

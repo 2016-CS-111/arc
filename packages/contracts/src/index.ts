@@ -3,6 +3,7 @@ export * from "./api/conversation.contract.js";
 export * from "./api/edit.contract.js";
 export * from "./api/embedding-provider-status.contract.js";
 export * from "./api/health.contract.js";
+export * from "./api/memory.contract.js";
 export * from "./api/project-ignore.contract.js";
 export * from "./api/project-dependency-index.contract.js";
 export * from "./api/project-dependency-graph.contract.js";

@@ -6,6 +6,7 @@ import type {
   ChatDeltaEvent,
   ChatEditProposalEvent,
   ChatErrorEvent,
+  ChatMemoryProposalEvent,
   ChatSendCommand,
   ChatTaskUpdateEvent,
 } from "@arc/contracts";
@@ -22,6 +23,7 @@ export type ChatTransportEvent =
   | { readonly type: "error"; readonly payload: ChatErrorEvent }
   | { readonly type: "edit-proposal"; readonly payload: ChatEditProposalEvent }
   | { readonly type: "task-update"; readonly payload: ChatTaskUpdateEvent }
+  | { readonly type: "memory-proposal"; readonly payload: ChatMemoryProposalEvent }
   | { readonly type: "malformed-event"; readonly eventName: string };
 
 export interface ChatTransportSubscription {

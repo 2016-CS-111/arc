@@ -342,6 +342,9 @@ export class ChatSessionController {
       case "task-update":
         this.publish({ proposal: event.payload.proposal, type: "tasks:updated" });
         return;
+      case "memory-proposal":
+        this.publish({ proposal: event.payload.proposal, type: "memories:proposal" });
+        return;
       case "malformed-event":
         return;
     }

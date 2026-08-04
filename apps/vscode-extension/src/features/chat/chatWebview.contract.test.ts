@@ -130,4 +130,19 @@ describe("webview chat contract", () => {
       }),
     ).toMatchObject({ type: "conversations:updated" });
   });
+
+  it("accepts explicit memory management messages", () => {
+    expect(
+      parseWebviewToExtensionMessage({
+        input: { content: "Use Sequelize.", kind: "convention", scope: "project" },
+        type: "memories:create",
+      }),
+    ).toMatchObject({ type: "memories:create" });
+    expect(
+      parseExtensionToWebviewMessage({
+        records: [],
+        type: "memories:updated",
+      }),
+    ).toMatchObject({ type: "memories:updated" });
+  });
 });

@@ -23,9 +23,11 @@ import { ProjectFrameworkRelationshipModel } from "./project-framework-relations
 import { ProjectEmbeddingChunkModel } from "./project-embedding-chunk.model.js";
 import { ProjectEmbeddingFileModel } from "./project-embedding-file.model.js";
 import { ProjectEmbeddingIndexRunModel } from "./project-embedding-index-run.model.js";
+import { MemoryRecordModel } from "./memory-record.model.js";
 
 export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
+    memoryRecords: MemoryRecordModel.initialize(sequelize),
     projectEmbeddingIndexRuns: ProjectEmbeddingIndexRunModel.initialize(sequelize),
     projectEmbeddingFiles: ProjectEmbeddingFileModel.initialize(sequelize),
     projectEmbeddingChunks: ProjectEmbeddingChunkModel.initialize(sequelize),
@@ -58,6 +60,15 @@ export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   models.chatMessages.belongsTo(models.chatSessions, {
     as: "session",
     foreignKey: "sessionId",
+  });
+  models.projects.hasMany(models.memoryRecords, {
+    as: "memories",
+    foreignKey: "projectId",
+    onDelete: "CASCADE",
+  });
+  models.memoryRecords.belongsTo(models.projects, {
+    as: "project",
+    foreignKey: "projectId",
   });
   models.projects.hasMany(models.projectEmbeddingIndexRuns, {
     as: "embeddingIndexRuns",

@@ -3,8 +3,14 @@ import {
   ConversationSessionSummarySchema,
   EditProposalSchema,
   HealthResponseSchema,
+  MemoryDraftSchema,
+  MemoryExportSchema,
+  MemoryIdSchema,
+  MemoryProposalSchema,
+  MemoryRecordSchema,
   OllamaProviderStatusResponseSchema,
   TaskProposalSchema,
+  UpdateMemoryRequestSchema,
   type HealthResponse,
   type OllamaProviderStatusResponse,
 } from "@arc/contracts";
@@ -75,6 +81,9 @@ export type ActiveChatGeneration = z.infer<typeof ActiveChatGenerationSchema>;
 export type ChatSessionSnapshot = z.infer<typeof ChatSessionSnapshotSchema>;
 export type ConversationListSnapshot = z.infer<typeof ConversationListSnapshotSchema>;
 export type EditProposal = z.infer<typeof EditProposalSchema>;
+export type MemoryDraft = z.infer<typeof MemoryDraftSchema>;
+export type MemoryProposal = z.infer<typeof MemoryProposalSchema>;
+export type MemoryRecord = z.infer<typeof MemoryRecordSchema>;
 export type TaskProposal = z.infer<typeof TaskProposalSchema>;
 
 const ChatSubmitCommandSchema = z.object({
@@ -131,6 +140,14 @@ export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
   z.object({ proposalId: z.string().uuid(), type: z.literal("tasks:reject") }),
   z.object({ proposalId: z.string().uuid(), type: z.literal("tasks:cancel") }),
   z.object({ proposalId: z.string().uuid(), type: z.literal("tasks:show-output") }),
+  z.object({ type: z.literal("memories:refresh") }),
+  z.object({ input: MemoryDraftSchema, type: z.literal("memories:create") }),
+  z.object({ memoryId: MemoryIdSchema, type: z.literal("memories:forget") }),
+  z.object({ memoryId: MemoryIdSchema, input: UpdateMemoryRequestSchema, type: z.literal("memories:update") }),
+  z.object({ proposalId: MemoryIdSchema, type: z.literal("memories:approve") }),
+  z.object({ proposalId: MemoryIdSchema, type: z.literal("memories:reject") }),
+  z.object({ type: z.literal("memories:export") }),
+  z.object({ records: z.array(MemoryDraftSchema).min(1).max(200), type: z.literal("memories:import") }),
   z.object({
     type: z.literal("link:open"),
     url: ExternalHttpUrlSchema,
@@ -191,6 +208,10 @@ export const ExtensionToWebviewMessageSchema = z.discriminatedUnion("type", [
   z.object({ message: z.string().min(1).max(4_000), type: z.literal("edits:error") }),
   z.object({ proposal: TaskProposalSchema, type: z.literal("tasks:updated") }),
   z.object({ message: z.string().min(1).max(4_000), type: z.literal("tasks:error") }),
+  z.object({ records: z.array(MemoryRecordSchema).max(200), type: z.literal("memories:updated") }),
+  z.object({ proposal: MemoryProposalSchema, type: z.literal("memories:proposal") }),
+  z.object({ value: MemoryExportSchema, type: z.literal("memories:exported") }),
+  z.object({ message: z.string().min(1).max(4_000), type: z.literal("memories:error") }),
 ]);
 
 export type ExtensionToWebviewMessage = z.infer<typeof ExtensionToWebviewMessageSchema>;

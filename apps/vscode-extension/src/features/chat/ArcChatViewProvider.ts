@@ -7,6 +7,7 @@ import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
 import type { EditProposalClientPort } from "../../infrastructure/backend/EditProposalClient.js";
 import type { TaskProposalClientPort } from "../../infrastructure/backend/TaskProposalClient.js";
+import type { MemoryClientPort } from "../../infrastructure/backend/MemoryClient.js";
 import type { EditDiffPreviewPort } from "../edits/EditDiffPreviewService.js";
 import type { TaskOutputPort } from "../tasks/TaskOutputService.js";
 import type { ChatSessionController, ChatSessionEventSubscription } from "./ChatSessionController.js";
@@ -15,6 +16,7 @@ import { WebviewActionService } from "./WebviewActionService.js";
 import {
   type BackendStatusSnapshot,
   type ExtensionToWebviewMessage,
+  type MemoryDraft,
   parseWebviewToExtensionMessage,
 } from "./chatWebview.contract.js";
 
@@ -44,6 +46,8 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     private readonly editPreview?: EditDiffPreviewPort,
     private readonly taskProposals?: TaskProposalClientPort,
     private readonly taskOutput?: TaskOutputPort,
+    private readonly memories?: MemoryClientPort,
+    private readonly projectIdProvider?: () => string | undefined,
   ) {
     this.webviewActions =
       webviewActions ??
@@ -72,6 +76,7 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
       switch (parsedMessage?.type) {
         case "webview:ready":
           void this.refreshStatus();
+          void this.loadMemories();
           this.chatSession.connect();
           void this.chatSession.hydrate();
           return;
@@ -125,6 +130,30 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         case "tasks:show-output":
           this.taskOutput?.show();
+          return;
+        case "memories:refresh":
+          void this.loadMemories();
+          return;
+        case "memories:create":
+          void this.createMemory(parsedMessage.input);
+          return;
+        case "memories:update":
+          void this.updateMemory(parsedMessage.memoryId, parsedMessage.input);
+          return;
+        case "memories:forget":
+          void this.forgetMemory(parsedMessage.memoryId);
+          return;
+        case "memories:approve":
+          void this.approveMemory(parsedMessage.proposalId);
+          return;
+        case "memories:reject":
+          void this.rejectMemory(parsedMessage.proposalId);
+          return;
+        case "memories:export":
+          void this.exportMemories();
+          return;
+        case "memories:import":
+          void this.importMemories(parsedMessage.records);
           return;
         case "link:open":
           void this.webviewActions.openExternalUrl(parsedMessage.url);
@@ -306,6 +335,114 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
   private async postTaskError(error: unknown): Promise<void> {
     const message = error instanceof Error ? error.message : "Arc could not update the task proposal.";
     await this.postChatMessage({ message, type: "tasks:error" });
+  }
+
+  private async loadMemories(): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({
+        records: [...(await this.memories.list(this.projectIdProvider?.(), true))],
+        type: "memories:updated",
+      });
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async createMemory(input: MemoryDraft): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      const projectId = this.projectIdProvider?.();
+      const request = input.scope === "project" && projectId !== undefined ? { ...input, projectId } : input;
+      await this.memories.create(request);
+      await this.loadMemories();
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async updateMemory(memoryId: string, input: Parameters<MemoryClientPort["update"]>[1]): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.memories.update(memoryId, input);
+      await this.loadMemories();
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async forgetMemory(memoryId: string): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.memories.forget(memoryId);
+      await this.loadMemories();
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async approveMemory(proposalId: string): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.memories.approveProposal(proposalId);
+      await this.loadMemories();
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async rejectMemory(proposalId: string): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({
+        proposal: await this.memories.rejectProposal(proposalId),
+        type: "memories:proposal",
+      });
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async exportMemories(): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      const value = await this.memories.export(this.projectIdProvider?.());
+      await this.webviewActions.copyCode(JSON.stringify(value, undefined, 2));
+      await this.postChatMessage({ type: "memories:exported", value });
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async importMemories(records: readonly MemoryDraft[]): Promise<void> {
+    if (this.memories === undefined) {
+      return;
+    }
+    try {
+      await this.memories.import(records);
+      await this.loadMemories();
+    } catch (error) {
+      await this.postMemoryError(error);
+    }
+  }
+
+  private async postMemoryError(error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : "Arc could not update memories.";
+    await this.postChatMessage({ message, type: "memories:error" });
   }
 
   private disposeView(): void {

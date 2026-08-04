@@ -5,6 +5,7 @@ import { loadConfig } from "../../../config/env.js";
 import type { ChatModelMessage } from "../../inference/domain/chat-model.types.js";
 import { ChatContextWindowExceededError } from "../domain/chat-context.errors.js";
 import type { ProjectChatContextService } from "./project-chat-context.service.js";
+import type { MemoryPromptContextService } from "./memory-prompt-context.service.js";
 import { ChatPromptService } from "./chat-prompt.service.js";
 import { ChatTokenBudgetService } from "./chat-token-budget.service.js";
 
@@ -29,6 +30,19 @@ function createProjectContextService() {
         estimatedTokens: 16,
         omittedCount: 1,
         reason: "prompt_budget" as const,
+        selectedCount: 1,
+      }),
+    ),
+  };
+}
+
+function createMemoryContextService() {
+  return {
+    select: vi.fn(() =>
+      Promise.resolve({
+        content: "ARC USER-APPROVED MEMORY\n- [project:convention] Use Sequelize.",
+        estimatedTokens: 16,
+        omittedCount: 0,
         selectedCount: 1,
       }),
     ),
@@ -83,6 +97,32 @@ describe("ChatPromptService", () => {
 
     expect(projectContextService.select).not.toHaveBeenCalled();
     expect(result.messages.some((message) => message.content.includes("ARC PROJECT CONTEXT"))).toBe(false);
+  });
+
+  it("attaches user-approved memory before project context", async () => {
+    const config = loadConfig({});
+    const memoryContextService = createMemoryContextService();
+    const service = new ChatPromptService(
+      config,
+      new ChatTokenBudgetService(config),
+      createProjectContextService() as unknown as ProjectChatContextService,
+      logger,
+      memoryContextService as unknown as MemoryPromptContextService,
+    );
+
+    const result = await service.build(
+      {
+        messages,
+        projectId: "00000000-0000-4000-8000-000000000001",
+        requestId: "request-1",
+        sessionId: "00000000-0000-4000-8000-000000000002",
+      },
+      new AbortController().signal,
+    );
+
+    expect(result.messages.at(1)?.content).toContain("ARC USER-APPROVED MEMORY");
+    expect(memoryContextService.select).toHaveBeenCalledOnce();
+    expect(result.estimatedMemoryTokens).toBe(16);
   });
 
   it("rejects required prompt content larger than the configured input budget", async () => {

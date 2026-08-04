@@ -5,6 +5,7 @@ import {
   ChatDeltaEventSchema,
   ChatEditProposalEventSchema,
   ChatErrorEventSchema,
+  ChatMemoryProposalEventSchema,
   ChatTaskUpdateEventSchema,
   type ChatCancelCommand,
   type ChatSendCommand,
@@ -182,6 +183,14 @@ export class SocketIoChatTransport implements ChatTransportPort {
         this.emit({ payload: parsed.data, type: "task-update" });
       } else {
         this.emit({ eventName: "chat:task-update", type: "malformed-event" });
+      }
+    });
+    socket.on("chat:memory-proposal", (payload: unknown) => {
+      const parsed = ChatMemoryProposalEventSchema.safeParse(payload);
+      if (parsed.success) {
+        this.emit({ payload: parsed.data, type: "memory-proposal" });
+      } else {
+        this.emit({ eventName: "chat:memory-proposal", type: "malformed-event" });
       }
     });
 

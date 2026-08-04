@@ -15,6 +15,7 @@ import { ConversationClient } from "./infrastructure/backend/ConversationClient.
 import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.js";
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
 import { TaskProposalClient } from "./infrastructure/backend/TaskProposalClient.js";
+import { MemoryClient } from "./infrastructure/backend/MemoryClient.js";
 import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTransport.js";
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -22,16 +23,18 @@ export function activate(context: vscode.ExtensionContext): void {
   const projectClient = new ProjectClient(backendConfig.url);
   const editProposalClient = new EditProposalClient(backendConfig.url);
   const taskProposalClient = new TaskProposalClient(backendConfig.url);
+  const memoryClient = new MemoryClient(backendConfig.url);
   const editPreview = new EditDiffPreviewService();
   const taskOutput = new TaskOutputService();
   const projectStore = new WorkspaceProjectStore(context.workspaceState);
   const folderSelector = new WorkspaceFolderSelector();
+  const projectIdProvider = (): string | undefined => {
+    const folder = folderSelector.preferred();
+    return folder === undefined ? undefined : projectStore.get(folder.uri.toString())?.id;
+  };
   const chatSession = new ChatSessionController({
     conversationClient: new ConversationClient(backendConfig.url),
-    projectIdProvider: () => {
-      const folder = folderSelector.preferred();
-      return folder === undefined ? undefined : projectStore.get(folder.uri.toString())?.id;
-    },
+    projectIdProvider,
     transport: new SocketIoChatTransport(backendConfig.url),
   });
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
@@ -50,6 +53,8 @@ export function activate(context: vscode.ExtensionContext): void {
     editPreview,
     taskProposalClient,
     taskOutput,
+    memoryClient,
+    projectIdProvider,
   );
 
   context.subscriptions.push(

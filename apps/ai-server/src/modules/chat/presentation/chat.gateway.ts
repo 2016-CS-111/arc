@@ -6,8 +6,10 @@ import {
   ChatDeltaEventSchema,
   ChatEditProposalEventSchema,
   ChatErrorEventSchema,
+  ChatMemoryProposalEventSchema,
   ChatTaskUpdateEventSchema,
   EditProposalSchema,
+  MemoryProposalSchema,
   TaskProposalSchema,
   ChatSendCommandSchema,
   type ChatError,
@@ -243,6 +245,10 @@ export class ChatGateway implements OnGatewayDisconnect, OnModuleDestroy {
           const taskProposal = extractTaskProposal(event.result);
           if (taskProposal !== undefined) {
             client.emit("chat:task-update", ChatTaskUpdateEventSchema.parse({ proposal: taskProposal }));
+          }
+          const memoryProposal = extractMemoryProposal(event.result);
+          if (memoryProposal !== undefined) {
+            client.emit("chat:memory-proposal", ChatMemoryProposalEventSchema.parse({ proposal: memoryProposal }));
           }
           continue;
         }
@@ -507,6 +513,26 @@ function extractTaskProposal(result: { readonly content: string; readonly name: 
       return undefined;
     }
     const parsed = TaskProposalSchema.safeParse(toolResult.proposal);
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractMemoryProposal(result: { readonly content: string; readonly name: string }) {
+  if (result.name !== "arc.propose_memory") {
+    return undefined;
+  }
+  try {
+    const payload: unknown = JSON.parse(result.content);
+    if (typeof payload !== "object" || payload === null || !("result" in payload)) {
+      return undefined;
+    }
+    const toolResult = payload.result;
+    if (typeof toolResult !== "object" || toolResult === null || !("proposal" in toolResult)) {
+      return undefined;
+    }
+    const parsed = MemoryProposalSchema.safeParse(toolResult.proposal);
     return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;

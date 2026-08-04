@@ -9,6 +9,7 @@ import { EditsModule } from "./modules/edits/edits.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { InferenceModule } from "./modules/inference/inference.module.js";
 import { LoggerModule } from "./modules/logger/logger.module.js";
+import { MemoriesModule } from "./modules/memories/memories.module.js";
 import { ProjectsModule } from "./modules/projects/projects.module.js";
 import { RealtimeModule } from "./modules/realtime/realtime.module.js";
 import { TasksModule } from "./modules/tasks/tasks.module.js";
@@ -24,6 +25,7 @@ import { TasksModule } from "./modules/tasks/tasks.module.js";
     RealtimeModule,
     EditsModule,
     TasksModule,
+    MemoriesModule,
     ChatModule,
     ConversationsModule,
     ProjectsModule,

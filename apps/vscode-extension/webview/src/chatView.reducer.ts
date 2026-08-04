@@ -5,6 +5,8 @@ import type {
   ChatSessionSnapshot,
   ConversationListSnapshot,
   EditProposal,
+  MemoryProposal,
+  MemoryRecord,
   TaskProposal,
 } from "../../src/features/chat/chatWebview.contract.js";
 
@@ -14,6 +16,9 @@ export interface ChatViewState {
   readonly conversations: ConversationListSnapshot | undefined;
   readonly editError: string | undefined;
   readonly editProposal: EditProposal | undefined;
+  readonly memories: readonly MemoryRecord[];
+  readonly memoryError: string | undefined;
+  readonly memoryProposal: MemoryProposal | undefined;
   readonly snapshot: ArcStatusSnapshot | undefined;
   readonly taskError: string | undefined;
   readonly taskProposal: TaskProposal | undefined;
@@ -40,7 +45,10 @@ export type ChatViewAction =
   | { readonly type: "edits:updated"; readonly proposal: EditProposal }
   | { readonly type: "edits:error"; readonly message: string }
   | { readonly type: "tasks:updated"; readonly proposal: TaskProposal }
-  | { readonly type: "tasks:error"; readonly message: string };
+  | { readonly type: "tasks:error"; readonly message: string }
+  | { readonly type: "memories:updated"; readonly records: readonly MemoryRecord[] }
+  | { readonly type: "memories:proposal"; readonly proposal: MemoryProposal }
+  | { readonly type: "memories:error"; readonly message: string };
 
 export const initialChatViewState: ChatViewState = {
   chat: undefined,
@@ -48,6 +56,9 @@ export const initialChatViewState: ChatViewState = {
   conversations: undefined,
   editError: undefined,
   editProposal: undefined,
+  memories: [],
+  memoryError: undefined,
+  memoryProposal: undefined,
   snapshot: undefined,
   taskError: undefined,
   taskProposal: undefined,
@@ -111,6 +122,12 @@ export function chatViewReducer(state: ChatViewState, action: ChatViewAction): C
       return { ...state, taskError: undefined, taskProposal: action.proposal };
     case "tasks:error":
       return { ...state, taskError: action.message };
+    case "memories:updated":
+      return { ...state, memories: action.records, memoryError: undefined };
+    case "memories:proposal":
+      return { ...state, memoryError: undefined, memoryProposal: action.proposal };
+    case "memories:error":
+      return { ...state, memoryError: action.message };
   }
 }
 

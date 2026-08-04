@@ -6,6 +6,8 @@ import { ProjectEditProposalService } from "../edits/application/project-edit-pr
 import { TasksModule } from "../tasks/tasks.module.js";
 import { TaskProposalService } from "../tasks/application/task-proposal.service.js";
 import { LoggerModule } from "../logger/logger.module.js";
+import { MemoriesModule } from "../memories/memories.module.js";
+import { MemoryProposalService } from "../memories/application/memory-proposal.service.js";
 import { ProjectsModule } from "../projects/projects.module.js";
 import { ProjectGitInspectionService } from "../projects/application/project-git-inspection.service.js";
 import { ProjectSemanticSearchService } from "../projects/application/project-semantic-search.service.js";
@@ -17,6 +19,7 @@ import { ToolRuntimeService } from "./application/tool-runtime.service.js";
 import type { ToolHandler } from "./domain/tool-handler.js";
 import { ArcRuntimeInfoTool } from "./infrastructure/arc-runtime-info.tool.js";
 import { ArcEditProposalTool } from "./infrastructure/arc-edit-proposal.tool.js";
+import { ArcMemoryProposalTool } from "./infrastructure/arc-memory-proposal.tool.js";
 import { ArcTaskProposalTool } from "./infrastructure/arc-task-proposal.tool.js";
 import { createReadOnlyProjectToolHandlers } from "./infrastructure/arc-readonly-project.tools.js";
 import { ARC_TOOL_HANDLERS } from "./tools.constants.js";
@@ -30,6 +33,7 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     ProjectGitInspectionService,
     ProjectEditProposalService,
     TaskProposalService,
+    MemoryProposalService,
   ],
   useFactory: (
     workspace: ProjectWorkspaceInspectionService,
@@ -38,16 +42,18 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     git: ProjectGitInspectionService,
     editProposals: ProjectEditProposalService,
     taskProposals: TaskProposalService,
+    memoryProposals: MemoryProposalService,
   ): readonly ToolHandler[] => [
     new ArcRuntimeInfoTool(),
     new ArcEditProposalTool(editProposals),
     new ArcTaskProposalTool(taskProposals),
+    new ArcMemoryProposalTool(memoryProposals),
     ...createReadOnlyProjectToolHandlers(workspace, symbols, semanticSearch, git),
   ],
 };
 
 @Module({
-  imports: [ConfigModule, LoggerModule, ProjectsModule, EditsModule, TasksModule],
+  imports: [ConfigModule, LoggerModule, ProjectsModule, EditsModule, TasksModule, MemoriesModule],
   providers: [toolHandlersProvider, ToolRegistryService, ToolPermissionService, ToolRuntimeService],
   exports: [ToolRuntimeService],
 })
