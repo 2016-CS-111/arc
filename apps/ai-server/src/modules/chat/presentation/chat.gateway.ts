@@ -6,13 +6,15 @@ import {
   ChatDeltaEventSchema,
   ChatEditProposalEventSchema,
   ChatErrorEventSchema,
+  ChatTaskUpdateEventSchema,
   EditProposalSchema,
+  TaskProposalSchema,
   ChatSendCommandSchema,
   type ChatError,
   type ChatSendCommand,
 } from "@arc/contracts";
 import type { Logger } from "@arc/shared";
-import { Inject } from "@nestjs/common";
+import { Inject, type OnModuleDestroy } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
@@ -22,6 +24,7 @@ import {
 } from "@nestjs/websockets";
 
 import { ARC_LOGGER } from "../../logger/logger.constants.js";
+import { TaskProposalService, type TaskProposalSubscription } from "../../tasks/application/task-proposal.service.js";
 import { ChatPromptService } from "../../context/application/chat-prompt.service.js";
 import type { ChatModelMessage } from "../../inference/domain/chat-model.types.js";
 import { ActiveGenerationRegistry } from "../application/active-generation.registry.js";
@@ -38,7 +41,10 @@ import type { ChatSocket } from "./chat.socket.js";
     origin: "*",
   },
 })
-export class ChatGateway implements OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayDisconnect, OnModuleDestroy {
+  private readonly clients = new Map<string, ChatSocket>();
+  private readonly taskProposalSubscription: TaskProposalSubscription;
+
   public constructor(
     @Inject(ActiveGenerationRegistry)
     private readonly activeGenerationRegistry: ActiveGenerationRegistry,
@@ -49,10 +55,16 @@ export class ChatGateway implements OnGatewayDisconnect {
     @Inject(SendChatMessageService)
     private readonly sendChatMessageService: SendChatMessageService,
     @Inject(ARC_LOGGER) private readonly logger: Logger,
-  ) {}
+    @Inject(TaskProposalService) taskProposalService?: TaskProposalService,
+  ) {
+    this.taskProposalSubscription = taskProposalService?.subscribe((event) => {
+      this.emitTaskUpdate(event.clientId, event.proposal);
+    }) ?? { dispose: (): void => undefined };
+  }
 
   @SubscribeMessage("chat:send")
   public handleChatSend(@ConnectedSocket() client: ChatSocket, @MessageBody() payload: unknown): void {
+    this.clients.set(client.id, client);
     const parsedCommand = ChatSendCommandSchema.safeParse(payload);
     if (!parsedCommand.success) {
       const correlation = this.extractCorrelation(payload);
@@ -131,7 +143,13 @@ export class ChatGateway implements OnGatewayDisconnect {
 
   public handleDisconnect(client: ChatSocket): void {
     this.activeGenerationRegistry.cancelAllForClient(client.id);
+    this.clients.delete(client.id);
     this.logger.info("Chat client disconnected", { socketId: client.id });
+  }
+
+  public onModuleDestroy(): void {
+    this.taskProposalSubscription.dispose();
+    this.clients.clear();
   }
 
   private async prepareAndStream(
@@ -203,6 +221,7 @@ export class ChatGateway implements OnGatewayDisconnect {
       for await (const event of this.sendChatMessageService.stream(
         {
           messages: modelMessages,
+          clientId: client.id,
           requestId: command.requestId,
           sessionId: command.sessionId,
           ...(command.projectId === undefined ? {} : { projectId: command.projectId }),
@@ -220,6 +239,10 @@ export class ChatGateway implements OnGatewayDisconnect {
                 sessionId: command.sessionId,
               }),
             );
+          }
+          const taskProposal = extractTaskProposal(event.result);
+          if (taskProposal !== undefined) {
+            client.emit("chat:task-update", ChatTaskUpdateEventSchema.parse({ proposal: taskProposal }));
           }
           continue;
         }
@@ -407,6 +430,17 @@ export class ChatGateway implements OnGatewayDisconnect {
     );
   }
 
+  private emitTaskUpdate(clientId: string, proposal: unknown): void {
+    const client = this.clients.get(clientId);
+    if (client === undefined) {
+      return;
+    }
+    const parsed = TaskProposalSchema.safeParse(proposal);
+    if (parsed.success) {
+      client.emit("chat:task-update", ChatTaskUpdateEventSchema.parse({ proposal: parsed.data }));
+    }
+  }
+
   private rejectRequest(client: ChatSocket, requestId: string, sessionId: string, error: ChatError): void {
     this.logger.warn("Chat request rejected", {
       errorCode: error.code,
@@ -453,6 +487,26 @@ function extractEditProposal(result: { readonly content: string; readonly name: 
       return undefined;
     }
     const parsed = EditProposalSchema.safeParse(toolResult.proposal);
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function extractTaskProposal(result: { readonly content: string; readonly name: string }) {
+  if (result.name !== "arc.propose_task") {
+    return undefined;
+  }
+  try {
+    const payload: unknown = JSON.parse(result.content);
+    if (typeof payload !== "object" || payload === null || !("result" in payload)) {
+      return undefined;
+    }
+    const toolResult = payload.result;
+    if (typeof toolResult !== "object" || toolResult === null || !("proposal" in toolResult)) {
+      return undefined;
+    }
+    const parsed = TaskProposalSchema.safeParse(toolResult.proposal);
     return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;

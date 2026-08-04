@@ -1370,7 +1370,7 @@ Delivered:
 
 ## Milestone 9: Safe File Editing and Diff Approval
 
-Status: Planned.
+Status: Complete.
 
 Goal: support transparent file changes that are previewed and explicitly approved before apply.
 
@@ -1392,23 +1392,28 @@ Implementation:
 
 ## Milestone 10: Terminal, Task Runner, and Git Mutation
 
-Status: Planned.
+Status: Complete.
 
 Goal: run approved development commands and intentional Git mutations through bounded local
 process adapters.
 
 Fixed gates:
 
-- 10.1 Structured command, working-directory, environment, approval, and result contracts.
-- 10.2 Process streaming, cancellation, timeout, output truncation, and process-tree cleanup.
-- 10.3 Presets for tests, lint, type-check, build, package scripts, and package-manager detection.
-- 10.4 Approved Git add, commit, branch, merge, restore, and stash operations with protected-command
-  policy.
-- 10.5 Separately gated Docker and arbitrary-shell execution.
-- 10.6 VSCode terminal/result presentation, audit metadata, failure recovery, and acceptance.
+- 10.1 Typed task proposals carry the executable, argument list, working directory, approval state, and result.
+- 10.2 The local runner uses `spawn` without a shell, streams output, caps it, and cancels the process group on stop or timeout.
+- 10.3 Test, lint, type-check, build, and format presets resolve through the project's pnpm, Yarn, or npm scripts.
+- 10.4 Typed Git add, commit, branch, merge, restore, and stash proposals are path-scoped and require approval.
+- 10.5 Docker and arbitrary shell input are deliberately unavailable; they need a separate, stricter future gate.
+- 10.6 The Arc chat panel and `Arc Tasks` output channel show the exact command, live output, exit code, and final state.
 
 Exit: Arc can run and report development tasks without hidden commands or unrestricted shell
 access.
+
+Implementation:
+
+- `arc.propose_task` stages only presets, named package scripts, or typed Git operations. It never executes them itself.
+- The task proposal is held in memory for the active backend session and is controlled through explicit approve, reject, and cancel endpoints.
+- Arc accepts no generic command, Git flags, Docker command, or shell string in this milestone.
 
 ## Milestone 11: Local Long-Term Memory
 

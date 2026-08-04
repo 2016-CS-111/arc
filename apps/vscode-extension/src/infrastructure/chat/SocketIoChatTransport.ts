@@ -5,6 +5,7 @@ import {
   ChatDeltaEventSchema,
   ChatEditProposalEventSchema,
   ChatErrorEventSchema,
+  ChatTaskUpdateEventSchema,
   type ChatCancelCommand,
   type ChatSendCommand,
 } from "@arc/contracts";
@@ -173,6 +174,14 @@ export class SocketIoChatTransport implements ChatTransportPort {
         this.emit({ payload: parsed.data, type: "edit-proposal" });
       } else {
         this.emit({ eventName: "chat:edit-proposal", type: "malformed-event" });
+      }
+    });
+    socket.on("chat:task-update", (payload: unknown) => {
+      const parsed = ChatTaskUpdateEventSchema.safeParse(payload);
+      if (parsed.success) {
+        this.emit({ payload: parsed.data, type: "task-update" });
+      } else {
+        this.emit({ eventName: "chat:task-update", type: "malformed-event" });
       }
     });
 

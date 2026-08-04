@@ -16,4 +16,5 @@ export * from "./api/project-framework-catalog.contract.js";
 export * from "./api/project.contract.js";
 export * from "./api/provider-status.contract.js";
 export * from "./api/tool.contract.js";
+export * from "./api/task.contract.js";
 export * from "./realtime/chat-events.contract.js";

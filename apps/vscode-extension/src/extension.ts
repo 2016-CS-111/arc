@@ -4,6 +4,7 @@ import { readBackendConfig } from "./config/backendConfig.js";
 import { ArcChatViewProvider } from "./features/chat/ArcChatViewProvider.js";
 import { ChatSessionController } from "./features/chat/ChatSessionController.js";
 import { EditDiffPreviewService } from "./features/edits/EditDiffPreviewService.js";
+import { TaskOutputService } from "./features/tasks/TaskOutputService.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
 import { ProjectInventoryController } from "./features/projects/ProjectInventoryController.js";
 import { RegisterWorkspaceCommand } from "./features/projects/RegisterWorkspaceCommand.js";
@@ -13,13 +14,16 @@ import { WorkspaceProjectStore } from "./features/projects/WorkspaceProjectStore
 import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
 import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.js";
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
+import { TaskProposalClient } from "./infrastructure/backend/TaskProposalClient.js";
 import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTransport.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const backendConfig = readBackendConfig();
   const projectClient = new ProjectClient(backendConfig.url);
   const editProposalClient = new EditProposalClient(backendConfig.url);
+  const taskProposalClient = new TaskProposalClient(backendConfig.url);
   const editPreview = new EditDiffPreviewService();
+  const taskOutput = new TaskOutputService();
   const projectStore = new WorkspaceProjectStore(context.workspaceState);
   const folderSelector = new WorkspaceFolderSelector();
   const chatSession = new ChatSessionController({
@@ -44,11 +48,14 @@ export function activate(context: vscode.ExtensionContext): void {
     undefined,
     editProposalClient,
     editPreview,
+    taskProposalClient,
+    taskOutput,
   );
 
   context.subscriptions.push(
     chatSession,
     editPreview,
+    taskOutput,
     chatViewProvider,
     projectInventoryController,
     registerWorkspaceCommand,

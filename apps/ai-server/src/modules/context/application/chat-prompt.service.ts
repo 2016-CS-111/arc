@@ -32,6 +32,7 @@ const systemMessage: ChatModelMessage = {
     "When context is insufficient, say what information is missing.",
     "Use native tool calls when available.",
     "When asked to change a registered project, use arc.propose_edits and clearly state that the user must review and approve its diff before any file changes occur.",
+    "When asked to run a development task or change Git state, use arc.propose_task. It stages only named package tasks and typed Git actions for approval; Docker and arbitrary shell commands are unavailable.",
     'If native tool calling is unavailable and a tool is needed, respond only with <arc_tool_call>{"name":"tool.name","arguments":{}}</arc_tool_call>.',
     "When a tool returns a citation, include it compactly as [path:startLine-endLine] in the final answer.",
   ].join(" "),

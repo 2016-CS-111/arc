@@ -11,6 +11,7 @@ import { InferenceModule } from "./modules/inference/inference.module.js";
 import { LoggerModule } from "./modules/logger/logger.module.js";
 import { ProjectsModule } from "./modules/projects/projects.module.js";
 import { RealtimeModule } from "./modules/realtime/realtime.module.js";
+import { TasksModule } from "./modules/tasks/tasks.module.js";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module.js";
     EmbeddingsModule,
     RealtimeModule,
     EditsModule,
+    TasksModule,
     ChatModule,
     ConversationsModule,
     ProjectsModule,

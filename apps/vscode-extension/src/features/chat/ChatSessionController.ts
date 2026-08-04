@@ -339,6 +339,9 @@ export class ChatSessionController {
       case "edit-proposal":
         this.publish({ proposal: event.payload.proposal, type: "edits:proposed" });
         return;
+      case "task-update":
+        this.publish({ proposal: event.payload.proposal, type: "tasks:updated" });
+        return;
       case "malformed-event":
         return;
     }

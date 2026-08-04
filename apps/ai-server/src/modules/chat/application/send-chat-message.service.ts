@@ -99,6 +99,7 @@ export class SendChatMessageService {
             requestId: input.requestId,
             sessionId: input.sessionId,
             signal,
+            ...(input.clientId === undefined ? {} : { clientId: input.clientId }),
             ...(input.projectId === undefined ? {} : { projectId: input.projectId }),
           }),
         ),
@@ -136,6 +137,7 @@ export class SendChatMessageService {
 }
 
 export interface SendChatMessageInput {
+  readonly clientId?: string;
   readonly messages: readonly ChatModelMessage[];
   readonly requestId: string;
   readonly sessionId: string;

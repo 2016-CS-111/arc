@@ -10,6 +10,7 @@ import { ToolPermissionService } from "./tool-permission.service.js";
 import { ToolRegistryService } from "./tool-registry.service.js";
 
 export interface ToolRuntimeContext {
+  readonly clientId?: string;
   readonly requestId: string;
   readonly sessionId: string;
   readonly projectId?: string;
@@ -76,14 +77,12 @@ export class ToolRuntimeService {
     }
   }
 
-  private async executeWithLimits(
-    handler: ToolHandler,
-    call: ToolCall,
-    context: ToolRuntimeContext,
-  ): Promise<unknown> {
+  private async executeWithLimits(handler: ToolHandler, call: ToolCall, context: ToolRuntimeContext): Promise<unknown> {
     const controller = new AbortController();
     let didTimeout = false;
-    const onParentAbort = (): void => controller.abort(context.signal.reason);
+    const onParentAbort = (): void => {
+      controller.abort(context.signal.reason);
+    };
     context.signal.addEventListener("abort", onParentAbort, { once: true });
     const timeout = setTimeout(() => {
       didTimeout = true;
@@ -104,6 +103,7 @@ export class ToolRuntimeService {
 
   private createExecutionContext(context: ToolRuntimeContext, signal: AbortSignal): ToolExecutionContext {
     return {
+      ...(context.clientId === undefined ? {} : { clientId: context.clientId }),
       requestId: context.requestId,
       sessionId: context.sessionId,
       signal,
@@ -158,12 +158,7 @@ export class ToolRuntimeService {
     };
   }
 
-  private logCompletion(
-    call: ToolCall,
-    context: ToolRuntimeContext,
-    result: ToolResult,
-    startedAt: number,
-  ): void {
+  private logCompletion(call: ToolCall, context: ToolRuntimeContext, result: ToolResult, startedAt: number): void {
     this.logger.info("Arc tool execution completed", {
       ...this.createLogContext(call, context),
       durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
@@ -189,17 +184,15 @@ class ToolExecutionAbortError extends Error {
   }
 }
 
-function waitForToolResult<T>(
-  promise: Promise<T>,
-  signal: AbortSignal,
-  didTimeout: () => boolean,
-): Promise<T> {
+function waitForToolResult<T>(promise: Promise<T>, signal: AbortSignal, didTimeout: () => boolean): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const onAbort = (): void => {
       cleanup();
       reject(new ToolExecutionAbortError(didTimeout()));
     };
-    const cleanup = (): void => signal.removeEventListener("abort", onAbort);
+    const cleanup = (): void => {
+      signal.removeEventListener("abort", onAbort);
+    };
 
     if (signal.aborted) {
       onAbort();
@@ -214,7 +207,7 @@ function waitForToolResult<T>(
       },
       (error: unknown) => {
         cleanup();
-        reject(error);
+        reject(error instanceof Error ? error : new Error("Arc tool execution failed."));
       },
     );
   });

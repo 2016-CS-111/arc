@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { EditProposalSchema } from "../api/edit.contract.js";
 import { ProjectIdSchema } from "../api/project.contract.js";
+import { TaskProposalSchema } from "../api/task.contract.js";
 
 const ChatIdentifierSchema = z.string().min(1).max(160);
 const ChatSessionIdSchema = z.string().uuid();
@@ -78,6 +79,10 @@ export const ChatEditProposalEventSchema = z.object({
   sessionId: ChatSessionIdSchema,
 });
 
+export const ChatTaskUpdateEventSchema = z.object({
+  proposal: TaskProposalSchema,
+});
+
 export type ChatSendCommand = z.infer<typeof ChatSendCommandSchema>;
 export type ChatCancelCommand = z.infer<typeof ChatCancelCommandSchema>;
 export type ChatErrorCode = z.infer<typeof ChatErrorCodeSchema>;
@@ -88,3 +93,4 @@ export type ChatCompletedEvent = z.infer<typeof ChatCompletedEventSchema>;
 export type ChatCancelledEvent = z.infer<typeof ChatCancelledEventSchema>;
 export type ChatErrorEvent = z.infer<typeof ChatErrorEventSchema>;
 export type ChatEditProposalEvent = z.infer<typeof ChatEditProposalEventSchema>;
+export type ChatTaskUpdateEvent = z.infer<typeof ChatTaskUpdateEventSchema>;

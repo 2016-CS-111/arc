@@ -9,6 +9,7 @@ import { ChatDeltaBatcher } from "./ChatDeltaBatcher.js";
 import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
 import { EditProposalPanel } from "./components/edits/EditProposalPanel.js";
+import { TaskProposalPanel } from "./components/tasks/TaskProposalPanel.js";
 import { SessionHistory } from "./components/chat/SessionHistory.js";
 import { IconButton } from "./components/ui/IconButton.js";
 import { StatusIndicator, type StatusTone } from "./components/ui/StatusIndicator.js";
@@ -77,6 +78,12 @@ export function App() {
           return;
         case "edits:error":
           dispatch({ message: message.message, type: "edits:error" });
+          return;
+        case "tasks:updated":
+          dispatch({ proposal: message.proposal, type: "tasks:updated" });
+          return;
+        case "tasks:error":
+          dispatch({ message: message.message, type: "tasks:error" });
           return;
         default:
           return;
@@ -163,6 +170,22 @@ export function App() {
     postToExtension({ proposalId, type: "edits:undo" });
   }, []);
 
+  const approveTask = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "tasks:approve" });
+  }, []);
+
+  const rejectTask = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "tasks:reject" });
+  }, []);
+
+  const cancelTask = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "tasks:cancel" });
+  }, []);
+
+  const showTaskOutput = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "tasks:show-output" });
+  }, []);
+
   return (
     <main className="flex h-screen overflow-hidden flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
@@ -217,6 +240,14 @@ export function App() {
         onReject={rejectEdits}
         onUndo={undoEdits}
         proposal={state.editProposal}
+      />
+      <TaskProposalPanel
+        error={state.taskError}
+        onApprove={approveTask}
+        onCancel={cancelTask}
+        onReject={rejectTask}
+        onShowOutput={showTaskOutput}
+        proposal={state.taskProposal}
       />
       <ChatComposer
         connectionReady={isConnectionReady}

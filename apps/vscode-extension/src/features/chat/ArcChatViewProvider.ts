@@ -6,7 +6,9 @@ import { z } from "zod";
 import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
 import type { EditProposalClientPort } from "../../infrastructure/backend/EditProposalClient.js";
+import type { TaskProposalClientPort } from "../../infrastructure/backend/TaskProposalClient.js";
 import type { EditDiffPreviewPort } from "../edits/EditDiffPreviewService.js";
+import type { TaskOutputPort } from "../tasks/TaskOutputService.js";
 import type { ChatSessionController, ChatSessionEventSubscription } from "./ChatSessionController.js";
 import { createWebviewHtml, type WebviewAsset } from "./createWebviewHtml.js";
 import { WebviewActionService } from "./WebviewActionService.js";
@@ -40,6 +42,8 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     webviewActions?: WebviewActionService,
     private readonly editProposals?: EditProposalClientPort,
     private readonly editPreview?: EditDiffPreviewPort,
+    private readonly taskProposals?: TaskProposalClientPort,
+    private readonly taskOutput?: TaskOutputPort,
   ) {
     this.webviewActions =
       webviewActions ??
@@ -109,6 +113,18 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         case "edits:undo":
           void this.undoEdits(parsedMessage.proposalId);
+          return;
+        case "tasks:approve":
+          void this.approveTask(parsedMessage.proposalId);
+          return;
+        case "tasks:reject":
+          void this.rejectTask(parsedMessage.proposalId);
+          return;
+        case "tasks:cancel":
+          void this.cancelTask(parsedMessage.proposalId);
+          return;
+        case "tasks:show-output":
+          this.taskOutput?.show();
           return;
         case "link:open":
           void this.webviewActions.openExternalUrl(parsedMessage.url);
@@ -238,7 +254,43 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     }
   }
 
+  private async approveTask(proposalId: string): Promise<void> {
+    if (this.taskProposals === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({ proposal: await this.taskProposals.approve(proposalId), type: "tasks:updated" });
+    } catch (error) {
+      await this.postTaskError(error);
+    }
+  }
+
+  private async rejectTask(proposalId: string): Promise<void> {
+    if (this.taskProposals === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({ proposal: await this.taskProposals.reject(proposalId), type: "tasks:updated" });
+    } catch (error) {
+      await this.postTaskError(error);
+    }
+  }
+
+  private async cancelTask(proposalId: string): Promise<void> {
+    if (this.taskProposals === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({ proposal: await this.taskProposals.cancel(proposalId), type: "tasks:updated" });
+    } catch (error) {
+      await this.postTaskError(error);
+    }
+  }
+
   private async postChatMessage(message: ExtensionToWebviewMessage): Promise<void> {
+    if (message.type === "tasks:updated") {
+      this.taskOutput?.append(message.proposal);
+    }
     if (this.view === undefined) {
       return;
     }
@@ -249,6 +301,11 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
   private async postEditError(error: unknown): Promise<void> {
     const message = error instanceof Error ? error.message : "Arc could not update the edit proposal.";
     await this.postChatMessage({ message, type: "edits:error" });
+  }
+
+  private async postTaskError(error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : "Arc could not update the task proposal.";
+    await this.postChatMessage({ message, type: "tasks:error" });
   }
 
   private disposeView(): void {

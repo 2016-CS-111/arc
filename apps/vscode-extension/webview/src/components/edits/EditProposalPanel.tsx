@@ -130,5 +130,5 @@ function operationLabel(operation: EditProposal["operations"][number]): string {
 }
 
 function statusLabel(status: EditProposal["status"]): string {
-  return status === "pending" ? "Review required" : status[0].toUpperCase() + status.slice(1);
+  return status === "pending" ? "Review required" : `${status.charAt(0).toUpperCase()}${status.slice(1)}`;
 }

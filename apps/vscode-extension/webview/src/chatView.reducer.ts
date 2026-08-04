@@ -5,6 +5,7 @@ import type {
   ChatSessionSnapshot,
   ConversationListSnapshot,
   EditProposal,
+  TaskProposal,
 } from "../../src/features/chat/chatWebview.contract.js";
 
 export interface ChatViewState {
@@ -14,6 +15,8 @@ export interface ChatViewState {
   readonly editError: string | undefined;
   readonly editProposal: EditProposal | undefined;
   readonly snapshot: ArcStatusSnapshot | undefined;
+  readonly taskError: string | undefined;
+  readonly taskProposal: TaskProposal | undefined;
 }
 
 export type ChatViewAction =
@@ -35,7 +38,9 @@ export type ChatViewAction =
   | { readonly type: "chat:connection-updated"; readonly status: ChatConnectionStatus }
   | { readonly type: "edits:proposed"; readonly proposal: EditProposal }
   | { readonly type: "edits:updated"; readonly proposal: EditProposal }
-  | { readonly type: "edits:error"; readonly message: string };
+  | { readonly type: "edits:error"; readonly message: string }
+  | { readonly type: "tasks:updated"; readonly proposal: TaskProposal }
+  | { readonly type: "tasks:error"; readonly message: string };
 
 export const initialChatViewState: ChatViewState = {
   chat: undefined,
@@ -44,6 +49,8 @@ export const initialChatViewState: ChatViewState = {
   editError: undefined,
   editProposal: undefined,
   snapshot: undefined,
+  taskError: undefined,
+  taskProposal: undefined,
 };
 
 export function chatViewReducer(state: ChatViewState, action: ChatViewAction): ChatViewState {
@@ -100,6 +107,10 @@ export function chatViewReducer(state: ChatViewState, action: ChatViewAction): C
       return { ...state, editError: undefined, editProposal: action.proposal };
     case "edits:error":
       return { ...state, editError: action.message };
+    case "tasks:updated":
+      return { ...state, taskError: undefined, taskProposal: action.proposal };
+    case "tasks:error":
+      return { ...state, taskError: action.message };
   }
 }
 

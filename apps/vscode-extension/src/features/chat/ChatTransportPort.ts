@@ -7,6 +7,7 @@ import type {
   ChatEditProposalEvent,
   ChatErrorEvent,
   ChatSendCommand,
+  ChatTaskUpdateEvent,
 } from "@arc/contracts";
 
 import type { ChatConnectionStatus } from "./chatWebview.contract.js";
@@ -20,6 +21,7 @@ export type ChatTransportEvent =
   | { readonly type: "cancelled"; readonly payload: ChatCancelledEvent }
   | { readonly type: "error"; readonly payload: ChatErrorEvent }
   | { readonly type: "edit-proposal"; readonly payload: ChatEditProposalEvent }
+  | { readonly type: "task-update"; readonly payload: ChatTaskUpdateEvent }
   | { readonly type: "malformed-event"; readonly eventName: string };
 
 export interface ChatTransportSubscription {

@@ -1,6 +1,7 @@
 import type { ToolCall, ToolDefinition } from "@arc/contracts";
 
 export interface ToolExecutionContext {
+  readonly clientId?: string;
   readonly requestId: string;
   readonly sessionId: string;
   readonly projectId?: string;
