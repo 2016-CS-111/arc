@@ -43,7 +43,7 @@ describe("ToolRuntimeService", () => {
       definition: {
         name: "arc.runtime_info",
         description: "Return runtime information.",
-        permission: "none",
+        permission: "read",
         parameters: { type: "object" },
       },
       execute: async (): Promise<unknown> => ({ runtime: "arc", value: "x".repeat(100) }),
@@ -64,7 +64,7 @@ describe("ToolRuntimeService", () => {
       definition: {
         name: "arc.privileged_fixture",
         description: "A future privileged fixture.",
-        permission: "read",
+        permission: "write",
         parameters: { type: "object" },
       },
       execute: async (): Promise<unknown> => ({ shouldNotRun: true }),

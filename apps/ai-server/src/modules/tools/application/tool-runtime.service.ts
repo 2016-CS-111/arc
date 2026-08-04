@@ -150,7 +150,10 @@ export class ToolRuntimeService {
     }
 
     return {
-      value: content.slice(0, this.config.tools.maxResultChars),
+      value: JSON.stringify({
+        message: "Arc tool result exceeded the configured output limit.",
+        truncated: true,
+      }),
       truncated: true,
     };
   }

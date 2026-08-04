@@ -32,6 +32,7 @@ const systemMessage: ChatModelMessage = {
     "When context is insufficient, say what information is missing.",
     "Use native tool calls when available.",
     "If native tool calling is unavailable and a tool is needed, respond only with <arc_tool_call>{\"name\":\"tool.name\",\"arguments\":{}}</arc_tool_call>.",
+    "When a tool returns a citation, include it compactly as [path:startLine-endLine] in the final answer.",
   ].join(" "),
   role: "system",
 };

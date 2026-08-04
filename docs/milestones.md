@@ -1307,8 +1307,8 @@ are in `docs/milestone-6-architecture.md`.
 
 This is the complete top-level ARC roadmap. It contains 20 major milestones:
 
-- Milestones 1-7: complete chat, project intelligence, grounded context, and the tool runtime.
-- Milestones 8-16: planned core self-hosted AI software engineer.
+- Milestones 1-8: complete chat, project intelligence, grounded context, and read-only tools.
+- Milestones 9-16: planned core self-hosted AI software engineer.
 - Milestones 17-20: optional platform expansion.
 
 Future implementation may divide these milestones into the numbered gates already listed below,
@@ -1343,7 +1343,7 @@ Delivered:
 
 ## Milestone 8: Read-Only Workspace and Git Tools
 
-Status: Planned.
+Status: Complete.
 
 Goal: give Arc bounded inspection tools before enabling any mutation.
 
@@ -1357,6 +1357,16 @@ Fixed gates:
   acceptance.
 
 Exit: Arc can investigate a project and Git history without changing files, refs, or processes.
+
+Delivered:
+
+- Registered-root directory listing, bounded UTF-8 reads, literal text, restricted regex, and
+  filename search with ignore, symlink, binary, large-file, and cancellation boundaries.
+- Current symbol-catalog lookup and existing local semantic search exposed as bounded tools.
+- Fixed, non-mutating Git status, diff, log, show, branch, and blame adapters; Git is accepted
+  only when the registered root is the repository root and optional Git locks are disabled.
+- Compact tool citations passed to the model as `path`, `startLine`, and `endLine`; final answers
+  are instructed to render them as `[path:startLine-endLine]`.
 
 ## Milestone 9: Safe File Editing and Diff Approval
 

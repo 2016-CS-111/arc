@@ -29,6 +29,13 @@ describe("loadConfig", () => {
       maxResultChars: 8_192,
       timeoutMs: 10_000,
     });
+    expect(config.workspaceTools).toEqual({
+      maxEntries: 100,
+      maxGitOutputChars: 6_000,
+      maxMatches: 40,
+      maxReadBytes: 8_192,
+      maxSearchFiles: 1_000,
+    });
     expect(config.embedding).toEqual({
       dimensions: 1_024,
       timeoutMs: 300_000,
@@ -112,6 +119,11 @@ describe("loadConfig", () => {
       ARC_TOOL_MAX_CALLS_PER_TURN: "3",
       ARC_TOOL_TIMEOUT_MS: "5000",
       ARC_TOOL_MAX_RESULT_CHARS: "4096",
+      ARC_WORKSPACE_TOOL_MAX_ENTRIES: "50",
+      ARC_WORKSPACE_TOOL_MAX_READ_BYTES: "2048",
+      ARC_WORKSPACE_TOOL_MAX_SEARCH_FILES: "250",
+      ARC_WORKSPACE_TOOL_MAX_MATCHES: "25",
+      ARC_GIT_TOOL_MAX_OUTPUT_CHARS: "3000",
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
       ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
@@ -179,6 +191,13 @@ describe("loadConfig", () => {
       maxCallsPerTurn: 3,
       maxResultChars: 4_096,
       timeoutMs: 5_000,
+    });
+    expect(config.workspaceTools).toEqual({
+      maxEntries: 50,
+      maxGitOutputChars: 3_000,
+      maxMatches: 25,
+      maxReadBytes: 2_048,
+      maxSearchFiles: 250,
     });
     expect(config.embedding).toEqual({
       dimensions: 768,

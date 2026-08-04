@@ -9,7 +9,7 @@ export interface ToolPermissionDecision {
 @Injectable()
 export class ToolPermissionService {
   public authorize(definition: ToolDefinition): ToolPermissionDecision {
-    if (definition.permission === "none") {
+    if (definition.permission === "none" || definition.permission === "read") {
       return { allowed: true };
     }
 

@@ -20,9 +20,12 @@ import type { ProjectSourceIndexRepository } from "./application/project-source-
 import { ProjectSourceIndexService } from "./application/project-source-index.service.js";
 import { ProjectSourceRangeService } from "./application/project-source-range.service.js";
 import { ProjectSemanticSearchService } from "./application/project-semantic-search.service.js";
+import { ProjectGitInspectionService } from "./application/project-git-inspection.service.js";
 import { ProjectSourceChunker } from "./application/project-source-chunker.js";
 import type { ProjectSymbolIndexRepository } from "./application/project-symbol-index.repository.js";
 import { ProjectSymbolIndexService } from "./application/project-symbol-index.service.js";
+import { ProjectSymbolSearchService } from "./application/project-symbol-search.service.js";
+import { ProjectWorkspaceInspectionService } from "./application/project-workspace-inspection.service.js";
 import { ProjectFrameworkIndexService } from "./application/project-framework-index.service.js";
 import { ProjectFrameworkCatalogService } from "./application/project-framework-catalog.service.js";
 import type { ProjectFrameworkIndexRepository } from "./domain/project-framework-index.types.js";
@@ -180,6 +183,9 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectFrameworkCatalogService,
     ProjectEmbeddingIndexService,
     ProjectSemanticSearchService,
+    ProjectWorkspaceInspectionService,
+    ProjectSymbolSearchService,
+    ProjectGitInspectionService,
     SourceLanguageClassifier,
   ],
   exports: [
@@ -197,6 +203,9 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectFrameworkCatalogService,
     ProjectEmbeddingIndexService,
     ProjectSemanticSearchService,
+    ProjectWorkspaceInspectionService,
+    ProjectSymbolSearchService,
+    ProjectGitInspectionService,
   ],
 })
 export class ProjectsModule {}

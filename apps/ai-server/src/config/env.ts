@@ -44,6 +44,11 @@ const rawEnvObjectSchema = z.object({
   ARC_TOOL_MAX_CALLS_PER_TURN: z.coerce.number().int().min(1).max(20).default(4),
   ARC_TOOL_TIMEOUT_MS: z.coerce.number().int().min(100).max(60_000).default(10_000),
   ARC_TOOL_MAX_RESULT_CHARS: z.coerce.number().int().min(256).max(65_536).default(8_192),
+  ARC_WORKSPACE_TOOL_MAX_ENTRIES: z.coerce.number().int().min(1).max(500).default(100),
+  ARC_WORKSPACE_TOOL_MAX_READ_BYTES: z.coerce.number().int().min(256).max(65_536).default(8_192),
+  ARC_WORKSPACE_TOOL_MAX_SEARCH_FILES: z.coerce.number().int().min(1).max(20_000).default(1_000),
+  ARC_WORKSPACE_TOOL_MAX_MATCHES: z.coerce.number().int().min(1).max(200).default(40),
+  ARC_GIT_TOOL_MAX_OUTPUT_CHARS: z.coerce.number().int().min(256).max(65_536).default(6_000),
   ARC_OLLAMA_EMBEDDING_MODEL: z.string().trim().min(1).optional(),
   ARC_OLLAMA_EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(1_024),
   ARC_OLLAMA_EMBEDDING_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
@@ -148,6 +153,13 @@ export interface AppConfig {
     readonly timeoutMs: number;
     readonly maxResultChars: number;
   };
+  readonly workspaceTools: {
+    readonly maxEntries: number;
+    readonly maxReadBytes: number;
+    readonly maxSearchFiles: number;
+    readonly maxMatches: number;
+    readonly maxGitOutputChars: number;
+  };
   readonly embedding: {
     readonly model?: string;
     readonly dimensions: number;
@@ -249,6 +261,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       maxCallsPerTurn: parsed.ARC_TOOL_MAX_CALLS_PER_TURN,
       maxResultChars: parsed.ARC_TOOL_MAX_RESULT_CHARS,
       timeoutMs: parsed.ARC_TOOL_TIMEOUT_MS,
+    },
+    workspaceTools: {
+      maxEntries: parsed.ARC_WORKSPACE_TOOL_MAX_ENTRIES,
+      maxGitOutputChars: parsed.ARC_GIT_TOOL_MAX_OUTPUT_CHARS,
+      maxMatches: parsed.ARC_WORKSPACE_TOOL_MAX_MATCHES,
+      maxReadBytes: parsed.ARC_WORKSPACE_TOOL_MAX_READ_BYTES,
+      maxSearchFiles: parsed.ARC_WORKSPACE_TOOL_MAX_SEARCH_FILES,
     },
     database,
     embedding,
