@@ -1441,7 +1441,7 @@ Implementation:
 
 ## Milestone 12: Advanced Project Intelligence
 
-Status: Planned.
+Status: Complete.
 
 Goal: extend static understanding beyond imports and framework catalogs.
 
@@ -1457,6 +1457,14 @@ Fixed gates:
 - 12.6 Freshness, bounded graph queries, privacy, incremental reuse, and acceptance.
 
 Exit: Arc can answer cross-file flow and data-model questions from explicit, fresh provenance.
+
+Implementation:
+
+- `GET /projects/:projectId/intelligence/catalog` returns bounded, source-range-backed facts from the current source, symbol, dependency, and framework snapshots.
+- The TypeScript/JavaScript adapter detects calls, type references, inheritance, implementations, queue jobs and workers, schedules, GraphQL, REST clients, configuration, environment access, and Mongoose `ref` declarations.
+- Sequelize associations are reused from the framework catalog; PostgreSQL foreign keys and README/architecture source-path citations are extracted from indexed SQL and Markdown files.
+- `arc.project_intelligence` makes the same compact evidence available to chat. It returns citations and metadata only, never raw project source.
+- Results are capped at 500 analyzed files and 500 returned records, symbol linking is capped at 10,000 symbols, and every source read verifies its indexed content hash before the response is returned.
 
 ## Milestone 13: Inline Completion
 

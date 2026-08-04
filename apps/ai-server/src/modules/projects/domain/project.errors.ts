@@ -247,3 +247,26 @@ export class ProjectFrameworkCatalogQueryFailedError extends Error {
     this.name = "ProjectFrameworkCatalogQueryFailedError";
   }
 }
+
+export class ProjectIntelligenceCatalogRequiredError extends Error {
+  public constructor(projectId: string) {
+    super(
+      `Arc project ${projectId} requires current source, symbol, and dependency catalogs before advanced analysis.`,
+    );
+    this.name = "ProjectIntelligenceCatalogRequiredError";
+  }
+}
+
+export class ProjectIntelligenceCatalogStaleError extends Error {
+  public constructor(projectId: string) {
+    super(`Arc project ${projectId} requires fresh source, symbol, and dependency catalogs before advanced analysis.`);
+    this.name = "ProjectIntelligenceCatalogStaleError";
+  }
+}
+
+export class ProjectIntelligenceCatalogQueryFailedError extends Error {
+  public constructor() {
+    super("Arc could not read the project intelligence catalog.");
+    this.name = "ProjectIntelligenceCatalogQueryFailedError";
+  }
+}

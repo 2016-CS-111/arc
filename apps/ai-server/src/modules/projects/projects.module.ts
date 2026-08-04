@@ -28,6 +28,7 @@ import { ProjectSymbolSearchService } from "./application/project-symbol-search.
 import { ProjectWorkspaceInspectionService } from "./application/project-workspace-inspection.service.js";
 import { ProjectFrameworkIndexService } from "./application/project-framework-index.service.js";
 import { ProjectFrameworkCatalogService } from "./application/project-framework-catalog.service.js";
+import { ProjectIntelligenceService } from "./application/project-intelligence.service.js";
 import type { ProjectFrameworkIndexRepository } from "./domain/project-framework-index.types.js";
 import type { ProjectEmbeddingIndexRepository } from "./domain/project-embedding-index.types.js";
 import type { RepositoryInventoryWalker } from "./application/repository-inventory.walker.js";
@@ -69,6 +70,7 @@ import {
 import { ProjectsController } from "./presentation/projects.controller.js";
 import { ProjectEmbeddingsController } from "./presentation/project-embeddings.controller.js";
 import { ProjectSemanticSearchController } from "./presentation/project-semantic-search.controller.js";
+import { ProjectIntelligenceController } from "./presentation/project-intelligence.controller.js";
 
 const projectRepositoryProvider: Provider<ProjectRepository> = {
   provide: PROJECT_REPOSITORY,
@@ -153,7 +155,12 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
 
 @Module({
   imports: [DatabaseModule, EmbeddingsModule],
-  controllers: [ProjectsController, ProjectEmbeddingsController, ProjectSemanticSearchController],
+  controllers: [
+    ProjectsController,
+    ProjectEmbeddingsController,
+    ProjectSemanticSearchController,
+    ProjectIntelligenceController,
+  ],
   providers: [
     projectRepositoryProvider,
     projectInventoryRepositoryProvider,
@@ -181,6 +188,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
+    ProjectIntelligenceService,
     ProjectEmbeddingIndexService,
     ProjectSemanticSearchService,
     ProjectWorkspaceInspectionService,
@@ -201,6 +209,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
     ProjectSymbolIndexService,
     ProjectFrameworkIndexService,
     ProjectFrameworkCatalogService,
+    ProjectIntelligenceService,
     ProjectEmbeddingIndexService,
     ProjectSemanticSearchService,
     ProjectWorkspaceInspectionService,

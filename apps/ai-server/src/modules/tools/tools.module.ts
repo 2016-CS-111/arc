@@ -12,6 +12,7 @@ import { ProjectsModule } from "../projects/projects.module.js";
 import { ProjectGitInspectionService } from "../projects/application/project-git-inspection.service.js";
 import { ProjectSemanticSearchService } from "../projects/application/project-semantic-search.service.js";
 import { ProjectSymbolSearchService } from "../projects/application/project-symbol-search.service.js";
+import { ProjectIntelligenceService } from "../projects/application/project-intelligence.service.js";
 import { ProjectWorkspaceInspectionService } from "../projects/application/project-workspace-inspection.service.js";
 import { ToolPermissionService } from "./application/tool-permission.service.js";
 import { ToolRegistryService } from "./application/tool-registry.service.js";
@@ -31,6 +32,7 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     ProjectSymbolSearchService,
     ProjectSemanticSearchService,
     ProjectGitInspectionService,
+    ProjectIntelligenceService,
     ProjectEditProposalService,
     TaskProposalService,
     MemoryProposalService,
@@ -40,6 +42,7 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     symbols: ProjectSymbolSearchService,
     semanticSearch: ProjectSemanticSearchService,
     git: ProjectGitInspectionService,
+    intelligence: ProjectIntelligenceService,
     editProposals: ProjectEditProposalService,
     taskProposals: TaskProposalService,
     memoryProposals: MemoryProposalService,
@@ -48,7 +51,7 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     new ArcEditProposalTool(editProposals),
     new ArcTaskProposalTool(taskProposals),
     new ArcMemoryProposalTool(memoryProposals),
-    ...createReadOnlyProjectToolHandlers(workspace, symbols, semanticSearch, git),
+    ...createReadOnlyProjectToolHandlers(workspace, symbols, semanticSearch, git, intelligence),
   ],
 };
 

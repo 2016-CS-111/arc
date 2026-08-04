@@ -1,13 +1,11 @@
-import type { ToolCall, ToolDefinition } from "@arc/contracts";
+import { ProjectIntelligenceKindSchema, type ToolCall, type ToolDefinition } from "@arc/contracts";
 import { z } from "zod";
 
-import { ProjectGitInspectionService } from "../../projects/application/project-git-inspection.service.js";
-import { ProjectSemanticSearchService } from "../../projects/application/project-semantic-search.service.js";
-import { ProjectSymbolSearchService } from "../../projects/application/project-symbol-search.service.js";
-import {
-  ProjectWorkspaceInspectionService,
-  type WorkspaceSearchMode,
-} from "../../projects/application/project-workspace-inspection.service.js";
+import type { ProjectGitInspectionService } from "../../projects/application/project-git-inspection.service.js";
+import type { ProjectSemanticSearchService } from "../../projects/application/project-semantic-search.service.js";
+import type { ProjectSymbolSearchService } from "../../projects/application/project-symbol-search.service.js";
+import type { ProjectIntelligenceService } from "../../projects/application/project-intelligence.service.js";
+import type { ProjectWorkspaceInspectionService } from "../../projects/application/project-workspace-inspection.service.js";
 import type { ToolExecutionContext, ToolHandler } from "../domain/tool-handler.js";
 
 const listArgumentsSchema = z.object({ path: z.string().min(1).max(4_096).optional() }).strict();
@@ -37,6 +35,13 @@ const semanticSearchArgumentsSchema = z
     limit: z.number().int().min(1).max(10).default(6),
   })
   .strict();
+const intelligenceArgumentsSchema = z
+  .object({
+    kinds: ProjectIntelligenceKindSchema.array().max(ProjectIntelligenceKindSchema.options.length).default([]),
+    limit: z.number().int().min(1).max(100).default(30),
+    pathPrefix: z.string().min(1).max(4_096).optional(),
+  })
+  .strict();
 const gitDiffArgumentsSchema = z
   .object({
     path: z.string().min(1).max(4_096).optional(),
@@ -58,6 +63,7 @@ export function createReadOnlyProjectToolHandlers(
   symbols: ProjectSymbolSearchService,
   semanticSearch: ProjectSemanticSearchService,
   git: ProjectGitInspectionService,
+  intelligence?: ProjectIntelligenceService,
 ): readonly ToolHandler[] {
   return [
     new ArcWorkspaceListTool(workspace),
@@ -65,6 +71,7 @@ export function createReadOnlyProjectToolHandlers(
     new ArcWorkspaceSearchTool(workspace),
     new ArcSymbolSearchTool(symbols),
     new ArcSemanticSearchTool(semanticSearch),
+    ...(intelligence === undefined ? [] : [new ArcProjectIntelligenceTool(intelligence)]),
     new ArcGitStatusTool(git),
     new ArcGitDiffTool(git),
     new ArcGitLogTool(git),
@@ -102,7 +109,11 @@ class ArcWorkspaceListTool extends ArcProjectTool {
   public async execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = listArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? this.unavailable("invalid_arguments") : projectId === undefined ? this.unavailable("project_required") : this.workspace.list(projectId, parsed.data.path, context.signal);
+    return !parsed.success
+      ? this.unavailable("invalid_arguments")
+      : projectId === undefined
+        ? this.unavailable("project_required")
+        : this.workspace.list(projectId, parsed.data.path, context.signal);
   }
 }
 
@@ -129,7 +140,11 @@ class ArcWorkspaceReadTool extends ArcProjectTool {
   public async execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = readArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? this.unavailable("invalid_arguments") : projectId === undefined ? this.unavailable("project_required") : this.workspace.read(projectId, parsed.data.path, parsed.data.startLine, parsed.data.endLine, context.signal);
+    return !parsed.success
+      ? this.unavailable("invalid_arguments")
+      : projectId === undefined
+        ? this.unavailable("project_required")
+        : this.workspace.read(projectId, parsed.data.path, parsed.data.startLine, parsed.data.endLine, context.signal);
   }
 }
 
@@ -156,7 +171,17 @@ class ArcWorkspaceSearchTool extends ArcProjectTool {
   public async execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = workspaceSearchArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? this.unavailable("invalid_arguments") : projectId === undefined ? this.unavailable("project_required") : this.workspace.search(projectId, parsed.data.query, parsed.data.mode as WorkspaceSearchMode, parsed.data.caseSensitive, context.signal);
+    return !parsed.success
+      ? this.unavailable("invalid_arguments")
+      : projectId === undefined
+        ? this.unavailable("project_required")
+        : this.workspace.search(
+            projectId,
+            parsed.data.query,
+            parsed.data.mode,
+            parsed.data.caseSensitive,
+            context.signal,
+          );
   }
 }
 
@@ -179,7 +204,11 @@ class ArcSymbolSearchTool extends ArcProjectTool {
   public async execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = symbolSearchArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? this.unavailable("invalid_arguments") : projectId === undefined ? this.unavailable("project_required") : this.symbols.search(projectId, parsed.data.query, parsed.data.limit, context.signal);
+    return !parsed.success
+      ? this.unavailable("invalid_arguments")
+      : projectId === undefined
+        ? this.unavailable("project_required")
+        : this.symbols.search(projectId, parsed.data.query, parsed.data.limit, context.signal);
   }
 }
 
@@ -237,6 +266,57 @@ class ArcSemanticSearchTool extends ArcProjectTool {
   }
 }
 
+class ArcProjectIntelligenceTool extends ArcProjectTool {
+  public readonly definition = createDefinition(
+    "arc.project_intelligence",
+    "Read bounded source-backed call, data-model, runtime, configuration, and architecture evidence from the current project indexes.",
+    {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        kinds: { type: "array", items: { type: "string", enum: ProjectIntelligenceKindSchema.options } },
+        limit: { type: "integer", minimum: 1, maximum: 100 },
+        pathPrefix: { type: "string" },
+      },
+    },
+  );
+
+  public constructor(private readonly intelligence: ProjectIntelligenceService) {
+    super();
+  }
+
+  public async execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
+    const parsed = intelligenceArgumentsSchema.safeParse(call.arguments);
+    const projectId = this.projectId(context);
+    if (!parsed.success) return this.unavailable("invalid_arguments");
+    if (projectId === undefined) return this.unavailable("project_required");
+    try {
+      const response = await this.intelligence.getCatalog(projectId, {
+        kinds: parsed.data.kinds,
+        maxRecords: parsed.data.limit,
+        ...(parsed.data.pathPrefix === undefined ? {} : { pathPrefix: parsed.data.pathPrefix }),
+      });
+      return {
+        available: true,
+        records: response.records.map((record) => ({
+          citation: {
+            endLine: record.range.endLine + 1,
+            path: record.path,
+            startLine: record.range.startLine + 1,
+          },
+          kind: record.kind,
+          name: record.name,
+          target: record.target?.name ?? null,
+        })),
+        truncated: response.truncated,
+      };
+    } catch {
+      if (context.signal.aborted) throw new Error("Arc project intelligence query was cancelled.");
+      return this.unavailable("project_intelligence_unavailable");
+    }
+  }
+}
+
 class ArcGitStatusTool extends ArcProjectTool {
   public readonly definition = createDefinition(
     "arc.git_status",
@@ -250,7 +330,9 @@ class ArcGitStatusTool extends ArcProjectTool {
 
   public execute(_call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const projectId = this.projectId(context);
-    return projectId === undefined ? Promise.resolve(this.unavailable("project_required")) : this.git.status(projectId, context.signal);
+    return projectId === undefined
+      ? Promise.resolve(this.unavailable("project_required"))
+      : this.git.status(projectId, context.signal);
   }
 }
 
@@ -272,7 +354,11 @@ class ArcGitDiffTool extends ArcProjectTool {
   public execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = gitDiffArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? Promise.resolve(this.unavailable("invalid_arguments")) : projectId === undefined ? Promise.resolve(this.unavailable("project_required")) : this.git.diff(projectId, parsed.data.path, parsed.data.staged, context.signal);
+    return !parsed.success
+      ? Promise.resolve(this.unavailable("invalid_arguments"))
+      : projectId === undefined
+        ? Promise.resolve(this.unavailable("project_required"))
+        : this.git.diff(projectId, parsed.data.path, parsed.data.staged, context.signal);
   }
 }
 
@@ -280,7 +366,11 @@ class ArcGitLogTool extends ArcProjectTool {
   public readonly definition = createDefinition(
     "arc.git_log",
     "Read a bounded recent commit log for the registered repository.",
-    { type: "object", additionalProperties: false, properties: { limit: { type: "integer", minimum: 1, maximum: 50 } } },
+    {
+      type: "object",
+      additionalProperties: false,
+      properties: { limit: { type: "integer", minimum: 1, maximum: 50 } },
+    },
   );
 
   public constructor(private readonly git: ProjectGitInspectionService) {
@@ -290,7 +380,11 @@ class ArcGitLogTool extends ArcProjectTool {
   public execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = logArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? Promise.resolve(this.unavailable("invalid_arguments")) : projectId === undefined ? Promise.resolve(this.unavailable("project_required")) : this.git.log(projectId, parsed.data.limit, context.signal);
+    return !parsed.success
+      ? Promise.resolve(this.unavailable("invalid_arguments"))
+      : projectId === undefined
+        ? Promise.resolve(this.unavailable("project_required"))
+        : this.git.log(projectId, parsed.data.limit, context.signal);
   }
 }
 
@@ -308,7 +402,11 @@ class ArcGitShowTool extends ArcProjectTool {
   public execute(call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const parsed = showArgumentsSchema.safeParse(call.arguments);
     const projectId = this.projectId(context);
-    return !parsed.success ? Promise.resolve(this.unavailable("invalid_arguments")) : projectId === undefined ? Promise.resolve(this.unavailable("project_required")) : this.git.show(projectId, parsed.data.ref, context.signal);
+    return !parsed.success
+      ? Promise.resolve(this.unavailable("invalid_arguments"))
+      : projectId === undefined
+        ? Promise.resolve(this.unavailable("project_required"))
+        : this.git.show(projectId, parsed.data.ref, context.signal);
   }
 }
 
@@ -325,7 +423,9 @@ class ArcGitBranchesTool extends ArcProjectTool {
 
   public execute(_call: ToolCall, context: ToolExecutionContext): Promise<unknown> {
     const projectId = this.projectId(context);
-    return projectId === undefined ? Promise.resolve(this.unavailable("project_required")) : this.git.branches(projectId, context.signal);
+    return projectId === undefined
+      ? Promise.resolve(this.unavailable("project_required"))
+      : this.git.branches(projectId, context.signal);
   }
 }
 
@@ -358,7 +458,13 @@ class ArcGitBlameTool extends ArcProjectTool {
     if (projectId === undefined) {
       return Promise.resolve(this.unavailable("project_required"));
     }
-    return this.git.blame(projectId, parsed.data.path, parsed.data.startLine, parsed.data.endLine ?? parsed.data.startLine, context.signal);
+    return this.git.blame(
+      projectId,
+      parsed.data.path,
+      parsed.data.startLine,
+      parsed.data.endLine ?? parsed.data.startLine,
+      context.signal,
+    );
   }
 }
 

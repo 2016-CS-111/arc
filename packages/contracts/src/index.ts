@@ -14,6 +14,7 @@ export * from "./api/project-semantic-search.contract.js";
 export * from "./api/project-symbol-index.contract.js";
 export * from "./api/project-framework-index.contract.js";
 export * from "./api/project-framework-catalog.contract.js";
+export * from "./api/project-intelligence.contract.js";
 export * from "./api/project.contract.js";
 export * from "./api/provider-status.contract.js";
 export * from "./api/tool.contract.js";
