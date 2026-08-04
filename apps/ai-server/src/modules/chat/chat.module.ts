@@ -14,5 +14,6 @@ import { ChatGateway } from "./presentation/chat.gateway.js";
 @Module({
   imports: [ContextModule, ConversationsModule, InferenceModule, LoggerModule, ToolsModule, TasksModule],
   providers: [ActiveGenerationRegistry, DurableChatService, SendChatMessageService, ChatGateway],
+  exports: [SendChatMessageService],
 })
 export class ChatModule {}

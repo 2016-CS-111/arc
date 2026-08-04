@@ -4,6 +4,11 @@ import { readBackendConfig } from "./config/backendConfig.js";
 import { ArcChatViewProvider } from "./features/chat/ArcChatViewProvider.js";
 import { ChatSessionController } from "./features/chat/ChatSessionController.js";
 import { ArcInlineCompletionProvider } from "./features/completions/ArcInlineCompletionProvider.js";
+import { ArcCodeActionProvider } from "./features/actions/ArcCodeActionProvider.js";
+import {
+  ArcGuidedCodeActionController,
+  type GuidedCodeActionCommand,
+} from "./features/actions/ArcGuidedCodeActionController.js";
 import { EditDiffPreviewService } from "./features/edits/EditDiffPreviewService.js";
 import { TaskOutputService } from "./features/tasks/TaskOutputService.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
@@ -14,6 +19,7 @@ import { WorkspaceFolderSelector } from "./features/projects/WorkspaceFolderSele
 import { WorkspaceProjectStore } from "./features/projects/WorkspaceProjectStore.js";
 import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
 import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.js";
+import { GuidedCodeActionClient } from "./infrastructure/backend/GuidedCodeActionClient.js";
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
 import { TaskProposalClient } from "./infrastructure/backend/TaskProposalClient.js";
 import { MemoryClient } from "./infrastructure/backend/MemoryClient.js";
@@ -41,6 +47,14 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   const inlineCompletionProvider = new ArcInlineCompletionProvider(
     new CompletionClient(backendConfig.url),
+    projectIdProvider,
+  );
+  const guidedCodeActions = new ArcGuidedCodeActionController(
+    new GuidedCodeActionClient(backendConfig.url),
+    editProposalClient,
+    editPreview,
+    taskProposalClient,
+    taskOutput,
     projectIdProvider,
   );
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
@@ -72,7 +86,19 @@ export function activate(context: vscode.ExtensionContext): void {
     registerWorkspaceCommand,
     sourceIntelligenceController,
     inlineCompletionProvider,
+    guidedCodeActions,
     vscode.languages.registerInlineCompletionItemProvider({ scheme: "file" }, inlineCompletionProvider),
+    vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new ArcCodeActionProvider(), {
+      providedCodeActionKinds: [
+        vscode.CodeActionKind.QuickFix,
+        vscode.CodeActionKind.Refactor,
+        vscode.CodeActionKind.RefactorExtract,
+        vscode.CodeActionKind.RefactorRewrite,
+      ],
+    }),
+    vscode.commands.registerCommand(ArcGuidedCodeActionController.command, (command: GuidedCodeActionCommand) =>
+      guidedCodeActions.execute(command),
+    ),
     vscode.window.registerWebviewViewProvider(ArcChatViewProvider.viewType, chatViewProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

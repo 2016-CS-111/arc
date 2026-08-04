@@ -8,6 +8,7 @@ import { ConversationsModule } from "./modules/conversations/conversations.modul
 import { EmbeddingsModule } from "./modules/embeddings/embeddings.module.js";
 import { EditsModule } from "./modules/edits/edits.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
+import { GuidedActionsModule } from "./modules/guided-actions/guided-actions.module.js";
 import { InferenceModule } from "./modules/inference/inference.module.js";
 import { LoggerModule } from "./modules/logger/logger.module.js";
 import { MemoriesModule } from "./modules/memories/memories.module.js";
@@ -21,6 +22,7 @@ import { TasksModule } from "./modules/tasks/tasks.module.js";
     DatabaseModule,
     LoggerModule,
     HealthModule,
+    GuidedActionsModule,
     InferenceModule,
     CompletionsModule,
     EmbeddingsModule,

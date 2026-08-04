@@ -1492,7 +1492,7 @@ Implementation:
 
 ## Milestone 14: Code Actions and Guided Refactors
 
-Status: Planned.
+Status: Complete.
 
 Goal: expose focused explain, fix, refactor, test, and documentation workflows from editor context.
 
@@ -1505,6 +1505,13 @@ Fixed gates:
 - 14.5 Availability rules, cancellation, stale-editor protection, and acceptance.
 
 Exit: common editor actions produce reviewable changes through the same safety model as chat.
+
+Implementation:
+
+- `POST /guided-actions` accepts a bounded editor selection, file context, diagnostic, and request id. `POST /guided-actions/:requestId/cancel` stops the matching local generation.
+- Explain actions use the local chat model without tools. Edit actions reuse the chat tool runtime, read-only project tools, and `arc.propose_edits`; the existing edit service still owns path policy, hashes, diff staging, approval, and undo.
+- The VS Code provider offers explain, fix diagnostic, simplify, extract function, rename symbol, add tests, and add documentation from local file contexts. Dirty, unregistered, stale, and superseded editor requests never become applied edits.
+- Every generated change opens the existing diff preview and requires explicit Apply or Reject. A compatible `test` task is staged after an edit, runs only after a separate prompt, and writes its output to `Arc Tasks`.
 
 ## Milestone 15: Autonomous Task Execution
 
