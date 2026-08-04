@@ -5,6 +5,7 @@ import { DatabaseModule } from "./database/database.module.js";
 import { ChatModule } from "./modules/chat/chat.module.js";
 import { ConversationsModule } from "./modules/conversations/conversations.module.js";
 import { EmbeddingsModule } from "./modules/embeddings/embeddings.module.js";
+import { EditsModule } from "./modules/edits/edits.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { InferenceModule } from "./modules/inference/inference.module.js";
 import { LoggerModule } from "./modules/logger/logger.module.js";
@@ -20,6 +21,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module.js";
     InferenceModule,
     EmbeddingsModule,
     RealtimeModule,
+    EditsModule,
     ChatModule,
     ConversationsModule,
     ProjectsModule,

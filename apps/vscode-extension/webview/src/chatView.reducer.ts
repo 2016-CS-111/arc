@@ -4,12 +4,15 @@ import type {
   ChatConnectionStatus,
   ChatSessionSnapshot,
   ConversationListSnapshot,
+  EditProposal,
 } from "../../src/features/chat/chatWebview.contract.js";
 
 export interface ChatViewState {
   readonly chat: ChatSessionSnapshot | undefined;
   readonly conversationError: string | undefined;
   readonly conversations: ConversationListSnapshot | undefined;
+  readonly editError: string | undefined;
+  readonly editProposal: EditProposal | undefined;
   readonly snapshot: ArcStatusSnapshot | undefined;
 }
 
@@ -29,12 +32,17 @@ export type ChatViewAction =
       readonly requestId: string;
       readonly error: ChatClientError;
     }
-  | { readonly type: "chat:connection-updated"; readonly status: ChatConnectionStatus };
+  | { readonly type: "chat:connection-updated"; readonly status: ChatConnectionStatus }
+  | { readonly type: "edits:proposed"; readonly proposal: EditProposal }
+  | { readonly type: "edits:updated"; readonly proposal: EditProposal }
+  | { readonly type: "edits:error"; readonly message: string };
 
 export const initialChatViewState: ChatViewState = {
   chat: undefined,
   conversationError: undefined,
   conversations: undefined,
+  editError: undefined,
+  editProposal: undefined,
   snapshot: undefined,
 };
 
@@ -87,6 +95,11 @@ export function chatViewReducer(state: ChatViewState, action: ChatViewAction): C
               connectionStatus: action.status,
             },
           };
+    case "edits:proposed":
+    case "edits:updated":
+      return { ...state, editError: undefined, editProposal: action.proposal };
+    case "edits:error":
+      return { ...state, editError: action.message };
   }
 }
 

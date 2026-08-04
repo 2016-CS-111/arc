@@ -8,6 +8,7 @@ import {
 import { ChatDeltaBatcher } from "./ChatDeltaBatcher.js";
 import { ChatComposer } from "./components/chat/ChatComposer.js";
 import { ConversationView } from "./components/chat/ConversationView.js";
+import { EditProposalPanel } from "./components/edits/EditProposalPanel.js";
 import { SessionHistory } from "./components/chat/SessionHistory.js";
 import { IconButton } from "./components/ui/IconButton.js";
 import { StatusIndicator, type StatusTone } from "./components/ui/StatusIndicator.js";
@@ -67,6 +68,15 @@ export function App() {
           return;
         case "chat:connection-updated":
           dispatch({ status: message.status, type: "chat:connection-updated" });
+          return;
+        case "edits:proposed":
+          dispatch({ proposal: message.proposal, type: "edits:proposed" });
+          return;
+        case "edits:updated":
+          dispatch({ proposal: message.proposal, type: "edits:updated" });
+          return;
+        case "edits:error":
+          dispatch({ message: message.message, type: "edits:error" });
           return;
         default:
           return;
@@ -137,6 +147,22 @@ export function App() {
     postToExtension({ type: "link:open", url });
   }, []);
 
+  const previewEdit = useCallback((proposalId: string, operationId: string): void => {
+    postToExtension({ operationId, proposalId, type: "edits:preview" });
+  }, []);
+
+  const approveEdits = useCallback((proposalId: string, operationIds: readonly string[]): void => {
+    postToExtension({ operationIds: [...operationIds], proposalId, type: "edits:approve" });
+  }, []);
+
+  const rejectEdits = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "edits:reject" });
+  }, []);
+
+  const undoEdits = useCallback((proposalId: string): void => {
+    postToExtension({ proposalId, type: "edits:undo" });
+  }, []);
+
   return (
     <main className="flex h-screen overflow-hidden flex-col bg-arc-background text-arc-foreground">
       <header className="flex h-10 items-center justify-between border-b border-arc-border px-3">
@@ -183,6 +209,14 @@ export function App() {
         onCopyCode={copyCode}
         onOpenExternal={openExternal}
         sessionId={state.chat?.sessionId}
+      />
+      <EditProposalPanel
+        error={state.editError}
+        onApprove={approveEdits}
+        onPreview={previewEdit}
+        onReject={rejectEdits}
+        onUndo={undoEdits}
+        proposal={state.editProposal}
       />
       <ChatComposer
         connectionReady={isConnectionReady}

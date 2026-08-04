@@ -336,6 +336,9 @@ export class ChatSessionController {
       case "error":
         this.failActiveGeneration(event.payload.requestId, event.payload.error);
         return;
+      case "edit-proposal":
+        this.publish({ proposal: event.payload.proposal, type: "edits:proposed" });
+        return;
       case "malformed-event":
         return;
     }

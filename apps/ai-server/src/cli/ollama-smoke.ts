@@ -39,12 +39,14 @@ async function main(): Promise<void> {
       continue;
     }
 
-    completed = true;
-    process.stdout.write("\n");
-    logger.info("Ollama stream completed", {
-      ...(event.finishReason === undefined ? {} : { finishReason: event.finishReason }),
-      ...(event.usage === undefined ? {} : { usage: event.usage }),
-    });
+    if (event.type === "completed") {
+      completed = true;
+      process.stdout.write("\n");
+      logger.info("Ollama stream completed", {
+        ...(event.finishReason === undefined ? {} : { finishReason: event.finishReason }),
+        ...(event.usage === undefined ? {} : { usage: event.usage }),
+      });
+    }
   }
 
   if (!completed) {

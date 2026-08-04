@@ -3,6 +3,7 @@ import {
   ChatCancelledEventSchema,
   ChatCompletedEventSchema,
   ChatDeltaEventSchema,
+  ChatEditProposalEventSchema,
   ChatErrorEventSchema,
   type ChatCancelCommand,
   type ChatSendCommand,
@@ -164,6 +165,14 @@ export class SocketIoChatTransport implements ChatTransportPort {
         this.emit({ payload: parsed.data, type: "error" });
       } else {
         this.emit({ eventName: "chat:error", type: "malformed-event" });
+      }
+    });
+    socket.on("chat:edit-proposal", (payload: unknown) => {
+      const parsed = ChatEditProposalEventSchema.safeParse(payload);
+      if (parsed.success) {
+        this.emit({ payload: parsed.data, type: "edit-proposal" });
+      } else {
+        this.emit({ eventName: "chat:edit-proposal", type: "malformed-event" });
       }
     });
 

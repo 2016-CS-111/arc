@@ -1,6 +1,7 @@
 import {
   ConversationIdSchema,
   ConversationSessionSummarySchema,
+  EditProposalSchema,
   HealthResponseSchema,
   OllamaProviderStatusResponseSchema,
   type HealthResponse,
@@ -72,6 +73,7 @@ export type ChatSessionMessage = z.infer<typeof ChatSessionMessageSchema>;
 export type ActiveChatGeneration = z.infer<typeof ActiveChatGenerationSchema>;
 export type ChatSessionSnapshot = z.infer<typeof ChatSessionSnapshotSchema>;
 export type ConversationListSnapshot = z.infer<typeof ConversationListSnapshotSchema>;
+export type EditProposal = z.infer<typeof EditProposalSchema>;
 
 const ChatSubmitCommandSchema = z.object({
   content: z.string().trim().min(1).max(20_000),
@@ -115,6 +117,14 @@ export const WebviewToExtensionMessageSchema = z.discriminatedUnion("type", [
     content: z.string().min(1).max(200_000),
     type: z.literal("code:copy"),
   }),
+  z.object({ operationId: z.string().uuid(), proposalId: z.string().uuid(), type: z.literal("edits:preview") }),
+  z.object({
+    operationIds: z.array(z.string().uuid()).min(1).max(20),
+    proposalId: z.string().uuid(),
+    type: z.literal("edits:approve"),
+  }),
+  z.object({ proposalId: z.string().uuid(), type: z.literal("edits:reject") }),
+  z.object({ proposalId: z.string().uuid(), type: z.literal("edits:undo") }),
   z.object({
     type: z.literal("link:open"),
     url: ExternalHttpUrlSchema,
@@ -170,6 +180,9 @@ export const ExtensionToWebviewMessageSchema = z.discriminatedUnion("type", [
     status: ChatConnectionStatusSchema,
     type: z.literal("chat:connection-updated"),
   }),
+  z.object({ proposal: EditProposalSchema, type: z.literal("edits:proposed") }),
+  z.object({ proposal: EditProposalSchema, type: z.literal("edits:updated") }),
+  z.object({ message: z.string().min(1).max(4_000), type: z.literal("edits:error") }),
 ]);
 
 export type ExtensionToWebviewMessage = z.infer<typeof ExtensionToWebviewMessageSchema>;

@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import type { BackendConfig } from "../../config/backendConfig.js";
 import { BackendStatusClient } from "../../infrastructure/backend/BackendStatusClient.js";
+import type { EditProposalClientPort } from "../../infrastructure/backend/EditProposalClient.js";
+import type { EditDiffPreviewPort } from "../edits/EditDiffPreviewService.js";
 import type { ChatSessionController, ChatSessionEventSubscription } from "./ChatSessionController.js";
 import { createWebviewHtml, type WebviewAsset } from "./createWebviewHtml.js";
 import { WebviewActionService } from "./WebviewActionService.js";
@@ -36,6 +38,8 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     private readonly backendConfig: BackendConfig,
     private readonly chatSession: ChatSessionController,
     webviewActions?: WebviewActionService,
+    private readonly editProposals?: EditProposalClientPort,
+    private readonly editPreview?: EditDiffPreviewPort,
   ) {
     this.webviewActions =
       webviewActions ??
@@ -93,6 +97,18 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
           return;
         case "code:copy":
           void this.webviewActions.copyCode(parsedMessage.content);
+          return;
+        case "edits:preview":
+          void this.previewEdit(parsedMessage.proposalId, parsedMessage.operationId);
+          return;
+        case "edits:approve":
+          void this.approveEdits(parsedMessage.proposalId, parsedMessage.operationIds);
+          return;
+        case "edits:reject":
+          void this.rejectEdits(parsedMessage.proposalId);
+          return;
+        case "edits:undo":
+          void this.undoEdits(parsedMessage.proposalId);
           return;
         case "link:open":
           void this.webviewActions.openExternalUrl(parsedMessage.url);
@@ -170,12 +186,69 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
     this.chatSession.cancelActiveGeneration();
   }
 
+  private async previewEdit(proposalId: string, operationId: string): Promise<void> {
+    if (this.editProposals === undefined || this.editPreview === undefined) {
+      return;
+    }
+    try {
+      await this.editPreview.show(await this.editProposals.get(proposalId), operationId);
+    } catch (error) {
+      await this.postEditError(error);
+    }
+  }
+
+  private async approveEdits(proposalId: string, operationIds: readonly string[]): Promise<void> {
+    if (this.editProposals === undefined) {
+      return;
+    }
+    try {
+      const proposal = await this.editProposals.get(proposalId);
+      if (this.editPreview?.hasDirtyDocuments(proposal) === true) {
+        await this.postEditError("Save or revert the affected open files before applying Arc edits.");
+        return;
+      }
+      await this.postChatMessage({
+        proposal: await this.editProposals.approve(proposalId, { operationIds: Array.from(operationIds) }),
+        type: "edits:updated",
+      });
+    } catch (error) {
+      await this.postEditError(error);
+    }
+  }
+
+  private async rejectEdits(proposalId: string): Promise<void> {
+    if (this.editProposals === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({ proposal: await this.editProposals.reject(proposalId), type: "edits:updated" });
+    } catch (error) {
+      await this.postEditError(error);
+    }
+  }
+
+  private async undoEdits(proposalId: string): Promise<void> {
+    if (this.editProposals === undefined) {
+      return;
+    }
+    try {
+      await this.postChatMessage({ proposal: await this.editProposals.undo(proposalId), type: "edits:updated" });
+    } catch (error) {
+      await this.postEditError(error);
+    }
+  }
+
   private async postChatMessage(message: ExtensionToWebviewMessage): Promise<void> {
     if (this.view === undefined) {
       return;
     }
 
     await this.view.webview.postMessage(message);
+  }
+
+  private async postEditError(error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : "Arc could not update the edit proposal.";
+    await this.postChatMessage({ message, type: "edits:error" });
   }
 
   private disposeView(): void {

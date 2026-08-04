@@ -1,6 +1,8 @@
 import { Module, type Provider } from "@nestjs/common";
 
 import { ConfigModule } from "../../config/config.module.js";
+import { EditsModule } from "../edits/edits.module.js";
+import { ProjectEditProposalService } from "../edits/application/project-edit-proposal.service.js";
 import { LoggerModule } from "../logger/logger.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
 import { ProjectGitInspectionService } from "../projects/application/project-git-inspection.service.js";
@@ -12,6 +14,7 @@ import { ToolRegistryService } from "./application/tool-registry.service.js";
 import { ToolRuntimeService } from "./application/tool-runtime.service.js";
 import type { ToolHandler } from "./domain/tool-handler.js";
 import { ArcRuntimeInfoTool } from "./infrastructure/arc-runtime-info.tool.js";
+import { ArcEditProposalTool } from "./infrastructure/arc-edit-proposal.tool.js";
 import { createReadOnlyProjectToolHandlers } from "./infrastructure/arc-readonly-project.tools.js";
 import { ARC_TOOL_HANDLERS } from "./tools.constants.js";
 
@@ -22,17 +25,23 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
     ProjectSymbolSearchService,
     ProjectSemanticSearchService,
     ProjectGitInspectionService,
+    ProjectEditProposalService,
   ],
   useFactory: (
     workspace: ProjectWorkspaceInspectionService,
     symbols: ProjectSymbolSearchService,
     semanticSearch: ProjectSemanticSearchService,
     git: ProjectGitInspectionService,
-  ): readonly ToolHandler[] => [new ArcRuntimeInfoTool(), ...createReadOnlyProjectToolHandlers(workspace, symbols, semanticSearch, git)],
+    editProposals: ProjectEditProposalService,
+  ): readonly ToolHandler[] => [
+    new ArcRuntimeInfoTool(),
+    new ArcEditProposalTool(editProposals),
+    ...createReadOnlyProjectToolHandlers(workspace, symbols, semanticSearch, git),
+  ],
 };
 
 @Module({
-  imports: [ConfigModule, LoggerModule, ProjectsModule],
+  imports: [ConfigModule, LoggerModule, ProjectsModule, EditsModule],
   providers: [toolHandlersProvider, ToolRegistryService, ToolPermissionService, ToolRuntimeService],
   exports: [ToolRuntimeService],
 })

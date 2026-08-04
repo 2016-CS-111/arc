@@ -4,7 +4,9 @@ import {
   ChatCancelledEventSchema,
   ChatCompletedEventSchema,
   ChatDeltaEventSchema,
+  ChatEditProposalEventSchema,
   ChatErrorEventSchema,
+  EditProposalSchema,
   ChatSendCommandSchema,
   type ChatError,
   type ChatSendCommand,
@@ -207,6 +209,21 @@ export class ChatGateway implements OnGatewayDisconnect {
         },
         signal,
       )) {
+        if (event.type === "tool") {
+          const proposal = extractEditProposal(event.result);
+          if (proposal !== undefined) {
+            client.emit(
+              "chat:edit-proposal",
+              ChatEditProposalEventSchema.parse({
+                proposal,
+                requestId: command.requestId,
+                sessionId: command.sessionId,
+              }),
+            );
+          }
+          continue;
+        }
+
         if (event.type === "delta") {
           assistantContent += event.content;
           const persisted = await this.durableChatService.stream(
@@ -419,6 +436,26 @@ export class ChatGateway implements OnGatewayDisconnect {
   private getStringField(candidate: Record<string, unknown>, field: string): string {
     const value = candidate[field];
     return typeof value === "string" && /^[A-Za-z0-9._:-]{1,160}$/.test(value) ? value : "unknown";
+  }
+}
+
+function extractEditProposal(result: { readonly content: string; readonly name: string }) {
+  if (result.name !== "arc.propose_edits") {
+    return undefined;
+  }
+  try {
+    const payload: unknown = JSON.parse(result.content);
+    if (typeof payload !== "object" || payload === null || !("result" in payload)) {
+      return undefined;
+    }
+    const toolResult = payload.result;
+    if (typeof toolResult !== "object" || toolResult === null || !("proposal" in toolResult)) {
+      return undefined;
+    }
+    const parsed = EditProposalSchema.safeParse(toolResult.proposal);
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
   }
 }
 

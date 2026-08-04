@@ -50,7 +50,11 @@ export class ProjectGitInspectionService {
   }
 
   public async log(projectId: string, limit: number, signal: AbortSignal): Promise<unknown> {
-    return this.inspect(projectId, ["log", "--no-color", `--max-count=${String(limit)}`, "--oneline", "--decorate"], signal);
+    return this.inspect(
+      projectId,
+      ["log", "--no-color", `--max-count=${String(limit)}`, "--oneline", "--decorate"],
+      signal,
+    );
   }
 
   public async show(projectId: string, ref: string, signal: AbortSignal): Promise<unknown> {
@@ -120,7 +124,7 @@ export class ProjectGitInspectionService {
   private async isRepositoryRoot(project: Project, signal: AbortSignal): Promise<boolean> {
     try {
       const result = await this.runGit(project.rootPath, ["rev-parse", "--show-toplevel"], signal);
-      return (await realpath(result.content.trim())) === project.rootPath;
+      return (await realpath(result.content.trim())) === (await realpath(project.rootPath));
     } catch {
       this.throwIfCancelled(signal);
       return false;

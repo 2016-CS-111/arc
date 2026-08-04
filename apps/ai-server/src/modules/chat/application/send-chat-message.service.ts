@@ -1,3 +1,4 @@
+import type { ToolDefinition, ToolResult } from "@arc/contracts";
 import { Inject, Injectable } from "@nestjs/common";
 
 import type { ChatModelPort } from "../../inference/application/chat-model.port.js";
@@ -11,23 +12,36 @@ import type {
 import { ToolCallFallbackParser } from "../../tools/application/tool-call-fallback.parser.js";
 import { ToolRuntimeService } from "../../tools/application/tool-runtime.service.js";
 
+export type SendChatMessageEvent =
+  Exclude<ChatModelEvent, { readonly type: "tool_calls" }> | { readonly type: "tool"; readonly result: ToolResult };
+
+interface ToolRuntimePort {
+  execute(call: ChatModelToolCall, context: Parameters<ToolRuntimeService["execute"]>[1]): Promise<ToolResult>;
+  getDefinitions(): readonly ToolDefinition[];
+  getMaxCallsPerTurn(): number;
+}
+
+const noToolRuntime: ToolRuntimePort = {
+  execute: (): Promise<ToolResult> => Promise.reject(new Error("Arc tool execution is unavailable.")),
+  getDefinitions: (): readonly ToolDefinition[] => [],
+  getMaxCallsPerTurn: (): number => 0,
+};
+
 @Injectable()
 export class SendChatMessageService {
   public constructor(
     @Inject(CHAT_MODEL) private readonly chatModel: ChatModelPort,
-    @Inject(ToolRuntimeService) private readonly toolRuntime: ToolRuntimeService,
+    @Inject(ToolRuntimeService) private readonly toolRuntime: ToolRuntimePort = noToolRuntime,
   ) {}
 
-  public async *stream(
-    input: SendChatMessageInput,
-    signal: AbortSignal,
-  ): AsyncGenerator<Exclude<ChatModelEvent, { readonly type: "tool_calls" }>> {
+  public async *stream(input: SendChatMessageInput, signal: AbortSignal): AsyncGenerator<SendChatMessageEvent> {
     const tools = this.toModelTools();
     let messages: readonly ChatModelMessage[] = input.messages;
-    let completedEvent: Exclude<ChatModelEvent, { readonly type: "delta" } | { readonly type: "tool_calls" }> | undefined;
+    let completedEvent:
+      Exclude<ChatModelEvent, { readonly type: "delta" } | { readonly type: "tool_calls" }> | undefined;
     let callsUsed = 0;
 
-    while (true) {
+    for (;;) {
       let assistantContent = "";
       const toolCalls: ChatModelToolCall[] = [];
       completedEvent = undefined;
@@ -89,6 +103,9 @@ export class SendChatMessageService {
           }),
         ),
       );
+      for (const result of results) {
+        yield { result, type: "tool" };
+      }
       callsUsed += callsToExecute.length;
       messages = [
         ...messages,
@@ -116,7 +133,6 @@ export class SendChatMessageService {
       },
     }));
   }
-
 }
 
 export interface SendChatMessageInput {

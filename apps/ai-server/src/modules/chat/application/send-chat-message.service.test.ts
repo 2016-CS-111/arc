@@ -3,10 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { ChatModelPort } from "../../inference/application/chat-model.port.js";
 import type { ChatModelEvent, ChatModelRequest, ChatModelStatus } from "../../inference/domain/chat-model.types.js";
 import type { ToolRuntimeService } from "../../tools/application/tool-runtime.service.js";
-import { SendChatMessageService } from "./send-chat-message.service.js";
+import { SendChatMessageService, type SendChatMessageEvent } from "./send-chat-message.service.js";
 
-async function collectEvents(stream: AsyncIterable<ChatModelEvent>): Promise<ChatModelEvent[]> {
-  const events: ChatModelEvent[] = [];
+async function collectEvents(stream: AsyncIterable<SendChatMessageEvent>): Promise<SendChatMessageEvent[]> {
+  const events: SendChatMessageEvent[] = [];
 
   for await (const event of stream) {
     events.push(event);
@@ -53,7 +53,7 @@ describe("SendChatMessageService", () => {
       { type: "delta", content: "Hello" },
       { type: "completed", finishReason: "stop" },
     ]);
-    expect(capturedRequest).toMatchObject({ messages: expect.arrayContaining(messages) });
+    expect(capturedRequest?.messages).toEqual(expect.arrayContaining(messages));
     expect(capturedSignal).toBe(controller.signal);
   });
 
@@ -64,6 +64,7 @@ describe("SendChatMessageService", () => {
         Promise.resolve({ status: "ready", model: "qwen2.5-coder:7b", latencyMs: 1 }),
       streamChat: async function* (request: ChatModelRequest): AsyncGenerator<ChatModelEvent> {
         requests.push(request);
+        await Promise.resolve();
         if (requests.length === 1) {
           yield {
             type: "tool_calls",
@@ -77,14 +78,15 @@ describe("SendChatMessageService", () => {
         yield { type: "completed", finishReason: "stop" };
       },
     };
-    const execute = vi.fn(async () => ({
-      callId: "ollama_1",
-      name: "arc.runtime_info",
-      status: "completed" as const,
-      content: '{"result":{"runtime":"arc"}}',
-    }));
+    const execute = vi.fn(() =>
+      Promise.resolve({
+        callId: "ollama_1",
+        name: "arc.runtime_info",
+        status: "completed" as const,
+        content: '{"result":{"runtime":"arc"}}',
+      }),
+    );
     const toolRuntime = {
-      ...createToolRuntime(),
       execute,
       getDefinitions: () => [
         {
@@ -94,6 +96,7 @@ describe("SendChatMessageService", () => {
           parameters: { type: "object" },
         },
       ],
+      getMaxCallsPerTurn: (): number => 4,
     } as unknown as ToolRuntimeService;
     const service = new SendChatMessageService(chatModel, toolRuntime);
 
@@ -109,6 +112,15 @@ describe("SendChatMessageService", () => {
         ),
       ),
     ).resolves.toEqual([
+      {
+        type: "tool",
+        result: {
+          callId: "ollama_1",
+          content: '{"result":{"runtime":"arc"}}',
+          name: "arc.runtime_info",
+          status: "completed",
+        },
+      },
       { type: "delta", content: "Arc has a typed tool runtime." },
       { type: "completed", finishReason: "stop" },
     ]);
@@ -126,9 +138,7 @@ describe("SendChatMessageService", () => {
 
 function createToolRuntime(): ToolRuntimeService {
   return {
-    execute: async (): Promise<never> => {
-      throw new Error("Tool execution was not expected.");
-    },
+    execute: (): Promise<never> => Promise.reject(new Error("Tool execution was not expected.")),
     getDefinitions: (): readonly [] => [],
     getMaxCallsPerTurn: (): number => 4,
   } as unknown as ToolRuntimeService;

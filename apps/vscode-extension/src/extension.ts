@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { readBackendConfig } from "./config/backendConfig.js";
 import { ArcChatViewProvider } from "./features/chat/ArcChatViewProvider.js";
 import { ChatSessionController } from "./features/chat/ChatSessionController.js";
+import { EditDiffPreviewService } from "./features/edits/EditDiffPreviewService.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
 import { ProjectInventoryController } from "./features/projects/ProjectInventoryController.js";
 import { RegisterWorkspaceCommand } from "./features/projects/RegisterWorkspaceCommand.js";
@@ -10,12 +11,15 @@ import { SourceIntelligenceController } from "./features/projects/SourceIntellig
 import { WorkspaceFolderSelector } from "./features/projects/WorkspaceFolderSelector.js";
 import { WorkspaceProjectStore } from "./features/projects/WorkspaceProjectStore.js";
 import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
+import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.js";
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
 import { SocketIoChatTransport } from "./infrastructure/chat/SocketIoChatTransport.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const backendConfig = readBackendConfig();
   const projectClient = new ProjectClient(backendConfig.url);
+  const editProposalClient = new EditProposalClient(backendConfig.url);
+  const editPreview = new EditDiffPreviewService();
   const projectStore = new WorkspaceProjectStore(context.workspaceState);
   const folderSelector = new WorkspaceFolderSelector();
   const chatSession = new ChatSessionController({
@@ -33,10 +37,18 @@ export function activate(context: vscode.ExtensionContext): void {
       () => undefined,
     ),
   );
-  const chatViewProvider = new ArcChatViewProvider(context.extensionUri, backendConfig, chatSession);
+  const chatViewProvider = new ArcChatViewProvider(
+    context.extensionUri,
+    backendConfig,
+    chatSession,
+    undefined,
+    editProposalClient,
+    editPreview,
+  );
 
   context.subscriptions.push(
     chatSession,
+    editPreview,
     chatViewProvider,
     projectInventoryController,
     registerWorkspaceCommand,

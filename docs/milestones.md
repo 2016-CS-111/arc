@@ -120,7 +120,7 @@ Not included yet:
 
 ### Milestone 2.4: End-to-End Streaming Chat
 
-Status: Planned.
+Status: Complete.
 
 Goal: connect the webview, extension host, backend gateway, and Ollama adapter into one working chat
 flow. Milestone 2.4 is divided into four independently testable gates so transport, state, UI, and
@@ -1376,13 +1376,19 @@ Goal: support transparent file changes that are previewed and explicitly approve
 
 Fixed gates:
 
-- 9.1 Structured create, update, rename, move, and delete patch contracts.
-- 9.2 Hash-based conflict detection, path containment, ignore policy, and edit-size limits.
-- 9.3 VSCode multi-file diff preview with approve, reject, and partial-selection controls.
-- 9.4 Atomic apply, rollback on failure, and one-session undo records.
-- 9.5 Formatting hooks, changed-file validation, concurrent-edit handling, and acceptance.
+- 9.1 Structured create, update, delete, and move contracts. A rename is represented as a move.
+- 9.2 Hash revalidation, root containment, symlink rejection, ignore policy, and bounded edit payloads.
+- 9.3 Native VSCode multi-file `vscode.diff` previews with approval, rejection, and partial selection.
+- 9.4 Atomic staged apply with rollback and one-session undo records.
+- 9.5 Dirty-document protection plus apply/undo conflict checks. Formatter commands remain in Milestone 10 so an approved diff is never changed implicitly.
 
 Exit: Arc can propose and safely apply reversible multi-file edits only after approval.
+
+Implementation:
+
+- `arc.propose_edits` stages project edits only; it cannot mutate files.
+- The local backend stores proposals in memory for the active server session and exposes explicit approve, reject, and undo endpoints.
+- The extension blocks approval for dirty editors and opens before/after virtual documents in VSCode's built-in diff viewer.
 
 ## Milestone 10: Terminal, Task Runner, and Git Mutation
 
