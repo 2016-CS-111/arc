@@ -1,10 +1,15 @@
 import { SecurityAuditEventSchema, type SecurityAuditEvent } from "@arc/contracts";
+import { Op } from "sequelize";
 
 import type { ArcDatabase } from "../../../database/database.types.js";
 import type { SecurityAuditLogRepository } from "../application/security-audit-log.repository.js";
 
 export class SequelizeSecurityAuditLogRepository implements SecurityAuditLogRepository {
   public constructor(private readonly database: ArcDatabase) {}
+
+  public deleteOlderThan(cutoff: Date): Promise<number> {
+    return this.database.models.securityAuditEvents.destroy({ where: { createdAt: { [Op.lt]: cutoff } } });
+  }
 
   public async list(limit: number): Promise<readonly SecurityAuditEvent[]> {
     const rows = await this.database.models.securityAuditEvents.findAll({

@@ -10,6 +10,7 @@ describe("SecurityAuditLogService", () => {
     let saved: SecurityAuditEvent | undefined;
     let requestedLimit: number | undefined;
     const repository: SecurityAuditLogRepository = {
+      deleteOlderThan: async () => 0,
       list: async (limit) => {
         requestedLimit = limit;
         return saved === undefined ? [] : [saved];

@@ -7,6 +7,7 @@ import { SequelizeSecurityAuditLogRepository } from "./sequelize-security-audit-
 describe("SequelizeSecurityAuditLogRepository", () => {
   it("stores and reloads compact audit metadata", async () => {
     const create = vi.fn(() => Promise.resolve());
+    const destroy = vi.fn(() => Promise.resolve(2));
     const findAll = vi.fn(() =>
       Promise.resolve([
         {
@@ -16,11 +17,12 @@ describe("SequelizeSecurityAuditLogRepository", () => {
       ]),
     );
     const repository = new SequelizeSecurityAuditLogRepository({
-      models: { securityAuditEvents: { create, findAll } },
+      models: { securityAuditEvents: { create, destroy, findAll } },
     } as unknown as ArcDatabase);
 
     await expect(repository.list(10)).resolves.toEqual([event()]);
     await repository.save(event());
+    await expect(repository.deleteOlderThan(new Date("2026-08-01T00:00:00.000Z"))).resolves.toBe(2);
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ category: "task", subjectId: "proposal-1" }));
   });
 });

@@ -9,6 +9,7 @@ import { LoggerModule } from "../logger/logger.module.js";
 import { PermissionProfileService } from "./application/permission-profile.service.js";
 import type { SecurityAuditLogRepository } from "./application/security-audit-log.repository.js";
 import { SecurityAuditLogService } from "./application/security-audit-log.service.js";
+import { SecurityAuditRetentionService } from "./application/security-audit-retention.service.js";
 import { SequelizeSecurityAuditLogRepository } from "./infrastructure/sequelize-security-audit-log.repository.js";
 import { SecurityController } from "./presentation/security.controller.js";
 import { SECURITY_AUDIT_LOG_REPOSITORY } from "./security.constants.js";
@@ -29,7 +30,12 @@ const securityAuditLogRepositoryProvider: Provider<SecurityAuditLogRepository> =
 @Module({
   imports: [DatabaseModule, LoggerModule],
   controllers: [SecurityController],
-  providers: [permissionProfileProvider, securityAuditLogRepositoryProvider, SecurityAuditLogService],
-  exports: [PermissionProfileService, SecurityAuditLogService],
+  providers: [
+    permissionProfileProvider,
+    securityAuditLogRepositoryProvider,
+    SecurityAuditLogService,
+    SecurityAuditRetentionService,
+  ],
+  exports: [PermissionProfileService, SecurityAuditLogService, SecurityAuditRetentionService],
 })
 export class SecurityModule {}

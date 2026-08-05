@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gate 16.1 is complete.
+Status: In progress. Gates 16.1 and 16.2 are complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.
@@ -1578,6 +1578,10 @@ Implementation:
 - `GET /security` exposes the active profile. `GET /security/audit?limit=50` returns up to 100 durable metadata-only audit events for tool execution and proposal state changes.
 - Sequelize stores audit category, action, status, correlation IDs, and timestamps in `security_audit_events`. Apply migration `0013_security_audit_events.sql` with `pnpm db:migrate`; the table never stores prompts, source text, diffs, tool arguments/results, task output, or error payloads.
 - `redactSecrets` protects console logs and task output from common password, token, authorization-header, and connection-string credentials. `pnpm security:dependencies` runs the package manager's production dependency audit without changing the workspace.
+- 16.2 keeps `/health` as a cheap liveness response and adds `GET /health/diagnostics` for typed PostgreSQL, Ollama, memory, process, and audit-retention status. A dependency failure degrades the diagnostic response without exposing internal connection errors.
+- Security audit retention runs on backend startup through `ARC_SECURITY_AUDIT_RETENTION_DAYS` (90 by default). Expired metadata-only audit rows are pruned; a retention error is visible in diagnostics but never prevents backend startup.
+- `pnpm db:backup` uses `pg_dump` to write a local custom-format backup to `ARC_BACKUP_DIRECTORY`. `pnpm db:restore <file>` uses `pg_restore` only when `ARC_DATABASE_RESTORE_CONFIRMED=true`; it is explicit and never part of automatic recovery.
+- Existing durable chat, index, embedding, task-run, and proposal workflows retain their own startup recovery and never replay an edit, command, or Git mutation. See `milestone-16.2-architecture.md` for the operational boundary.
 
 ## Optional Platform Expansion
 

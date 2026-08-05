@@ -30,7 +30,9 @@ pnpm lint
 pnpm security:dependencies
 pnpm backend:dev
 pnpm db:create
+pnpm db:backup
 pnpm db:migrate
+pnpm db:restore <backup-file>
 pnpm db:verify
 pnpm project:verify
 pnpm source:index:verify
@@ -104,6 +106,28 @@ non-destructive `sequelize.sync()` after a successful connection, but it does no
 turns, streaming/completion persistence, reopen-and-continue behavior, scoped restart recovery,
 rename, and deletion against the configured PostgreSQL database. It creates one temporary session
 and removes it before exiting.
+
+For an operational check without changing application state, use:
+
+```sh
+curl http://127.0.0.1:7331/health
+curl http://127.0.0.1:7331/health/diagnostics
+```
+
+The diagnostics route actively checks PostgreSQL and Ollama, reports bounded runtime information,
+and shows the last audit-retention outcome. The normal `/health` liveness route remains fast for
+the extension.
+
+`pnpm db:backup` writes a PostgreSQL custom-format backup through `pg_dump` to
+`ARC_BACKUP_DIRECTORY` (default `~/.arc/backups`). Restore is intentionally destructive to the
+configured database and requires both a backup path and explicit confirmation:
+
+```sh
+ARC_DATABASE_RESTORE_CONFIRMED=true pnpm db:restore ~/.arc/backups/arc-<timestamp>.dump
+```
+
+`pg_dump` and `pg_restore` must be on your shell `PATH`. Restore uses `--clean --if-exists` only
+against `ARC_DATABASE_URL`; it is never run during Arc startup or automatic recovery.
 
 For the final local acceptance pass, run `pnpm db:verify`, start `pnpm backend:dev`, then open Arc
 in the Extension Development Host. Create a conversation, send a prompt, restart the backend or

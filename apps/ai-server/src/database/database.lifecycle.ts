@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
+import { redactSecrets } from "@arc/shared";
 
 import { APP_CONFIG } from "../config/config.constants.js";
 import type { AppConfig } from "../config/env.js";
@@ -19,7 +20,7 @@ export class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationS
       await this.database.sequelize.authenticate();
       this.logger.log("PostgreSQL connection ready");
     } catch (error) {
-      this.logger.warn(`PostgreSQL connection unavailable: ${getErrorMessage(error)}`);
+      this.logger.warn(`PostgreSQL connection unavailable: ${redactSecrets(getErrorMessage(error))}`);
       return;
     }
 
@@ -31,7 +32,7 @@ export class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationS
       await this.database.sequelize.sync();
       this.logger.log("PostgreSQL Sequelize models synchronized");
     } catch (error) {
-      this.logger.warn(`PostgreSQL Sequelize sync failed: ${getErrorMessage(error)}`);
+      this.logger.warn(`PostgreSQL Sequelize sync failed: ${redactSecrets(getErrorMessage(error))}`);
     }
   }
 
