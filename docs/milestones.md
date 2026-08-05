@@ -1555,7 +1555,8 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gates 16.1 through 16.6 are complete.
+Status: Complete. Gates 16.1 through 16.7 are complete; final release acceptance remains an explicit
+local operator action against configured PostgreSQL and Ollama services.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.

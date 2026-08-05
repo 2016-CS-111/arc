@@ -92,6 +92,12 @@ Arc's current verified development platform is Intel macOS. Apple Silicon macOS,
 use the same Node, PostgreSQL, Ollama, and VS Code paths, but each release should run the platform
 acceptance commands before being called verified. See [the Milestone 16.6 compatibility matrix](docs/milestone-16.6-architecture.md).
 
+## Release
+
+Use [the Milestone 16.7 release checklist](docs/milestone-16.7-acceptance.md) for a local release.
+`pnpm extension:package` creates an unsigned private VSIX. Marketplace distribution is a separate,
+operator-controlled publish step; the Marketplace signs extensions it publishes.
+
 ## Security
 
 Milestone 16.1 adds a local permission profile and a durable, metadata-only security audit. The
