@@ -21,6 +21,7 @@
     "embedding:catalog:verify": "pnpm --filter @arc/ai-server embedding:catalog:verify",
     "embedding:catalog:verify:compiled": "pnpm --filter @arc/ai-server embedding:catalog:verify:compiled",
     "embedding:verify": "pnpm embedding:smoke && pnpm embedding:catalog:verify",
+    "evaluation:verify": "pnpm --filter @arc/ai-server evaluation:verify",
     "db:up": "pnpm db:create",
     "chat:cancel-smoke": "pnpm --filter @arc/ai-server chat:cancel-smoke",
     "chat:socket-smoke": "pnpm --filter @arc/ai-server chat:socket-smoke",

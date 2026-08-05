@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gates 16.1 and 16.2 are complete.
+Status: In progress. Gates 16.1 through 16.3 are complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.
@@ -1582,6 +1582,8 @@ Implementation:
 - Security audit retention runs on backend startup through `ARC_SECURITY_AUDIT_RETENTION_DAYS` (90 by default). Expired metadata-only audit rows are pruned; a retention error is visible in diagnostics but never prevents backend startup.
 - `pnpm db:backup` uses `pg_dump` to write a local custom-format backup to `ARC_BACKUP_DIRECTORY`. `pnpm db:restore <file>` uses `pg_restore` only when `ARC_DATABASE_RESTORE_CONFIRMED=true`; it is explicit and never part of automatic recovery.
 - Existing durable chat, index, embedding, task-run, and proposal workflows retain their own startup recovery and never replay an edit, command, or Git mutation. See `milestone-16.2-architecture.md` for the operational boundary.
+- 16.3 makes the existing focused retrieval, completion, staged edit, tool, and agent tests the deterministic local evaluation corpus. `pnpm evaluation:verify` runs each suite separately and reports a 10-second process budget for retrieval, completion, edit, and tool behavior, plus 15 seconds for the agent suite.
+- The evaluation command uses no PostgreSQL, Ollama, project workspace, or network connection. The documented Intel MacBook model profile keeps manual completion p50 targets below 4 seconds for `qwen2.5-coder:3b` and below 8 seconds for `qwen2.5-coder:7b`; the 20-second completion timeout remains the hard bound.
 
 ## Optional Platform Expansion
 

@@ -19,6 +19,7 @@
     "embedding:smoke:compiled": "node dist/cli/embedding-smoke.js",
     "embedding:catalog:verify": "tsx src/cli/embedding-catalog-verify.ts",
     "embedding:catalog:verify:compiled": "node dist/cli/embedding-catalog-verify.js",
+    "evaluation:verify": "tsx src/cli/evaluation-verify.ts",
     "framework-evidence:smoke": "tsx src/cli/framework-evidence-smoke.ts",
     "framework-evidence:smoke:compiled": "node dist/cli/framework-evidence-smoke.js",
     "framework:index:verify": "tsx src/cli/framework-index-verify.ts",

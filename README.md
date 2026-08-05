@@ -28,6 +28,7 @@ pnpm build
 pnpm test
 pnpm lint
 pnpm security:dependencies
+pnpm evaluation:verify
 pnpm backend:dev
 pnpm db:create
 pnpm db:backup
@@ -128,6 +129,11 @@ ARC_DATABASE_RESTORE_CONFIRMED=true pnpm db:restore ~/.arc/backups/arc-<timestam
 
 `pg_dump` and `pg_restore` must be on your shell `PATH`. Restore uses `--clean --if-exists` only
 against `ARC_DATABASE_URL`; it is never run during Arc startup or automatic recovery.
+
+`pnpm evaluation:verify` runs the deterministic retrieval, completion, edit, tool, and agent
+workflow corpus without PostgreSQL or Ollama. It reports each suite's local process duration against
+its budget; the model-specific manual timing profile is in
+[the Milestone 16.3 acceptance guide](docs/milestone-16.3-acceptance.md).
 
 For the final local acceptance pass, run `pnpm db:verify`, start `pnpm backend:dev`, then open Arc
 in the Extension Development Host. Create a conversation, send a prompt, restart the backend or
