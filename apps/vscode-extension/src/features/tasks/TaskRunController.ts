@@ -2,6 +2,10 @@ import { AgentPlanSchema, type AgentPlan, type AgentRun } from "@arc/contracts";
 import * as vscode from "vscode";
 
 import type { AgentRunClientPort } from "../../infrastructure/backend/AgentRunClient.js";
+import type { EditProposalClientPort } from "../../infrastructure/backend/EditProposalClient.js";
+import type { TaskProposalClientPort } from "../../infrastructure/backend/TaskProposalClient.js";
+import type { EditDiffPreviewPort } from "../edits/EditDiffPreviewService.js";
+import type { TaskOutputPort } from "./TaskOutputService.js";
 
 export class TaskRunController implements vscode.Disposable {
   public static readonly cancelCommand = "arc.cancelTaskRun";
@@ -13,13 +17,21 @@ export class TaskRunController implements vscode.Disposable {
   private readonly monitoringRuns = new Set<string>();
   private readonly output = vscode.window.createOutputChannel("Arc Agent Tasks");
   private readonly reportedVersions = new Map<string, string>();
+  private readonly reviewedArtifacts = new Set<string>();
 
-  public constructor(private readonly runs: AgentRunClientPort) {}
+  public constructor(
+    private readonly runs: AgentRunClientPort,
+    private readonly editProposals: EditProposalClientPort,
+    private readonly editPreview: EditDiffPreviewPort,
+    private readonly taskProposals: TaskProposalClientPort,
+    private readonly taskOutput: TaskOutputPort,
+  ) {}
 
   public dispose(): void {
     this.activeRuns.clear();
     this.monitoringRuns.clear();
     this.reportedVersions.clear();
+    this.reviewedArtifacts.clear();
     this.output.dispose();
   }
 
@@ -96,7 +108,10 @@ export class TaskRunController implements vscode.Disposable {
       for (;;) {
         const run = await this.runs.get(runId);
         this.report(run);
-        if (run.status !== "running") return;
+        if (run.status !== "running") {
+          await this.reviewWaitingArtifacts(run);
+          return;
+        }
         await delay(500);
       }
     } catch (error) {
@@ -109,12 +124,90 @@ export class TaskRunController implements vscode.Disposable {
   private report(run: AgentRun): void {
     const activeStep = run.steps.find((step) => step.step.id === run.activeStepId);
     const checkpoint = activeStep?.checkpoint ?? lastCheckpoint(run);
-    const version = [run.updatedAt, run.status, run.activeStepId, run.budget.toolCallsUsed, checkpoint].join("|");
+    const version = [
+      run.updatedAt,
+      run.status,
+      run.activeStepId,
+      run.budget.toolCallsUsed,
+      run.budget.repairAttempts,
+      checkpoint,
+    ].join("|");
     if (this.reportedVersions.get(run.id) === version) return;
     this.reportedVersions.set(run.id, version);
     this.output.appendLine(
-      `[${run.status}] ${activeStep?.step.title ?? run.goal} (${String(run.budget.toolCallsUsed)}/${String(run.budget.maxToolCalls)} tools)${checkpoint === undefined ? "" : `\n${checkpoint}`}`,
+      `[${run.status}] ${activeStep?.step.title ?? run.goal} (${String(run.budget.toolCallsUsed)}/${String(run.budget.maxToolCalls)} tools, ${String(run.budget.repairAttempts)}/${String(run.budget.maxRepairAttempts)} repairs)${checkpoint === undefined ? "" : `\n${checkpoint}`}`,
     );
+  }
+
+  private async reviewWaitingArtifacts(run: AgentRun): Promise<void> {
+    for (const step of run.steps) {
+      if (step.status !== "waiting") continue;
+      for (const artifact of step.artifacts) {
+        if (artifact.status !== "pending") continue;
+        const key = `${run.id}:${artifact.proposalId}`;
+        if (this.reviewedArtifacts.has(key)) continue;
+        this.reviewedArtifacts.add(key);
+        if (artifact.kind === "edit") {
+          await this.reviewEditArtifact(artifact.proposalId, key);
+        } else {
+          await this.reviewTaskArtifact(artifact.proposalId, key);
+        }
+      }
+    }
+  }
+
+  private async reviewEditArtifact(proposalId: string, key: string): Promise<void> {
+    const proposal = await this.editProposals.get(proposalId);
+    if (proposal.status !== "pending") return;
+    const firstOperation = proposal.operations.at(0);
+    if (firstOperation === undefined) return;
+    await this.editPreview.show(proposal, firstOperation.id);
+    const decision = await vscode.window.showInformationMessage("Arc staged task edits for review.", "Apply", "Reject");
+    if (decision === "Apply") {
+      if (this.editPreview.hasDirtyDocuments(proposal)) {
+        this.reviewedArtifacts.delete(key);
+        await vscode.window.showWarningMessage("Save or revert the affected open files before applying Arc edits.");
+        return;
+      }
+      await this.editProposals.approve(proposal.id, {
+        operationIds: proposal.operations.map((operation) => operation.id),
+      });
+      this.output.appendLine("[applied] Task edits are ready. Resume the Arc task run.");
+      return;
+    }
+    await this.editProposals.reject(proposal.id);
+    this.output.appendLine("[rejected] Task edits were rejected. Resume the Arc task run to record the outcome.");
+  }
+
+  private async reviewTaskArtifact(proposalId: string, key: string): Promise<void> {
+    const proposal = await this.taskProposals.get(proposalId);
+    if (proposal.status !== "pending") return;
+    if (proposal.mutates) {
+      this.reviewedArtifacts.delete(key);
+      await vscode.window.showWarningMessage(
+        "This task proposal changes the workspace and requires Milestone 15.4 approval support.",
+      );
+      return;
+    }
+    const decision = await vscode.window.showInformationMessage(`Run Arc task: ${proposal.title}?`, "Run", "Reject");
+    if (decision !== "Run") {
+      await this.taskProposals.reject(proposal.id);
+      this.output.appendLine("[rejected] Task command was rejected. Resume the Arc task run to record the outcome.");
+      return;
+    }
+    await this.monitorTask(proposal.id);
+  }
+
+  private async monitorTask(proposalId: string): Promise<void> {
+    let proposal = await this.taskProposals.approve(proposalId);
+    this.taskOutput.append(proposal);
+    this.taskOutput.show();
+    while (proposal.status === "running") {
+      await delay(400);
+      proposal = await this.taskProposals.get(proposalId);
+      this.taskOutput.append(proposal);
+    }
+    this.output.appendLine(`[${proposal.status}] ${proposal.title}. Resume the Arc task run.`);
   }
 
   private async showError(error: unknown): Promise<void> {

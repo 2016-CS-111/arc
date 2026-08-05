@@ -62,7 +62,13 @@ export function activate(context: vscode.ExtensionContext): void {
     projectIdProvider,
   );
   const taskPlans = new TaskPlanDocumentController(new AgentPlanClient(backendConfig.url), projectIdProvider);
-  const taskRuns = new TaskRunController(new AgentRunClient(backendConfig.url));
+  const taskRuns = new TaskRunController(
+    new AgentRunClient(backendConfig.url),
+    editProposalClient,
+    editPreview,
+    taskProposalClient,
+    taskOutput,
+  );
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
   const sourceIntelligenceController = new SourceIntelligenceController(projectClient, projectStore, folderSelector);
   const registerWorkspaceCommand = new RegisterWorkspaceCommand(projectClient, projectStore, folderSelector, (folder) =>

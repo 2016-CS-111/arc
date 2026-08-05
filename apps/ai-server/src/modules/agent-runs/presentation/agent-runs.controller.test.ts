@@ -38,7 +38,7 @@ describe("AgentRunsController", () => {
 function run() {
   return {
     activeStepId: null,
-    budget: { maxToolCalls: 3, toolCallsUsed: 0 },
+    budget: { maxRepairAttempts: 2, maxToolCalls: 3, repairAttempts: 0, toolCallsUsed: 0 },
     createdAt: "2026-08-05T00:00:00.000Z",
     goal: "Improve categories",
     id: runId,
@@ -47,6 +47,8 @@ function run() {
     status: "pending" as const,
     steps: [
       {
+        artifacts: [],
+        attempt: 1,
         checkpoint: null,
         status: "pending" as const,
         step: {
