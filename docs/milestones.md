@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gates 16.1 through 16.3 are complete.
+Status: In progress. Gates 16.1 through 16.4 are complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.
@@ -1584,6 +1584,8 @@ Implementation:
 - Existing durable chat, index, embedding, task-run, and proposal workflows retain their own startup recovery and never replay an edit, command, or Git mutation. See `milestone-16.2-architecture.md` for the operational boundary.
 - 16.3 makes the existing focused retrieval, completion, staged edit, tool, and agent tests the deterministic local evaluation corpus. `pnpm evaluation:verify` runs each suite separately and reports a 10-second process budget for retrieval, completion, edit, and tool behavior, plus 15 seconds for the agent suite.
 - The evaluation command uses no PostgreSQL, Ollama, project workspace, or network connection. The documented Intel MacBook model profile keeps manual completion p50 targets below 4 seconds for `qwen2.5-coder:3b` and below 8 seconds for `qwen2.5-coder:7b`; the 20-second completion timeout remains the hard bound.
+- 16.4 adds no Redis dependency or service to the current single-user product. PostgreSQL already serializes durable conversation turns and project indexes, and it owns their restart recovery; agent-run journals pause rather than replay work. Active model requests and approval-sensitive drafts remain process-local and safely disappear on disconnect or restart.
+- Redis may be reconsidered only after measured evidence requires multi-process coordination, a user-visible background job with safe resume semantics, or a repeatable expensive read-only cache. Any future queue preserves the existing no-replay boundary for model generations, edits, commands, and Git mutations.
 
 ## Optional Platform Expansion
 

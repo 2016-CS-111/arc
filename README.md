@@ -6,6 +6,10 @@ Arc is a self-hosted AI software engineering platform built as three independent
 2. A local NestJS AI backend server.
 3. Local AI infrastructure such as Ollama, PostgreSQL, pgvector, and Redis.
 
+Redis is not required for the current single-user product. PostgreSQL owns durable coordination and
+recovery; see [the Milestone 16.4 decision](docs/milestone-16.4-architecture.md) for when a queue
+or shared cache becomes justified.
+
 Milestones 1 through 6 complete the Arc MVP: durable local chat, project registration, source
 intelligence, semantic retrieval, and grounded project context.
 
