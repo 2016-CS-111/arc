@@ -33,6 +33,7 @@ pnpm test
 pnpm lint
 pnpm security:dependencies
 pnpm evaluation:verify
+pnpm setup:doctor
 pnpm backend:dev
 pnpm db:create
 pnpm db:backup
@@ -50,10 +51,40 @@ pnpm ollama:smoke
 pnpm chat:socket-smoke
 pnpm chat:cancel-smoke
 pnpm extension:watch
+pnpm extension:package
 pnpm extension:run
 ```
 
 The AI server listens on `http://127.0.0.1:7331` by default.
+
+## Install And Upgrade
+
+Run `pnpm setup:doctor` before starting Arc. It checks PostgreSQL connectivity, reports pending
+migrations without applying them, checks the configured chat and completion model, and checks the
+embedding model when configured. It never changes the database or downloads models.
+
+For a new local install or upgrade, run:
+
+```sh
+pnpm install
+pnpm db:migrate
+pnpm setup:doctor
+pnpm extension:package
+code --install-extension apps/vscode-extension/arc-0.1.0.vsix
+```
+
+The VSIX name follows the extension version in `apps/vscode-extension/package.json`. Installing a
+new VSIX through the same VS Code command updates the local extension. Start or restart the backend
+with `pnpm backend:dev` afterward.
+
+To remove only the extension, run:
+
+```sh
+code --uninstall-extension local.arc-vscode-extension
+```
+
+This does not remove local PostgreSQL data or backups. Remove those separately only when you intend
+to discard Arc data.
 
 ## Security
 

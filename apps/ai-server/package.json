@@ -28,6 +28,7 @@
     "pgvector:smoke:compiled": "node dist/cli/pgvector-smoke.js",
     "project:verify": "tsx src/cli/project-inventory-verify.ts",
     "source:index:verify": "tsx src/cli/source-index-verify.ts",
+    "setup:doctor": "tsx src/cli/setup-doctor.ts",
     "symbol:index:verify": "tsx src/cli/symbol-index-verify.ts",
     "module-resolution:smoke": "tsx src/cli/module-resolution-smoke.ts",
     "module-resolution:smoke:compiled": "node dist/cli/module-resolution-smoke.js",

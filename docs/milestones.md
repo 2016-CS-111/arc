@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gates 16.1 through 16.4 are complete.
+Status: In progress. Gates 16.1 through 16.5 are complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.
@@ -1586,6 +1586,8 @@ Implementation:
 - The evaluation command uses no PostgreSQL, Ollama, project workspace, or network connection. The documented Intel MacBook model profile keeps manual completion p50 targets below 4 seconds for `qwen2.5-coder:3b` and below 8 seconds for `qwen2.5-coder:7b`; the 20-second completion timeout remains the hard bound.
 - 16.4 adds no Redis dependency or service to the current single-user product. PostgreSQL already serializes durable conversation turns and project indexes, and it owns their restart recovery; agent-run journals pause rather than replay work. Active model requests and approval-sensitive drafts remain process-local and safely disappear on disconnect or restart.
 - Redis may be reconsidered only after measured evidence requires multi-process coordination, a user-visible background job with safe resume semantics, or a repeatable expensive read-only cache. Any future queue preserves the existing no-replay boundary for model generations, edits, commands, and Git mutations.
+- 16.5 adds `pnpm setup:doctor`, a read-only local report for PostgreSQL reachability, pending migrations, chat/completion model readiness, and optional embedding-model readiness. It returns nonzero for incomplete setup and never changes state, applies migrations, or downloads a model.
+- `pnpm extension:package` type-checks, bundles the extension host and webview, and writes the unsigned local artifact `apps/vscode-extension/arc-<version>.vsix`. Install or update it with VS Code's `code --install-extension` command; upgrades run `pnpm db:migrate` explicitly, and uninstalling the extension never deletes PostgreSQL data or backups.
 
 ## Optional Platform Expansion
 

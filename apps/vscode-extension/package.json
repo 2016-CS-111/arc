@@ -21,6 +21,13 @@
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "files": [
+    "dist/extension.js",
+    "dist/extension.js.map",
+    "dist/webview",
+    "media",
+    "README.md"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -133,13 +140,16 @@
     }
   },
   "scripts": {
-    "build": "concurrently --kill-others-on-fail --success=all \"pnpm run build:host\" \"pnpm run check:webview\" \"pnpm run build:webview\"",
-    "build:host": "tsc -p tsconfig.json",
+    "build": "concurrently --kill-others-on-fail --success=all \"pnpm run check:host\" \"pnpm run build:host\" \"pnpm run check:webview\" \"pnpm run build:webview\"",
+    "build:host": "esbuild src/extension.ts --bundle --platform=node --format=esm --external:vscode --outfile=dist/extension.js --sourcemap",
+    "check:host": "tsc -p tsconfig.json --noEmit",
     "build:webview": "vite build --config vite.config.ts",
     "check:webview": "tsc -p tsconfig.webview.json",
     "dev": "pnpm run watch",
     "host": "pnpm --dir ../.. extension:host",
+    "package": "vsce package --allow-missing-repository --no-dependencies --skip-license --out arc-${npm_package_version}.vsix",
     "test": "vitest run",
+    "vscode:prepublish": "pnpm run build",
     "watch": "concurrently --kill-others-on-fail \"pnpm run watch:host\" \"pnpm run watch:webview\" \"pnpm run watch:webview-types\"",
     "watch:host": "tsc -watch -p tsconfig.json",
     "watch:webview": "vite build --config vite.config.ts --watch",
@@ -150,7 +160,9 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "@vscode/vsce": "^3.9.2",
     "concurrently": "^10.0.3",
+    "esbuild": "^0.28.1",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5"
   },

@@ -3,7 +3,9 @@ packages:
   - "packages/*"
 confirmModulesPurge: false
 allowBuilds:
+  "@vscode/vsce-sign": false
   esbuild: true
+  keytar: false
   tree-sitter: true
   tree-sitter-javascript: true
   tree-sitter-typescript: true

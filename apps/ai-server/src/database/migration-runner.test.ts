@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Sequelize, Transaction } from "sequelize";
 
-import { loadMigrations, runMigrations } from "./migration-runner.js";
+import { getPendingMigrations, loadMigrations, runMigrations } from "./migration-runner.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -19,6 +19,10 @@ class FakeSequelize {
 
     if (text === "SELECT name FROM arc_schema_migrations") {
       return Promise.resolve([...this.appliedMigrations].map((name) => ({ name })));
+    }
+
+    if (text === "SELECT to_regclass('arc_schema_migrations') AS name") {
+      return Promise.resolve([{ name: "arc_schema_migrations" }]);
     }
 
     if (text === "INSERT INTO arc_schema_migrations (name) VALUES ($1)") {
@@ -85,5 +89,19 @@ describe("loadMigrations", () => {
       "SELECT name FROM arc_schema_migrations",
     ]);
     expect(sequelize.transactionCount).toBe(2);
+  });
+
+  it("reports pending migrations without applying them", async () => {
+    const sequelize = new FakeSequelize();
+    sequelize.appliedMigrations.add("0001_create_sessions.sql");
+    const migrations = [
+      { name: "0001_create_sessions.sql", sql: "CREATE TABLE chat_sessions ();" },
+      { name: "0002_create_messages.sql", sql: "CREATE TABLE chat_messages ();" },
+    ];
+
+    await expect(getPendingMigrations(createSequelize(sequelize), migrations)).resolves.toEqual([
+      "0002_create_messages.sql",
+    ]);
+    expect(sequelize.transactionCount).toBe(0);
   });
 });

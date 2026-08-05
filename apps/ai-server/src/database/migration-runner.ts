@@ -13,6 +13,10 @@ interface MigrationRow {
   readonly name: string;
 }
 
+interface MigrationTableRow {
+  readonly name: string | null;
+}
+
 const migrationFilePattern = /^\d{4}_[a-z0-9_]+\.sql$/;
 
 export async function loadMigrations(directory = getDefaultMigrationDirectory()): Promise<SqlMigration[]> {
@@ -54,6 +58,25 @@ export async function runMigrations(sequelize: Sequelize, migrations: readonly S
   }
 
   return pendingMigrations.map((migration) => migration.name);
+}
+
+export async function getPendingMigrations(
+  sequelize: Sequelize,
+  migrations: readonly SqlMigration[],
+): Promise<string[]> {
+  const [migrationTable] = await sequelize.query<MigrationTableRow>(
+    "SELECT to_regclass('arc_schema_migrations') AS name",
+    { type: QueryTypes.SELECT },
+  );
+  if (migrationTable?.name === null || migrationTable === undefined) {
+    return migrations.map((migration) => migration.name);
+  }
+
+  const appliedRows = await sequelize.query<MigrationRow>("SELECT name FROM arc_schema_migrations", {
+    type: QueryTypes.SELECT,
+  });
+  const appliedNames = new Set(appliedRows.map((row) => row.name));
+  return migrations.filter((migration) => !appliedNames.has(migration.name)).map((migration) => migration.name);
 }
 
 function getDefaultMigrationDirectory(): string {
