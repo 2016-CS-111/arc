@@ -2,20 +2,24 @@ import { randomUUID } from "node:crypto";
 
 import {
   AgentRunSchema,
+  AgentRunReportSchema,
   EditProposalSchema,
   TaskProposalSchema,
   type AgentRun,
   type AgentRunArtifact,
+  type AgentRunReport,
   type AgentRunStep,
   type ToolResult,
 } from "@arc/contracts";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger, type OnApplicationBootstrap } from "@nestjs/common";
 
 import { AgentPlanService } from "../../agent-plans/application/agent-plan.service.js";
 import { SendChatMessageService, type SendChatMessageEvent } from "../../chat/application/send-chat-message.service.js";
 import { ProjectEditProposalService } from "../../edits/application/project-edit-proposal.service.js";
 import { TaskProposalService } from "../../tasks/application/task-proposal.service.js";
+import { AGENT_RUN_JOURNAL_REPOSITORY } from "../agent-runs.constants.js";
 import { AgentRunNotFoundError, AgentRunStateError } from "../domain/agent-run.errors.js";
+import type { AgentRunJournalRepository } from "./agent-run-journal.repository.js";
 
 interface StoredAgentRun {
   readonly run: AgentRun;
@@ -33,8 +37,10 @@ export interface AgentRunSubscription {
 }
 
 @Injectable()
-export class AgentRunService {
+export class AgentRunService implements OnApplicationBootstrap {
   private readonly listeners = new Set<(event: AgentRunEvent) => void>();
+  private readonly logger = new Logger(AgentRunService.name);
+  private readonly journalWrites = new Map<string, Promise<void>>();
   private readonly runs = new Map<string, StoredAgentRun>();
 
   public constructor(
@@ -42,9 +48,34 @@ export class AgentRunService {
     @Inject(SendChatMessageService) private readonly chat: SendChatMessageService,
     @Inject(ProjectEditProposalService) private readonly editProposals: ProjectEditProposalService,
     @Inject(TaskProposalService) private readonly taskProposals: TaskProposalService,
+    @Inject(AGENT_RUN_JOURNAL_REPOSITORY) private readonly journal: AgentRunJournalRepository,
   ) {}
 
-  public create(planId: string): AgentRun {
+  public async onApplicationBootstrap(): Promise<void> {
+    try {
+      let recoveredCount = 0;
+      for (const run of await this.journal.list()) {
+        const recovered = recoverRun(run);
+        this.runs.set(recovered.run.id, {
+          abortController: undefined,
+          budgetExceeded: false,
+          cancelRequested: false,
+          run: recovered.run,
+        });
+        if (recovered.changed) {
+          await this.journal.save(recovered.run);
+          recoveredCount += 1;
+        }
+      }
+      if (recoveredCount > 0) {
+        this.logger.warn("Recovered interrupted Arc task runs.", { recoveredCount });
+      }
+    } catch (error) {
+      this.logger.warn("Could not recover interrupted Arc task runs.", { error: getErrorMessage(error) });
+    }
+  }
+
+  public async create(planId: string): Promise<AgentRun> {
     const plan = this.plans.get(planId);
     const now = new Date().toISOString();
     const maxRepairAttempts = 2;
@@ -72,12 +103,14 @@ export class AgentRunService {
       })),
       updatedAt: now,
     });
-    this.runs.set(run.id, {
+    const stored: StoredAgentRun = {
       abortController: undefined,
       budgetExceeded: false,
       cancelRequested: false,
       run,
-    });
+    };
+    this.runs.set(run.id, stored);
+    await this.persist(stored);
     return structuredClone(run);
   }
 
@@ -85,47 +118,73 @@ export class AgentRunService {
     return structuredClone(this.requireRun(runId).run);
   }
 
-  public start(runId: string): AgentRun {
+  public async start(runId: string): Promise<AgentRun> {
     const stored = this.requireRun(runId);
     if (stored.run.status !== "pending") throw new AgentRunStateError("This task run has already started.");
     this.begin(stored);
+    await this.persist(stored);
     return structuredClone(stored.run);
   }
 
-  public resume(runId: string): AgentRun {
+  public async resume(runId: string): Promise<AgentRun> {
     const stored = this.requireRun(runId);
     if (stored.run.status !== "paused") throw new AgentRunStateError("Only a paused task run can resume.");
-    if (this.reconcileWaitingStep(stored)) return structuredClone(stored.run);
+    if (this.reconcileWaitingStep(stored)) {
+      await this.persist(stored);
+      return structuredClone(stored.run);
+    }
     if (stored.run.steps.some((step) => step.status === "waiting")) {
       throw new AgentRunStateError("Finish or reject the staged task action before resuming.");
     }
     this.begin(stored);
+    await this.persist(stored);
     return structuredClone(stored.run);
   }
 
-  public pause(runId: string): AgentRun {
+  public async pause(runId: string): Promise<AgentRun> {
     const stored = this.requireRun(runId);
     if (stored.run.status === "paused") return structuredClone(stored.run);
     if (stored.run.status !== "running" || stored.abortController === undefined) {
       throw new AgentRunStateError("Only a running task run can pause.");
     }
+    this.setStatus(stored, "paused");
     stored.abortController.abort();
+    this.publish(stored);
+    await this.persist(stored);
     return structuredClone(stored.run);
   }
 
-  public cancel(runId: string): AgentRun {
+  public async cancel(runId: string): Promise<AgentRun> {
     const stored = this.requireRun(runId);
     if (stored.run.status === "pending" || stored.run.status === "paused") {
       this.setStatus(stored, "cancelled");
       this.publish(stored);
+      await this.persist(stored);
       return structuredClone(stored.run);
     }
     if (stored.run.status !== "running" || stored.abortController === undefined) {
       throw new AgentRunStateError("This task run cannot be cancelled.");
     }
     stored.cancelRequested = true;
+    this.setStatus(stored, "cancelled");
     stored.abortController.abort();
+    this.publish(stored);
+    await this.persist(stored);
     return structuredClone(stored.run);
+  }
+
+  public report(runId: string): AgentRunReport {
+    const run = this.get(runId);
+    const artifacts = run.steps.flatMap((step) => step.artifacts);
+    const changes = artifacts.filter((artifact) => artifact.kind === "edit");
+    const tests = artifacts.filter((artifact) => artifact.kind === "task");
+    return AgentRunReportSchema.parse({
+      changes,
+      outcome: runOutcome(run),
+      rollbackGuidance: rollbackGuidance(changes, tests),
+      run,
+      tests,
+    });
   }
 
   public subscribe(listener: (event: AgentRunEvent) => void): AgentRunSubscription {
@@ -287,7 +346,7 @@ export class AgentRunService {
       return {
         ...artifact,
         status: proposal.status,
-        summary: `${String(proposal.operations.length)} staged edit operations.`,
+        summary: editSummary(proposal),
       };
     }
     const proposal = this.taskProposals.get(artifact.proposalId);
@@ -336,8 +395,19 @@ export class AgentRunService {
   }
 
   private publish(stored: StoredAgentRun): void {
+    void this.persist(stored).catch((error: unknown) => {
+      this.logger.warn("Could not persist Arc task run.", { error: getErrorMessage(error), runId: stored.run.id });
+    });
     const event: AgentRunEvent = { run: structuredClone(stored.run) };
     for (const listener of this.listeners) listener(event);
+  }
+
+  private persist(stored: StoredAgentRun): Promise<void> {
+    const snapshot = structuredClone(stored.run);
+    const previous = this.journalWrites.get(snapshot.id) ?? Promise.resolve();
+    const write = previous.catch(() => undefined).then(() => this.journal.save(snapshot));
+    this.journalWrites.set(snapshot.id, write);
+    return write;
   }
 }
 
@@ -374,7 +444,7 @@ function artifactFromToolResult(result: ToolResult): AgentRunArtifact | undefine
       kind: "edit",
       proposalId: edit.data.id,
       status: edit.data.status,
-      summary: `${String(edit.data.operations.length)} staged edit operations.`,
+      summary: editSummary(edit.data),
     };
   }
   const task = TaskProposalSchema.safeParse(proposal);
@@ -408,4 +478,63 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function taskSummary(output: string): string | null {
   const summary = output.trim().slice(-2_000);
   return summary.length === 0 ? null : summary;
+}
+
+function editSummary(proposal: {
+  readonly operations: readonly { readonly path: string; readonly type: string }[];
+}): string {
+  const summary = proposal.operations
+    .map((operation) => `${operation.type} ${operation.path}`)
+    .join(", ")
+    .slice(0, 2_000);
+  return summary.length === 0 ? "Staged edits." : summary;
+}
+
+function recoverRun(run: AgentRun): { readonly changed: boolean; readonly run: AgentRun } {
+  const recovered = structuredClone(run);
+  let changed = false;
+  if (recovered.status === "running") {
+    recovered.status = "paused";
+    changed = true;
+  }
+  if (recovered.status === "paused") {
+    for (const step of recovered.steps) {
+      if (step.status !== "running" && step.status !== "waiting") continue;
+      step.artifacts = [];
+      step.checkpoint = "Recovered after an Arc backend restart. Resume to retry this step.";
+      step.status = "pending";
+      changed = true;
+    }
+    if (recovered.activeStepId !== null) {
+      recovered.activeStepId = null;
+      changed = true;
+    }
+  }
+  if (changed) recovered.updatedAt = new Date().toISOString();
+  return { changed, run: recovered };
+}
+
+function runOutcome(run: AgentRun): string {
+  const failedStep = run.steps.find((step) => step.status === "failed");
+  if (failedStep !== undefined) return `${failedStep.step.title} failed.`;
+  if (run.status === "completed") return "Task run completed.";
+  if (run.status === "cancelled") return "Task run was cancelled.";
+  if (run.status === "paused") return "Task run is paused.";
+  return `Task run is ${run.status}.`;
+}
+
+function rollbackGuidance(changes: readonly AgentRunArtifact[], tests: readonly AgentRunArtifact[]): readonly string[] {
+  const applied = changes.filter((artifact) => artifact.status === "applied");
+  const failedTests = tests.filter((artifact) => artifact.status === "failed" || artifact.status === "timed_out");
+  return [
+    applied.length === 0
+      ? "No applied Arc edit proposals are recorded."
+      : `Use Arc Undo for applied edit proposals: ${applied.map((artifact) => artifact.proposalId).join(", ")}.`,
+    "Review workspace and Git changes before using your normal revert workflow; Arc does not auto-rollback task changes.",
+    ...(failedTests.length === 0 ? [] : ["Review the recorded failed test output before making a rollback decision."]),
+  ];
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

@@ -1,4 +1,11 @@
-import { AgentRunCreateRequestSchema, AgentRunSchema, type AgentRun, type AgentRunCreateRequest } from "@arc/contracts";
+import {
+  AgentRunCreateRequestSchema,
+  AgentRunReportSchema,
+  AgentRunSchema,
+  type AgentRun,
+  type AgentRunCreateRequest,
+  type AgentRunReport,
+} from "@arc/contracts";
 import {
   BadRequestException,
   Body,
@@ -19,10 +26,19 @@ export class AgentRunsController {
   public constructor(@Inject(AgentRunService) private readonly runs: AgentRunService) {}
 
   @Post()
-  public create(@Body() payload: unknown): AgentRun {
+  public async create(@Body() payload: unknown): Promise<AgentRun> {
     const request = this.parseCreate(payload);
     try {
-      return AgentRunSchema.parse(this.runs.create(request.planId));
+      return AgentRunSchema.parse(await this.runs.create(request.planId));
+    } catch (error) {
+      this.mapError(error);
+    }
+  }
+
+  @Get(":runId/report")
+  public report(@Param("runId") runId: string): AgentRunReport {
+    try {
+      return AgentRunReportSchema.parse(this.runs.report(runId));
     } catch (error) {
       this.mapError(error);
     }
@@ -38,28 +54,28 @@ export class AgentRunsController {
   }
 
   @Post(":runId/start")
-  public start(@Param("runId") runId: string): AgentRun {
+  public start(@Param("runId") runId: string): Promise<AgentRun> {
     return this.transition(runId, (id) => this.runs.start(id));
   }
 
   @Post(":runId/resume")
-  public resume(@Param("runId") runId: string): AgentRun {
+  public resume(@Param("runId") runId: string): Promise<AgentRun> {
     return this.transition(runId, (id) => this.runs.resume(id));
   }
 
   @Post(":runId/pause")
-  public pause(@Param("runId") runId: string): AgentRun {
+  public pause(@Param("runId") runId: string): Promise<AgentRun> {
     return this.transition(runId, (id) => this.runs.pause(id));
   }
 
   @Post(":runId/cancel")
-  public cancel(@Param("runId") runId: string): AgentRun {
+  public cancel(@Param("runId") runId: string): Promise<AgentRun> {
     return this.transition(runId, (id) => this.runs.cancel(id));
   }
 
-  private transition(runId: string, transition: (id: string) => AgentRun): AgentRun {
+  private async transition(runId: string, transition: (id: string) => Promise<AgentRun>): Promise<AgentRun> {
     try {
-      return AgentRunSchema.parse(transition(runId));
+      return AgentRunSchema.parse(await transition(runId));
     } catch (error) {
       this.mapError(error);
     }

@@ -1,4 +1,4 @@
-import { AgentPlanSchema, type AgentPlan, type AgentRun, type TaskProposal } from "@arc/contracts";
+import { AgentPlanSchema, type AgentPlan, type AgentRun, type AgentRunReport, type TaskProposal } from "@arc/contracts";
 import * as vscode from "vscode";
 
 import type { AgentRunClientPort } from "../../infrastructure/backend/AgentRunClient.js";
@@ -17,6 +17,7 @@ export class TaskRunController implements vscode.Disposable {
   private readonly monitoringRuns = new Set<string>();
   private readonly output = vscode.window.createOutputChannel("Arc Agent Tasks");
   private readonly reportedVersions = new Map<string, string>();
+  private readonly reportedFinalRuns = new Set<string>();
   private readonly reviewedArtifacts = new Set<string>();
 
   public constructor(
@@ -31,6 +32,7 @@ export class TaskRunController implements vscode.Disposable {
     this.activeRuns.clear();
     this.monitoringRuns.clear();
     this.reportedVersions.clear();
+    this.reportedFinalRuns.clear();
     this.reviewedArtifacts.clear();
     this.output.dispose();
   }
@@ -110,6 +112,7 @@ export class TaskRunController implements vscode.Disposable {
         this.report(run);
         if (run.status !== "running") {
           await this.reviewWaitingArtifacts(run);
+          if (isTerminal(run)) await this.reportFinal(run.id);
           return;
         }
         await delay(500);
@@ -203,6 +206,31 @@ export class TaskRunController implements vscode.Disposable {
     this.output.appendLine(`[${proposal.status}] ${proposal.title}. Resume the Arc task run.`);
   }
 
+  private async reportFinal(runId: string): Promise<void> {
+    if (this.reportedFinalRuns.has(runId)) return;
+    try {
+      this.appendFinalReport(await this.runs.report(runId));
+      this.reportedFinalRuns.add(runId);
+    } catch (error) {
+      this.output.appendLine(
+        `[report unavailable] ${error instanceof Error ? error.message : "Arc task report failed."}`,
+      );
+    }
+  }
+
+  private appendFinalReport(report: AgentRunReport): void {
+    this.output.appendLine(`[final report] ${report.outcome}`);
+    for (const change of report.changes) {
+      this.output.appendLine(`[change ${change.status}] ${change.summary ?? change.proposalId}`);
+    }
+    for (const test of report.tests) {
+      this.output.appendLine(`[test ${test.status}] ${test.summary ?? test.proposalId}`);
+    }
+    for (const guidance of report.rollbackGuidance) {
+      this.output.appendLine(`[rollback] ${guidance}`);
+    }
+  }
+
   private async showError(error: unknown): Promise<void> {
     await vscode.window.showErrorMessage(error instanceof Error ? error.message : "Arc task run failed.");
   }
@@ -217,6 +245,10 @@ function lastCheckpoint(run: AgentRun): string | undefined {
     if (step.checkpoint !== null) return step.checkpoint;
   }
   return undefined;
+}
+
+function isTerminal(run: AgentRun): boolean {
+  return run.status === "completed" || run.status === "cancelled" || run.status === "failed";
 }
 
 function taskApprovalPrompt(proposal: TaskProposal): Thenable<string | undefined> {

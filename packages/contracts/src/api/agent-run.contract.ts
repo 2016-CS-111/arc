@@ -71,11 +71,22 @@ export const AgentRunSchema = z
   })
   .strict();
 
+export const AgentRunReportSchema = z
+  .object({
+    changes: AgentRunArtifactSchema.array().max(240),
+    outcome: z.string().trim().min(1).max(2_000),
+    rollbackGuidance: z.string().trim().min(1).max(2_000).array().max(8),
+    run: AgentRunSchema,
+    tests: AgentRunArtifactSchema.array().max(240),
+  })
+  .strict();
+
 export type AgentRun = z.infer<typeof AgentRunSchema>;
 export type AgentRunArtifact = z.infer<typeof AgentRunArtifactSchema>;
 export type AgentRunArtifactKind = z.infer<typeof AgentRunArtifactKindSchema>;
 export type AgentRunArtifactStatus = z.infer<typeof AgentRunArtifactStatusSchema>;
 export type AgentRunBudget = z.infer<typeof AgentRunBudgetSchema>;
 export type AgentRunCreateRequest = z.infer<typeof AgentRunCreateRequestSchema>;
+export type AgentRunReport = z.infer<typeof AgentRunReportSchema>;
 export type AgentRunStatus = z.infer<typeof AgentRunStatusSchema>;
 export type AgentRunStep = z.infer<typeof AgentRunStepSchema>;

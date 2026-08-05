@@ -1515,7 +1515,7 @@ Implementation:
 
 ## Milestone 15: Autonomous Task Execution
 
-Status: In progress. Gates 15.1 through 15.4 are complete.
+Status: In progress. Gates 15.1 through 15.5 are complete.
 
 Goal: execute bounded software tasks as visible plans with checkpoints, approvals, and stop
 conditions.
@@ -1536,15 +1536,18 @@ Implementation:
 - 15.1 adds `POST /agent-plans`, `GET /agent-plans/:planId`, and `PATCH /agent-plans/:planId` for typed draft plans. Plans contain bounded inspect, edit, and test steps with estimates and explicit dependencies.
 - The local chat model produces the plan through a dedicated tool definition. `package.json` is read locally as compact project context, and native plus fallback tool calls are supported for Ollama models.
 - Dependencies are topologically sorted before a plan is returned or saved. Unknown references and cycles are rejected; total estimates are recomputed from the saved steps.
-- `Arc: Plan Task` opens the draft as editable JSON. `Arc: Save Task Plan` validates and saves the edited goal and steps. Plans are in-memory until Gate 15.5; no plan can execute anything in 15.1.
+- `Arc: Plan Task` opens the draft as editable JSON. `Arc: Save Task Plan` validates and saves the edited goal and steps. Plans are in-memory; an executing run carries its own journaled plan snapshot.
 - 15.2 adds an in-memory `AgentRun` state machine with `pending`, `running`, `paused`, `completed`, `cancelled`, and `failed` states. Each start or resume processes only the next ordered plan step, stores its checkpoint, and pauses again until the user resumes it.
 - Task runs use the existing chat and tool runtime for read-only inspection and reviewable proposals only. The run prompt explicitly excludes file writes, shell commands, and Git actions; those approval-linked paths remain Gates 15.3 and 15.4.
 - `POST /agent-runs` creates a run from a saved plan. `GET /agent-runs/:runId` returns its latest snapshot, and start, resume, pause, and cancel transitions are available below that resource. Tool usage is visible and capped at three calls per plan step, up to 60.
-- `Arc: Start Task Run`, `Arc: Resume Task Run`, `Arc: Pause Task Run`, and `Arc: Cancel Task Run` operate on the open task-plan JSON document. Checkpoints and status changes appear in the `Arc Agent Tasks` output channel. Runs are intentionally in-memory until Gate 15.5.
+- `Arc: Start Task Run`, `Arc: Resume Task Run`, `Arc: Pause Task Run`, and `Arc: Cancel Task Run` operate on the open task-plan JSON document. Checkpoints and status changes appear in the `Arc Agent Tasks` output channel.
 - 15.3 records staged edit and task proposal artifacts on the matching task step. A run pauses in `waiting` until the user applies or rejects an edit, or runs or rejects a task. Existing proposal services remain the only paths that can write files or start a local process.
 - 15.4 gives every staged task an explicit approval class: `standard`, `workspace_write`, `git_mutation`, or `destructive`. The approval endpoint accepts only `{ "confirmed": true }`, and the extension uses warning prompts for every elevated class before it sends that confirmation.
 - Workspace writes remain staged diffs with selected-operation Apply or Reject. Direct package scripts and `build` or `format` presets are workspace writes; Git add, commit, and branch actions are Git mutations; merge, restore, and stash are destructive actions.
 - Docker, Podman, nerdctl, kubectl, recursive removal, destructive Git, and SQL drop or truncate package scripts are refused before a task proposal exists. The agent still only stages proposals; it cannot directly write files, start a process, or mutate Git.
+- 15.5 stores each task-run snapshot in the Sequelize `agent_run_journals` table. Initial create and API transitions wait for persistence, while streamed checkpoints and artifacts are serialized in order.
+- Backend startup reloads the journal. An interrupted running step or a lost pending approval becomes a paused run with a pending step and a recovery checkpoint; no edit, command, or Git action is replayed automatically.
+- `GET /agent-runs/:runId/report` returns the terminal outcome, compact change and test artifacts, and rollback guidance. The VS Code `Arc Agent Tasks` channel appends that report for completed, failed, and cancelled runs.
 - A failed or timed-out test resets the preceding edit step with compact test output as repair context, then reruns the test after review. Repair attempts are capped at two per run, with the expanded tool budget reported in each run snapshot. A third failed test ends the run.
 
 ## Milestone 16: Production Hardening and Distribution

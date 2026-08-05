@@ -1,4 +1,6 @@
 import type {
+  AgentRun,
+  AgentRunStatus,
   ChatError,
   ConversationMessageRole,
   ConversationMessageStatus,
@@ -59,6 +61,7 @@ import type { ProjectEmbeddingChunkModel } from "./models/project-embedding-chun
 import type { ProjectEmbeddingFileModel } from "./models/project-embedding-file.model.js";
 import type { ProjectEmbeddingIndexRunModel } from "./models/project-embedding-index-run.model.js";
 import type { MemoryRecordModel } from "./models/memory-record.model.js";
+import type { AgentRunJournalModel } from "./models/agent-run-journal.model.js";
 
 export interface ProjectEmbeddingIndexRunAttributes {
   readonly id: string;
@@ -235,6 +238,17 @@ export interface MemoryRecordAttributes {
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
+
+export interface AgentRunJournalAttributes {
+  readonly id: string;
+  readonly projectId: string;
+  readonly status: AgentRunStatus;
+  readonly snapshot: AgentRun;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+export type AgentRunJournalCreationAttributes = Optional<AgentRunJournalAttributes, "createdAt" | "updatedAt">;
 
 export type MemoryRecordCreationAttributes = Optional<
   MemoryRecordAttributes,
@@ -550,6 +564,7 @@ export interface ProjectSymbolAttributes {
 export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, "id" | "exported">;
 
 export interface ArcDatabaseModels {
+  readonly agentRunJournals: ModelStatic<AgentRunJournalModel>;
   readonly memoryRecords: ModelStatic<MemoryRecordModel>;
   readonly projectEmbeddingIndexRuns: ModelStatic<ProjectEmbeddingIndexRunModel>;
   readonly projectEmbeddingFiles: ModelStatic<ProjectEmbeddingFileModel>;

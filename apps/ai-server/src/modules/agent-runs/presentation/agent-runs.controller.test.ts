@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import type { AgentRunReport } from "@arc/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AgentRunService } from "../application/agent-run.service.js";
@@ -9,17 +10,19 @@ const planId = "f40d11a0-a990-4b7c-ba6c-8bd5077b0cee";
 const runId = "5efae680-025a-41ff-8133-482c50538bd4";
 
 describe("AgentRunsController", () => {
-  it("creates and transitions a typed task run", () => {
-    const create = vi.fn(() => run());
-    const start = vi.fn(() => ({ ...run(), status: "running" as const }));
-    const controller = new AgentRunsController({ create, start } as unknown as AgentRunService);
+  it("creates and transitions a typed task run", async () => {
+    const create = vi.fn(() => Promise.resolve(run()));
+    const start = vi.fn(() => Promise.resolve({ ...run(), status: "running" as const }));
+    const report = vi.fn(() => taskReport());
+    const controller = new AgentRunsController({ create, report, start } as unknown as AgentRunService);
 
-    expect(controller.create({ planId })).toMatchObject({ id: runId, status: "pending" });
-    expect(controller.start(runId)).toMatchObject({ status: "running" });
+    await expect(controller.create({ planId })).resolves.toMatchObject({ id: runId, status: "pending" });
+    await expect(controller.start(runId)).resolves.toMatchObject({ status: "running" });
+    expect(controller.report(runId)).toMatchObject({ outcome: "Task run completed." });
     expect(create).toHaveBeenCalledWith(planId);
   });
 
-  it("maps invalid and state errors to HTTP errors", () => {
+  it("maps invalid and state errors to HTTP errors", async () => {
     const controller = new AgentRunsController({
       create: vi.fn(() => {
         throw new AgentRunNotFoundError(planId);
@@ -29,9 +32,9 @@ describe("AgentRunsController", () => {
       }),
     } as unknown as AgentRunService);
 
-    expect(() => controller.create({})).toThrow(BadRequestException);
-    expect(() => controller.create({ planId })).toThrow(NotFoundException);
-    expect(() => controller.resume(runId)).toThrow(ConflictException);
+    await expect(controller.create({})).rejects.toBeInstanceOf(BadRequestException);
+    await expect(controller.create({ planId })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.resume(runId)).rejects.toBeInstanceOf(ConflictException);
   });
 });
 
@@ -63,5 +66,15 @@ function run() {
       },
     ],
     updatedAt: "2026-08-05T00:00:00.000Z",
+  };
+}
+
+function taskReport(): AgentRunReport {
+  return {
+    changes: [],
+    outcome: "Task run completed.",
+    rollbackGuidance: ["No applied Arc edit proposals are recorded."],
+    run: { ...run(), status: "completed" },
+    tests: [],
   };
 }

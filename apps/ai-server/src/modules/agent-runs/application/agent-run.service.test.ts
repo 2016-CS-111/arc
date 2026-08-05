@@ -1,10 +1,11 @@
-import type { AgentPlanStep, EditProposal, TaskProposal } from "@arc/contracts";
+import type { AgentPlanStep, AgentRun, EditProposal, TaskProposal } from "@arc/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { AgentPlanService } from "../../agent-plans/application/agent-plan.service.js";
 import type { SendChatMessageEvent, SendChatMessageService } from "../../chat/application/send-chat-message.service.js";
 import type { ProjectEditProposalService } from "../../edits/application/project-edit-proposal.service.js";
 import type { TaskProposalService } from "../../tasks/application/task-proposal.service.js";
+import type { AgentRunJournalRepository } from "./agent-run-journal.repository.js";
 import { AgentRunService } from "./agent-run.service.js";
 
 const projectId = "be1ce7ce-b4a6-419c-a6a2-38f499459c75";
@@ -18,17 +19,18 @@ describe("AgentRunService", () => {
       { stream } as unknown as SendChatMessageService,
       editProposals(),
       taskProposals(),
+      journal(),
     );
-    const run = service.create(planId);
+    const run = await service.create(planId);
 
-    service.start(run.id);
+    await service.start(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).status).toBe("paused");
     });
     expect(service.get(run.id).steps[0]).toMatchObject({ checkpoint: "Inspection complete.", status: "completed" });
     expect(service.get(run.id).steps[1]?.status).toBe("pending");
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).status).toBe("completed");
     });
@@ -53,22 +55,23 @@ describe("AgentRunService", () => {
       } as unknown as SendChatMessageService,
       editProposals(),
       taskProposals(),
+      journal(),
     );
-    const run = service.create(planId);
+    const run = await service.create(planId);
 
-    service.start(run.id);
+    await service.start(run.id);
     await vi.waitFor(() => {
       expect(starts).toBe(1);
     });
-    service.pause(run.id);
+    await service.pause(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).status).toBe("paused");
     });
     expect(service.get(run.id).steps[0]).toMatchObject({ checkpoint: "Inspection started.", status: "pending" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await resumedStream;
-    service.cancel(run.id);
+    await service.cancel(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).status).toBe("cancelled");
     });
@@ -87,10 +90,11 @@ describe("AgentRunService", () => {
       } as unknown as SendChatMessageService,
       editProposals(),
       taskProposals(),
+      journal(),
     );
-    const run = service.create(planId);
+    const run = await service.create(planId);
 
-    service.start(run.id);
+    await service.start(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).status).toBe("failed");
     });
@@ -135,50 +139,115 @@ describe("AgentRunService", () => {
       { stream } as unknown as SendChatMessageService,
       editProposalService(edits),
       taskProposalService(tasks),
+      journal(),
     );
-    const run = service.create(planId);
+    const run = await service.create(planId);
 
-    service.start(run.id);
+    await service.start(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[0]?.status).toBe("waiting");
     });
     edits.set(firstEdit.id, { ...firstEdit, status: "applied" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[1]?.status).toBe("waiting");
     });
     tasks.set(firstTest.id, { ...firstTest, output: "Expected 0 to equal 1.", status: "failed" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[0]).toMatchObject({ attempt: 2, status: "waiting" });
     });
     edits.set(repairEdit.id, { ...repairEdit, status: "applied" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[1]?.status).toBe("waiting");
     });
     tasks.set(secondTest.id, { ...secondTest, output: "The repaired test still fails.", status: "failed" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[0]).toMatchObject({ attempt: 3, status: "waiting" });
     });
     edits.set(finalEdit.id, { ...finalEdit, status: "applied" });
 
-    service.resume(run.id);
+    await service.resume(run.id);
     await vi.waitFor(() => {
       expect(service.get(run.id).steps[1]?.status).toBe("waiting");
     });
     tasks.set(finalTest.id, { ...finalTest, output: "The final test fails.", status: "failed" });
 
-    expect(service.resume(run.id)).toMatchObject({ status: "failed" });
+    await expect(service.resume(run.id)).resolves.toMatchObject({ status: "failed" });
     expect(service.get(run.id)).toMatchObject({ budget: { maxRepairAttempts: 2, repairAttempts: 2 } });
     expect(stream).toHaveBeenCalledTimes(6);
+    expect(service.report(run.id)).toMatchObject({
+      changes: [expect.objectContaining({ status: "applied", summary: "update src/categories.ts" })],
+      tests: [expect.objectContaining({ status: "failed", summary: "The final test fails." })],
+    });
+  });
+
+  it("recovers a waiting task without replaying its staged approval", async () => {
+    const { planId, plans } = createPlans();
+    const plan = plans.get(planId);
+    const save = vi.fn(() => Promise.resolve());
+    const interrupted: AgentRun = {
+      activeStepId: "inspect",
+      budget: { maxRepairAttempts: 2, maxToolCalls: 12, repairAttempts: 0, toolCallsUsed: 1 },
+      createdAt: "2026-08-05T00:00:00.000Z",
+      goal: plan.goal,
+      id: "1a9e27cc-930a-4a27-a47b-132aebbb9eab",
+      planId,
+      projectId,
+      status: "paused",
+      steps: plan.steps.map((step, index) => ({
+        artifacts:
+          index === 0
+            ? [
+                {
+                  kind: "edit",
+                  proposalId: "3a5dc5bf-4f2d-4c8f-84cb-17f11144c53b",
+                  status: "pending",
+                  summary: "update src/categories.ts",
+                },
+              ]
+            : [],
+        attempt: 1,
+        checkpoint: null,
+        status: index === 0 ? "waiting" : "pending",
+        step,
+        toolCallsUsed: 0,
+      })),
+      updatedAt: "2026-08-05T00:00:00.000Z",
+    };
+    const service = new AgentRunService(
+      plans,
+      { stream: () => chatEvents([]) } as unknown as SendChatMessageService,
+      editProposals(),
+      taskProposals(),
+      { list: () => Promise.resolve([interrupted]), save },
+    );
+
+    await service.onApplicationBootstrap();
+
+    const recovered = service.get(interrupted.id);
+    expect(recovered).toMatchObject({ activeStepId: null, status: "paused" });
+    expect(recovered.steps[0]).toMatchObject({
+      artifacts: [],
+      checkpoint: "Recovered after an Arc backend restart. Resume to retry this step.",
+      status: "pending",
+    });
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ id: interrupted.id, status: "paused" }));
   });
 });
+
+function journal(runs: readonly AgentRun[] = []): AgentRunJournalRepository {
+  return {
+    list: () => Promise.resolve(runs),
+    save: () => Promise.resolve(),
+  };
+}
 
 function createPlans(
   steps: readonly AgentPlanStep[] = [step("inspect", [], "inspect"), step("edit", ["inspect"], "edit")],

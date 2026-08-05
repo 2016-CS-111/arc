@@ -1,10 +1,17 @@
-import { AgentRunSchema, type AgentRun, type AgentRunCreateRequest } from "@arc/contracts";
+import {
+  AgentRunReportSchema,
+  AgentRunSchema,
+  type AgentRun,
+  type AgentRunCreateRequest,
+  type AgentRunReport,
+} from "@arc/contracts";
 
 export interface AgentRunClientPort {
   cancel(runId: string): Promise<AgentRun>;
   create(request: AgentRunCreateRequest): Promise<AgentRun>;
   get(runId: string): Promise<AgentRun>;
   pause(runId: string): Promise<AgentRun>;
+  report(runId: string): Promise<AgentRunReport>;
   resume(runId: string): Promise<AgentRun>;
   start(runId: string): Promise<AgentRun>;
 }
@@ -46,6 +53,10 @@ export class AgentRunClient implements AgentRunClientPort {
     return this.transition(runId, "pause");
   }
 
+  public report(runId: string): Promise<AgentRunReport> {
+    return this.requestReport(`agent-runs/${runId}/report`);
+  }
+
   public cancel(runId: string): Promise<AgentRun> {
     return this.transition(runId, "cancel");
   }
@@ -68,6 +79,23 @@ export class AgentRunClient implements AgentRunClientPort {
       return AgentRunSchema.parse(await response.json());
     } catch {
       throw new AgentRunClientError("Arc backend returned an invalid task run response.");
+    }
+  }
+
+  private async requestReport(path: string): Promise<AgentRunReport> {
+    let response: Response;
+    try {
+      response = await this.fetchImplementation(this.urlFor(path));
+    } catch {
+      throw new AgentRunClientError("Arc backend is unavailable.");
+    }
+    if (!response.ok) {
+      throw new AgentRunClientError(`Arc could not load the task report (HTTP ${String(response.status)}).`);
+    }
+    try {
+      return AgentRunReportSchema.parse(await response.json());
+    } catch {
+      throw new AgentRunClientError("Arc backend returned an invalid task report response.");
     }
   }
 
