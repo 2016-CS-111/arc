@@ -2,11 +2,12 @@ import { Module } from "@nestjs/common";
 
 import { ConfigModule } from "../../config/config.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
+import { SecurityModule } from "../security/security.module.js";
 import { ProjectEditProposalService } from "./application/project-edit-proposal.service.js";
 import { EditProposalsController } from "./presentation/edit-proposals.controller.js";
 
 @Module({
-  imports: [ConfigModule, ProjectsModule],
+  imports: [ConfigModule, ProjectsModule, SecurityModule],
   controllers: [EditProposalsController],
   providers: [ProjectEditProposalService],
   exports: [ProjectEditProposalService],

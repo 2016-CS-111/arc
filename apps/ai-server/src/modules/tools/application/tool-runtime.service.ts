@@ -5,6 +5,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { APP_CONFIG } from "../../../config/config.constants.js";
 import type { AppConfig } from "../../../config/env.js";
 import { ARC_LOGGER } from "../../logger/logger.constants.js";
+import { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import type { ToolExecutionContext, ToolHandler } from "../domain/tool-handler.js";
 import { ToolPermissionService } from "./tool-permission.service.js";
 import { ToolRegistryService } from "./tool-registry.service.js";
@@ -24,6 +25,7 @@ export class ToolRuntimeService {
     @Inject(ARC_LOGGER) private readonly logger: Logger,
     @Inject(ToolRegistryService) private readonly registry: ToolRegistryService,
     @Inject(ToolPermissionService) private readonly permissionService: ToolPermissionService,
+    @Inject(SecurityAuditLogService) private readonly auditLog: SecurityAuditLogService,
   ) {}
 
   public getDefinitions(): readonly ToolDefinition[] {
@@ -45,7 +47,13 @@ export class ToolRuntimeService {
 
     const permission = this.permissionService.authorize(handler.definition);
     if (!permission.allowed) {
-      const result = this.createResult(call, "rejected", "This Arc tool requires user approval.", "approval_required");
+      const restricted = permission.reason === "profile_restricted";
+      const result = this.createResult(
+        call,
+        "rejected",
+        restricted ? "Arc is running with the read-only permission profile." : "This Arc tool requires user approval.",
+        restricted ? "permission_denied" : "approval_required",
+      );
       this.logCompletion(call, context, result, startedAt);
       return result;
     }
@@ -159,6 +167,15 @@ export class ToolRuntimeService {
   }
 
   private logCompletion(call: ToolCall, context: ToolRuntimeContext, result: ToolResult, startedAt: number): void {
+    this.auditLog.record({
+      action: "executed",
+      category: "tool",
+      projectId: context.projectId ?? null,
+      requestId: context.requestId,
+      sessionId: context.sessionId,
+      status: result.status,
+      subjectId: call.id,
+    });
     this.logger.info("Arc tool execution completed", {
       ...this.createLogContext(call, context),
       durationMs: Math.max(0, Math.round(performance.now() - startedAt)),

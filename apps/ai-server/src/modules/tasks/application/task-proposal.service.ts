@@ -12,6 +12,7 @@ import {
   type TaskProposalApprovalRequest,
   type TaskProposalRequest,
 } from "@arc/contracts";
+import { redactSecrets } from "@arc/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { APP_CONFIG } from "../../../config/config.constants.js";
@@ -21,6 +22,8 @@ import { ProjectPathNormalizer } from "../../projects/application/project-path.n
 import type { ProjectRepository } from "../../projects/application/project.repository.js";
 import { PROJECT_REPOSITORY } from "../../projects/projects.constants.js";
 import { ProjectNotFoundError } from "../../projects/domain/project.errors.js";
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import { LocalTaskProcessRunner } from "./local-task-process.runner.js";
 import {
   TaskProposalConflictError,
@@ -67,6 +70,10 @@ export class TaskProposalService {
     private readonly config: AppConfig,
     @Inject(LocalTaskProcessRunner)
     private readonly processRunner: LocalTaskProcessRunner,
+    @Inject(PermissionProfileService)
+    private readonly permissions: PermissionProfileService,
+    @Inject(SecurityAuditLogService)
+    private readonly auditLog: SecurityAuditLogService,
   ) {}
 
   public async propose(input: {
@@ -76,6 +83,7 @@ export class TaskProposalService {
     readonly requestId: string;
     readonly sessionId: string;
   }): Promise<TaskProposal> {
+    this.permissions.assertProposalStaging();
     const project = await this.requireProject(input.projectId);
     const resolved = await this.resolveCommand(project, input.request);
     const now = new Date().toISOString();
@@ -103,6 +111,7 @@ export class TaskProposalService {
       clientId: input.clientId,
       proposal,
     });
+    this.recordAudit(proposal, "proposed");
     return structuredClone(proposal);
   }
 
@@ -118,6 +127,7 @@ export class TaskProposalService {
     }
     stored.abortController = new AbortController();
     this.setStatus(stored, "running");
+    this.recordAudit(stored.proposal, "started");
     this.publish(stored);
     void this.run(stored);
     return structuredClone(stored.proposal);
@@ -129,6 +139,7 @@ export class TaskProposalService {
       throw new TaskProposalStateError("This task proposal is no longer awaiting approval.");
     }
     this.setStatus(stored, "rejected");
+    this.recordAudit(stored.proposal, "rejected");
     this.publish(stored);
     return structuredClone(stored.proposal);
   }
@@ -138,6 +149,7 @@ export class TaskProposalService {
     if (stored.proposal.status === "pending") {
       stored.cancelled = true;
       this.setStatus(stored, "cancelled");
+      this.recordAudit(stored.proposal, "cancelled");
       this.publish(stored);
       return structuredClone(stored.proposal);
     }
@@ -183,11 +195,13 @@ export class TaskProposalService {
         this.setStatus(stored, "cancelled");
       }
       stored.abortController = undefined;
+      this.recordAudit(stored.proposal, "finished");
       this.publish(stored);
     }
   }
 
   private appendOutput(stored: StoredTaskProposal, content: string): void {
+    content = redactSecrets(content);
     const remaining = this.config.tasks.maxOutputChars - stored.proposal.output.length;
     if (remaining <= 0) {
       if (!stored.proposal.truncated) {
@@ -214,6 +228,18 @@ export class TaskProposalService {
       case "git":
         return this.resolveGitOperation(project, request.git);
     }
+  }
+
+  private recordAudit(proposal: TaskProposal, action: string): void {
+    this.auditLog.record({
+      action,
+      category: "task",
+      projectId: proposal.projectId,
+      requestId: proposal.requestId,
+      sessionId: proposal.sessionId,
+      status: proposal.status,
+      subjectId: proposal.id,
+    });
   }
 
   private async resolvePreset(

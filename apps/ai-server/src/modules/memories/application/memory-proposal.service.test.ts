@@ -1,13 +1,19 @@
 import type { MemoryRecord } from "@arc/contracts";
 import { describe, expect, it, vi } from "vitest";
 
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import type { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import type { MemoryService } from "./memory.service.js";
 import { MemoryProposalService } from "./memory-proposal.service.js";
 
 describe("MemoryProposalService", () => {
   it("stores an assistant suggestion only after explicit approval", async () => {
     const create = vi.fn(() => Promise.resolve(memory));
-    const service = new MemoryProposalService({ create } as unknown as MemoryService);
+    const service = new MemoryProposalService(
+      { create } as unknown as MemoryService,
+      new PermissionProfileService("review"),
+      { record: (): void => undefined } as unknown as SecurityAuditLogService,
+    );
     const proposal = service.propose({
       projectId: "c7d0da58-9f18-4d86-89d7-53c372d95472",
       request: {

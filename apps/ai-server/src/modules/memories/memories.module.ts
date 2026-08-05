@@ -5,6 +5,7 @@ import { DatabaseModule } from "../../database/database.module.js";
 import type { ArcDatabase } from "../../database/database.types.js";
 import { EmbeddingsModule } from "../embeddings/embeddings.module.js";
 import { ProjectsModule } from "../projects/projects.module.js";
+import { SecurityModule } from "../security/security.module.js";
 import type { MemoryRepository } from "./application/memory.repository.js";
 import { MemoryProposalService } from "./application/memory-proposal.service.js";
 import { MemoryService } from "./application/memory.service.js";
@@ -20,7 +21,7 @@ const memoryRepositoryProvider: Provider<MemoryRepository> = {
 };
 
 @Module({
-  imports: [DatabaseModule, EmbeddingsModule, ProjectsModule],
+  imports: [DatabaseModule, EmbeddingsModule, ProjectsModule, SecurityModule],
   controllers: [MemoriesController, MemoryProposalsController],
   providers: [memoryRepositoryProvider, MemoryService, MemoryProposalService],
   exports: [MemoryService, MemoryProposalService],

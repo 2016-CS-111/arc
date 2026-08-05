@@ -2,6 +2,7 @@ import type { Sequelize } from "sequelize";
 
 import type { ArcDatabaseModels } from "../database.types.js";
 import { AgentRunJournalModel } from "./agent-run-journal.model.js";
+import { SecurityAuditEventModel } from "./security-audit-event.model.js";
 import { ChatMessageModel } from "./chat-message.model.js";
 import { ChatSessionModel } from "./chat-session.model.js";
 import { ProjectDependencyBindingModel } from "./project-dependency-binding.model.js";
@@ -29,6 +30,7 @@ import { MemoryRecordModel } from "./memory-record.model.js";
 export function createDatabaseModels(sequelize: Sequelize): ArcDatabaseModels {
   const models: ArcDatabaseModels = {
     agentRunJournals: AgentRunJournalModel.initialize(sequelize),
+    securityAuditEvents: SecurityAuditEventModel.initialize(sequelize),
     memoryRecords: MemoryRecordModel.initialize(sequelize),
     projectEmbeddingIndexRuns: ProjectEmbeddingIndexRunModel.initialize(sequelize),
     projectEmbeddingFiles: ProjectEmbeddingFileModel.initialize(sequelize),

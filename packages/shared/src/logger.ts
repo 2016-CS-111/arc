@@ -1,3 +1,5 @@
+import { redactSecrets } from "./redaction.js";
+
 export type LogContext = Readonly<Record<string, unknown>>;
 
 export interface Logger {
@@ -12,7 +14,7 @@ type LogLevel = keyof Logger;
 export function createConsoleLogger(scope: string): Logger {
   const format = (level: LogLevel, message: string, context?: LogContext): string => {
     const base = `[${new Date().toISOString()}] ${level.toUpperCase()} ${scope}: ${message}`;
-    return context === undefined ? base : `${base} ${JSON.stringify(context)}`;
+    return context === undefined ? base : `${base} ${redactSecrets(JSON.stringify(context))}`;
   };
 
   return {

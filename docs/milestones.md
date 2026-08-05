@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: Planned.
+Status: In progress. Gate 16.1 is complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.
@@ -1571,6 +1571,13 @@ Fixed gates:
 - 16.7 Release checklist, signed artifacts, documentation, and final local-product acceptance.
 
 Exit: ARC can be installed and maintained as a production-quality self-hosted developer tool.
+
+Implementation:
+
+- 16.1 documents the trusted local-user threat model and adds `ARC_PERMISSION_PROFILE=review|read_only`. The default keeps existing proposal-and-approval workflows; `read_only` blocks new edit, task, and memory proposals.
+- `GET /security` exposes the active profile. `GET /security/audit?limit=50` returns up to 100 durable metadata-only audit events for tool execution and proposal state changes.
+- Sequelize stores audit category, action, status, correlation IDs, and timestamps in `security_audit_events`. Apply migration `0013_security_audit_events.sql` with `pnpm db:migrate`; the table never stores prompts, source text, diffs, tool arguments/results, task output, or error payloads.
+- `redactSecrets` protects console logs and task output from common password, token, authorization-header, and connection-string credentials. `pnpm security:dependencies` runs the package manager's production dependency audit without changing the workspace.
 
 ## Optional Platform Expansion
 

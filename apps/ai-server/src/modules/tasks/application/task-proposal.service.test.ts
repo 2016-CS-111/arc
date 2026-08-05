@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import type { ProjectIgnorePolicyService } from "../../projects/application/project-ignore-policy.service.js";
 import { ProjectPathNormalizer } from "../../projects/application/project-path.normalizer.js";
 import type { ProjectRepository } from "../../projects/application/project.repository.js";
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import type { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import type { LocalTaskProcessRunner } from "./local-task-process.runner.js";
 import { TaskProposalService } from "./task-proposal.service.js";
 
@@ -186,6 +188,8 @@ function createService(
     new ProjectPathNormalizer(),
     { tasks: { maxOutputChars: 12_000, timeoutMs: 10_000 } } as AppConfig,
     runner,
+    new PermissionProfileService("review"),
+    { record: (): void => undefined } as unknown as SecurityAuditLogService,
   );
 }
 

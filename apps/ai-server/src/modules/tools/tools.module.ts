@@ -14,6 +14,7 @@ import { ProjectSemanticSearchService } from "../projects/application/project-se
 import { ProjectSymbolSearchService } from "../projects/application/project-symbol-search.service.js";
 import { ProjectIntelligenceService } from "../projects/application/project-intelligence.service.js";
 import { ProjectWorkspaceInspectionService } from "../projects/application/project-workspace-inspection.service.js";
+import { SecurityModule } from "../security/security.module.js";
 import { ToolPermissionService } from "./application/tool-permission.service.js";
 import { ToolRegistryService } from "./application/tool-registry.service.js";
 import { ToolRuntimeService } from "./application/tool-runtime.service.js";
@@ -56,7 +57,7 @@ const toolHandlersProvider: Provider<readonly ToolHandler[]> = {
 };
 
 @Module({
-  imports: [ConfigModule, LoggerModule, ProjectsModule, EditsModule, TasksModule, MemoriesModule],
+  imports: [ConfigModule, LoggerModule, SecurityModule, ProjectsModule, EditsModule, TasksModule, MemoriesModule],
   providers: [toolHandlersProvider, ToolRegistryService, ToolPermissionService, ToolRuntimeService],
   exports: [ToolRuntimeService],
 })

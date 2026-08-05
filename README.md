@@ -27,6 +27,7 @@ pnpm install
 pnpm build
 pnpm test
 pnpm lint
+pnpm security:dependencies
 pnpm backend:dev
 pnpm db:create
 pnpm db:migrate
@@ -46,6 +47,28 @@ pnpm extension:run
 ```
 
 The AI server listens on `http://127.0.0.1:7331` by default.
+
+## Security
+
+Milestone 16.1 adds a local permission profile and a durable, metadata-only security audit. The
+default `ARC_PERMISSION_PROFILE=review` allows Arc to stage edits, tasks, and memories for the
+existing explicit approval flows. Set `ARC_PERMISSION_PROFILE=read_only` before starting the
+backend to prevent new proposals from being staged.
+
+With the backend running, inspect the active profile and latest audit events locally:
+
+```sh
+curl http://127.0.0.1:7331/security
+curl 'http://127.0.0.1:7331/security/audit?limit=50'
+```
+
+Audit rows contain only event category, action, status, correlation IDs, and timestamps. They do
+not contain prompts, source text, diffs, tool arguments or results, or task output. Console logs
+and task output redact common passwords, tokens, authorization headers, and connection-string
+passwords. Run `pnpm security:dependencies` to ask the active package manager to report production
+dependency vulnerabilities; it reads the lockfile and may contact the configured package registry.
+Apply migration `0013_security_audit_events.sql` with `pnpm db:migrate` before reviewing durable
+audit history.
 
 `pnpm tree-sitter:smoke` verifies the pinned native JavaScript, JSX, TypeScript, and TSX parser
 stack. After `pnpm build`, `pnpm tree-sitter:smoke:compiled` verifies the emitted backend path.

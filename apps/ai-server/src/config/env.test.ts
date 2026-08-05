@@ -16,6 +16,7 @@ describe("loadConfig", () => {
       sync: false,
       url: "postgresql://postgres:postgres@127.0.0.1:5432/arc",
     });
+    expect(config.security).toEqual({ permissionProfile: "review" });
     expect(config.chatContext).toEqual({
       contextWindowTokens: 8_192,
       historyTokens: 2_560,
@@ -127,6 +128,7 @@ describe("loadConfig", () => {
       ARC_DATABASE_CONNECT_TIMEOUT_MS: "8000",
       ARC_DATABASE_SYNC: "true",
       ARC_DATABASE_URL: "postgres://arc:arc@localhost:5433/arc_test",
+      ARC_PERMISSION_PROFILE: "read_only",
       ARC_PROJECT_SCAN_BATCH_SIZE: "250",
       ARC_PROJECT_SCAN_MAX_DEPTH: "20",
       ARC_PROJECT_SCAN_MAX_FILES: "5000",
@@ -179,6 +181,7 @@ describe("loadConfig", () => {
       sync: true,
       url: "postgres://arc:arc@localhost:5433/arc_test",
     });
+    expect(config.security).toEqual({ permissionProfile: "read_only" });
     expect(config.chatContext).toEqual({
       contextWindowTokens: 16_384,
       historyTokens: 4_096,

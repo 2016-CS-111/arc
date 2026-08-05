@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 import type { ProjectIgnorePolicyService } from "../../projects/application/project-ignore-policy.service.js";
 import { ProjectPathNormalizer } from "../../projects/application/project-path.normalizer.js";
 import type { ProjectRepository } from "../../projects/application/project.repository.js";
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import type { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import { ProjectEditProposalService } from "./project-edit-proposal.service.js";
 
 const projectId = "c7d0da58-9f18-4d86-89d7-53c372d95472";
@@ -114,8 +116,15 @@ function createService(rootPath: string, maxResultChars = 8_192): ProjectEditPro
     }),
   } as unknown as ProjectIgnorePolicyService;
 
-  return new ProjectEditProposalService(projectRepository, ignorePolicy, new ProjectPathNormalizer(), {
-    edits: { maxContentBytes: 32_768, maxOperations: 20 },
-    tools: { maxResultChars },
-  } as AppConfig);
+  return new ProjectEditProposalService(
+    projectRepository,
+    ignorePolicy,
+    new ProjectPathNormalizer(),
+    {
+      edits: { maxContentBytes: 32_768, maxOperations: 20 },
+      tools: { maxResultChars },
+    } as AppConfig,
+    new PermissionProfileService("review"),
+    { record: (): void => undefined } as unknown as SecurityAuditLogService,
+  );
 }

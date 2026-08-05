@@ -19,6 +19,8 @@ import { ProjectPathNormalizer } from "../../projects/application/project-path.n
 import type { ProjectRepository } from "../../projects/application/project.repository.js";
 import { PROJECT_REPOSITORY } from "../../projects/projects.constants.js";
 import { ProjectNotFoundError } from "../../projects/domain/project.errors.js";
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import {
   EditProposalConflictError,
   EditProposalNotFoundError,
@@ -60,6 +62,10 @@ export class ProjectEditProposalService {
     private readonly pathNormalizer: ProjectPathNormalizer,
     @Inject(APP_CONFIG)
     private readonly config: AppConfig,
+    @Inject(PermissionProfileService)
+    private readonly permissions: PermissionProfileService,
+    @Inject(SecurityAuditLogService)
+    private readonly auditLog: SecurityAuditLogService,
   ) {}
 
   public async propose(input: {
@@ -68,6 +74,7 @@ export class ProjectEditProposalService {
     readonly sessionId: string;
     readonly signal: AbortSignal;
   }): Promise<EditProposal> {
+    this.permissions.assertProposalStaging();
     this.throwIfCancelled(input.signal);
     this.assertContentLimit(input.operations);
     const project = await this.requireProject(input.projectId);
@@ -101,6 +108,7 @@ export class ProjectEditProposalService {
     };
     this.assertTransportLimit(proposal);
     this.proposals.set(proposal.id, proposal);
+    this.recordAudit(proposal, "proposed");
     return this.toPublicProposal(proposal);
   }
 
@@ -125,9 +133,11 @@ export class ProjectEditProposalService {
       await this.applyOperations(project, selectedOperations);
       proposal.selectedOperationIds = selectedOperations.map((operation) => operation.id);
       this.setStatus(proposal, "applied");
+      this.recordAudit(proposal, "approved");
       return this.toPublicProposal(proposal);
     } catch (error) {
       this.setStatus(proposal, "failed");
+      this.recordAudit(proposal, "failed");
       throw error;
     } finally {
       this.applyingProposalIds.delete(proposalId);
@@ -140,6 +150,7 @@ export class ProjectEditProposalService {
       throw new EditProposalStateError("This edit proposal is no longer awaiting approval.");
     }
     this.setStatus(proposal, "rejected");
+    this.recordAudit(proposal, "rejected");
     return this.toPublicProposal(proposal);
   }
 
@@ -159,6 +170,7 @@ export class ProjectEditProposalService {
       await this.assertUndoCurrent(project, selectedOperations);
       await this.restoreOperations(project, selectedOperations);
       this.setStatus(proposal, "undone");
+      this.recordAudit(proposal, "undone");
       return this.toPublicProposal(proposal);
     } finally {
       this.applyingProposalIds.delete(proposalId);
@@ -214,6 +226,18 @@ export class ProjectEditProposalService {
       path,
       type: operation.type,
     };
+  }
+
+  private recordAudit(proposal: StoredEditProposal, action: string): void {
+    this.auditLog.record({
+      action,
+      category: "edit",
+      projectId: proposal.projectId,
+      requestId: null,
+      sessionId: proposal.sessionId,
+      status: proposal.status,
+      subjectId: proposal.id,
+    });
   }
 
   private async assertCurrent(project: Project, operations: readonly StoredEditOperation[]): Promise<void> {

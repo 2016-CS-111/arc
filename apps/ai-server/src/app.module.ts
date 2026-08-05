@@ -16,6 +16,7 @@ import { LoggerModule } from "./modules/logger/logger.module.js";
 import { MemoriesModule } from "./modules/memories/memories.module.js";
 import { ProjectsModule } from "./modules/projects/projects.module.js";
 import { RealtimeModule } from "./modules/realtime/realtime.module.js";
+import { SecurityModule } from "./modules/security/security.module.js";
 import { TasksModule } from "./modules/tasks/tasks.module.js";
 
 @Module({
@@ -25,6 +26,7 @@ import { TasksModule } from "./modules/tasks/tasks.module.js";
     AgentRunsModule,
     DatabaseModule,
     LoggerModule,
+    SecurityModule,
     HealthModule,
     GuidedActionsModule,
     InferenceModule,

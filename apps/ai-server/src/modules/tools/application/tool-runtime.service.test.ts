@@ -3,6 +3,8 @@ import type { Logger } from "@arc/shared";
 import { describe, expect, it } from "vitest";
 
 import type { ToolHandler } from "../domain/tool-handler.js";
+import { PermissionProfileService } from "../../security/application/permission-profile.service.js";
+import type { SecurityAuditLogService } from "../../security/application/security-audit-log.service.js";
 import { ToolPermissionService } from "./tool-permission.service.js";
 import { ToolRegistryService } from "./tool-registry.service.js";
 import { ToolRuntimeService } from "./tool-runtime.service.js";
@@ -25,7 +27,8 @@ function createRuntime(handler: ToolHandler, maxResultChars = 8_192): ToolRuntim
     } as AppConfig,
     logger,
     new ToolRegistryService([handler]),
-    new ToolPermissionService(),
+    new ToolPermissionService(new PermissionProfileService("review")),
+    { record: (): void => undefined } as unknown as SecurityAuditLogService,
   );
 }
 
@@ -39,15 +42,18 @@ function createContext(signal: AbortSignal = new AbortController().signal) {
 
 describe("ToolRuntimeService", () => {
   it("runs a registered harmless tool with bounded output", async () => {
-    const runtime = createRuntime({
-      definition: {
-        name: "arc.runtime_info",
-        description: "Return runtime information.",
-        permission: "read",
-        parameters: { type: "object" },
+    const runtime = createRuntime(
+      {
+        definition: {
+          name: "arc.runtime_info",
+          description: "Return runtime information.",
+          permission: "read",
+          parameters: { type: "object" },
+        },
+        execute: async (): Promise<unknown> => ({ runtime: "arc", value: "x".repeat(100) }),
       },
-      execute: async (): Promise<unknown> => ({ runtime: "arc", value: "x".repeat(100) }),
-    }, 40);
+      40,
+    );
 
     await expect(
       runtime.execute({ id: "call_1", name: "arc.runtime_info", arguments: {} }, createContext()),
@@ -76,6 +82,19 @@ describe("ToolRuntimeService", () => {
     await expect(
       runtime.execute({ id: "call_2", name: "arc.privileged_fixture", arguments: {} }, createContext()),
     ).resolves.toMatchObject({ status: "rejected", error: { code: "approval_required" } });
+  });
+
+  it("rejects proposal tools in the read-only profile", () => {
+    const permissions = new ToolPermissionService(new PermissionProfileService("read_only"));
+
+    expect(
+      permissions.authorize({
+        name: "arc.propose_edits",
+        description: "Stage edits.",
+        permission: "read",
+        parameters: { type: "object" },
+      }),
+    ).toEqual({ allowed: false, reason: "profile_restricted" });
   });
 
   it("returns cancellation when the chat request has already stopped", async () => {

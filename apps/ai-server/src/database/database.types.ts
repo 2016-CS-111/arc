@@ -1,6 +1,7 @@
 import type {
   AgentRun,
   AgentRunStatus,
+  SecurityAuditEvent,
   ChatError,
   ConversationMessageRole,
   ConversationMessageStatus,
@@ -62,6 +63,7 @@ import type { ProjectEmbeddingFileModel } from "./models/project-embedding-file.
 import type { ProjectEmbeddingIndexRunModel } from "./models/project-embedding-index-run.model.js";
 import type { MemoryRecordModel } from "./models/memory-record.model.js";
 import type { AgentRunJournalModel } from "./models/agent-run-journal.model.js";
+import type { SecurityAuditEventModel } from "./models/security-audit-event.model.js";
 
 export interface ProjectEmbeddingIndexRunAttributes {
   readonly id: string;
@@ -249,6 +251,21 @@ export interface AgentRunJournalAttributes {
 }
 
 export type AgentRunJournalCreationAttributes = Optional<AgentRunJournalAttributes, "createdAt" | "updatedAt">;
+
+export interface SecurityAuditEventAttributes {
+  readonly id: string;
+  readonly category: SecurityAuditEvent["category"];
+  readonly action: string;
+  readonly status: string;
+  readonly subjectId: string;
+  readonly projectId: string | null;
+  readonly requestId: string | null;
+  readonly sessionId: string | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+export type SecurityAuditEventCreationAttributes = Optional<SecurityAuditEventAttributes, "createdAt" | "updatedAt">;
 
 export type MemoryRecordCreationAttributes = Optional<
   MemoryRecordAttributes,
@@ -565,6 +582,7 @@ export type ProjectSymbolCreationAttributes = Optional<ProjectSymbolAttributes, 
 
 export interface ArcDatabaseModels {
   readonly agentRunJournals: ModelStatic<AgentRunJournalModel>;
+  readonly securityAuditEvents: ModelStatic<SecurityAuditEventModel>;
   readonly memoryRecords: ModelStatic<MemoryRecordModel>;
   readonly projectEmbeddingIndexRuns: ModelStatic<ProjectEmbeddingIndexRunModel>;
   readonly projectEmbeddingFiles: ModelStatic<ProjectEmbeddingFileModel>;
