@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Project } from "@arc/contracts";
+import type { Project, TaskProposalApprovalRequest } from "@arc/contracts";
 import type { AppConfig } from "../../../config/env.js";
 import { describe, expect, it } from "vitest";
 
@@ -35,11 +35,12 @@ describe("TaskProposalService", () => {
       });
 
       expect(proposal).toMatchObject({
+        approval: { kind: "standard", required: true },
         command: { args: ["run", "test"], executable: "pnpm" },
         mutates: false,
         status: "pending",
       });
-      service.start(proposal.id);
+      service.start(proposal.id, { confirmed: true });
 
       await expect(waitForTerminalStatus(service, proposal.id)).resolves.toMatchObject({
         output: "tests passed\n",
@@ -87,7 +88,7 @@ describe("TaskProposalService", () => {
         requestId: "request_2",
         sessionId,
       });
-      service.start(proposal.id);
+      service.start(proposal.id, { confirmed: true });
       service.cancel(proposal.id);
 
       await expect(waitForTerminalStatus(service, proposal.id)).resolves.toMatchObject({ status: "cancelled" });
@@ -95,12 +96,65 @@ describe("TaskProposalService", () => {
       await rm(rootPath, { force: true, recursive: true });
     }
   });
+
+  it("classifies Git work and refuses Docker or destructive package scripts", async () => {
+    const rootPath = await createProjectRoot({
+      clean: "rm -rf dist",
+      container: "docker compose up",
+      test: "vitest run",
+    });
+    const service = createService(rootPath, { run: () => Promise.resolve({ exitCode: 0 }) });
+
+    try {
+      await expect(
+        service.propose({
+          clientId: "socket_1",
+          projectId,
+          request: { script: "container", type: "package_script" },
+          requestId: "request_3",
+          sessionId,
+        }),
+      ).rejects.toThrow("does not stage Docker or destructive package scripts");
+      await expect(
+        service.propose({
+          clientId: "socket_1",
+          projectId,
+          request: { script: "clean", type: "package_script" },
+          requestId: "request_4",
+          sessionId,
+        }),
+      ).rejects.toThrow("does not stage Docker or destructive package scripts");
+
+      const proposal = await service.propose({
+        clientId: "socket_1",
+        projectId,
+        request: { git: { operation: "restore", paths: ["src/example.ts"] }, type: "git" },
+        requestId: "request_5",
+        sessionId,
+      });
+      expect(proposal).toMatchObject({ approval: { kind: "destructive", required: true }, mutates: true });
+      expect(() =>
+        service.start(proposal.id, { confirmed: false } as unknown as TaskProposalApprovalRequest),
+      ).toThrow();
+
+      const packageScript = await service.propose({
+        clientId: "socket_1",
+        projectId,
+        request: { script: "test", type: "package_script" },
+        requestId: "request_6",
+        sessionId,
+      });
+      expect(packageScript).toMatchObject({ approval: { kind: "workspace_write", required: true }, mutates: true });
+    } finally {
+      await rm(rootPath, { force: true, recursive: true });
+    }
+  });
 });
 
-async function createProjectRoot(): Promise<string> {
+async function createProjectRoot(scripts: Record<string, string> = { test: "vitest run" }): Promise<string> {
   const rootPath = await mkdtemp(join(tmpdir(), "arc-tasks-"));
   await writeFile(join(rootPath, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf8");
-  await writeFile(join(rootPath, "package.json"), JSON.stringify({ scripts: { test: "vitest run" } }), "utf8");
+  await writeFile(join(rootPath, "package.json"), JSON.stringify({ scripts }), "utf8");
   return rootPath;
 }
 

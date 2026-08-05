@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 
+import type { TaskProposal } from "@arc/contracts";
 import * as vscode from "vscode";
 import { z } from "zod";
 
@@ -288,6 +289,8 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
       return;
     }
     try {
+      const proposal = await this.taskProposals.get(proposalId);
+      if (!(await confirmTaskApproval(proposal))) return;
       await this.postChatMessage({ proposal: await this.taskProposals.approve(proposalId), type: "tasks:updated" });
     } catch (error) {
       await this.postTaskError(error);
@@ -454,4 +457,12 @@ export class ArcChatViewProvider implements vscode.WebviewViewProvider, vscode.D
 
 function createNonce(): string {
   return randomBytes(16).toString("base64");
+}
+
+function confirmTaskApproval(proposal: TaskProposal): Thenable<boolean> {
+  if (proposal.approval.kind === "standard") return Promise.resolve(true);
+  const label = proposal.approval.kind.replace(/_/gu, " ");
+  return vscode.window
+    .showWarningMessage(`Confirm ${label}: ${proposal.title}?`, "Run", "Cancel")
+    .then((choice) => choice === "Run");
 }

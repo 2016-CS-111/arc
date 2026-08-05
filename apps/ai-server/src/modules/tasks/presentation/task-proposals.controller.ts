@@ -1,5 +1,20 @@
-import { TaskProposalSchema, type TaskProposal } from "@arc/contracts";
-import { ConflictException, Controller, Get, Inject, NotFoundException, Param, Post } from "@nestjs/common";
+import {
+  TaskProposalApprovalRequestSchema,
+  TaskProposalSchema,
+  type TaskProposal,
+  type TaskProposalApprovalRequest,
+} from "@arc/contracts";
+import {
+  BadRequestException,
+  Body,
+  ConflictException,
+  Controller,
+  Get,
+  Inject,
+  NotFoundException,
+  Param,
+  Post,
+} from "@nestjs/common";
 
 import { TaskProposalService } from "../application/task-proposal.service.js";
 import {
@@ -25,9 +40,10 @@ export class TaskProposalsController {
   }
 
   @Post(":proposalId/approve")
-  public approve(@Param("proposalId") proposalId: string): TaskProposal {
+  public approve(@Param("proposalId") proposalId: string, @Body() payload: unknown): TaskProposal {
+    const approval = this.parseApproval(payload);
     try {
-      return TaskProposalSchema.parse(this.taskProposals.start(proposalId));
+      return TaskProposalSchema.parse(this.taskProposals.start(proposalId, approval));
     } catch (error) {
       this.mapError(error);
     }
@@ -49,6 +65,12 @@ export class TaskProposalsController {
     } catch (error) {
       this.mapError(error);
     }
+  }
+
+  private parseApproval(payload: unknown): TaskProposalApprovalRequest {
+    const parsed = TaskProposalApprovalRequestSchema.safeParse(payload);
+    if (!parsed.success) throw new BadRequestException("Arc task approval is invalid.");
+    return parsed.data;
   }
 
   private mapError(error: unknown): never {

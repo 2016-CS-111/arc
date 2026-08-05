@@ -144,6 +144,7 @@ function editProposal(): EditProposal {
 
 function taskProposal(): TaskProposal {
   return {
+    approval: { kind: "standard", required: true },
     command: { args: ["run", "test"], cwd: "/workspace/project", executable: "pnpm" },
     createdAt: "2026-08-05T00:00:00.000Z",
     durationMs: null,
@@ -197,6 +198,12 @@ async function* cancellableChatEvents(
   };
   onWaiting();
   await new Promise<void>((_resolve, reject) => {
-    signal.addEventListener("abort", () => reject(new Error("Arc editor action was cancelled.")), { once: true });
+    signal.addEventListener(
+      "abort",
+      () => {
+        reject(new Error("Arc editor action was cancelled."));
+      },
+      { once: true },
+    );
   });
 }

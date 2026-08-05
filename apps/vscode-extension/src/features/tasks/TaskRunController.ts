@@ -1,4 +1,4 @@
-import { AgentPlanSchema, type AgentPlan, type AgentRun } from "@arc/contracts";
+import { AgentPlanSchema, type AgentPlan, type AgentRun, type TaskProposal } from "@arc/contracts";
 import * as vscode from "vscode";
 
 import type { AgentRunClientPort } from "../../infrastructure/backend/AgentRunClient.js";
@@ -150,7 +150,7 @@ export class TaskRunController implements vscode.Disposable {
         if (artifact.kind === "edit") {
           await this.reviewEditArtifact(artifact.proposalId, key);
         } else {
-          await this.reviewTaskArtifact(artifact.proposalId, key);
+          await this.reviewTaskArtifact(artifact.proposalId);
         }
       }
     }
@@ -179,17 +179,10 @@ export class TaskRunController implements vscode.Disposable {
     this.output.appendLine("[rejected] Task edits were rejected. Resume the Arc task run to record the outcome.");
   }
 
-  private async reviewTaskArtifact(proposalId: string, key: string): Promise<void> {
+  private async reviewTaskArtifact(proposalId: string): Promise<void> {
     const proposal = await this.taskProposals.get(proposalId);
     if (proposal.status !== "pending") return;
-    if (proposal.mutates) {
-      this.reviewedArtifacts.delete(key);
-      await vscode.window.showWarningMessage(
-        "This task proposal changes the workspace and requires Milestone 15.4 approval support.",
-      );
-      return;
-    }
-    const decision = await vscode.window.showInformationMessage(`Run Arc task: ${proposal.title}?`, "Run", "Reject");
+    const decision = await taskApprovalPrompt(proposal);
     if (decision !== "Run") {
       await this.taskProposals.reject(proposal.id);
       this.output.appendLine("[rejected] Task command was rejected. Resume the Arc task run to record the outcome.");
@@ -224,4 +217,18 @@ function lastCheckpoint(run: AgentRun): string | undefined {
     if (step.checkpoint !== null) return step.checkpoint;
   }
   return undefined;
+}
+
+function taskApprovalPrompt(proposal: TaskProposal): Thenable<string | undefined> {
+  const message =
+    proposal.approval.kind === "standard"
+      ? `Run Arc task: ${proposal.title}?`
+      : `Confirm ${approvalLabel(proposal.approval.kind)}: ${proposal.title}?`;
+  return proposal.approval.kind === "standard"
+    ? vscode.window.showInformationMessage(message, "Run", "Reject")
+    : vscode.window.showWarningMessage(message, "Run", "Reject");
+}
+
+function approvalLabel(kind: TaskProposal["approval"]["kind"]): string {
+  return kind.replace(/_/gu, " ");
 }

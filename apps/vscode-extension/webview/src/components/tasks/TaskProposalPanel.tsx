@@ -28,6 +28,7 @@ export function TaskProposalPanel({
   const pending = proposal.status === "pending";
   const running = proposal.status === "running";
   const command = [proposal.command.executable, ...proposal.command.args].join(" ");
+  const approval = approvalLabel(proposal.approval.kind);
 
   return (
     <section aria-label="Proposed task" className="border-t border-arc-border bg-arc-surface">
@@ -35,7 +36,9 @@ export function TaskProposalPanel({
         <h2 className="m-0 min-w-0 truncate text-xs font-semibold text-arc-foreground" title={proposal.title}>
           {proposal.title}
         </h2>
-        <span className="shrink-0 text-xs text-arc-muted">{statusLabel(proposal.status)}</span>
+        <span className="shrink-0 text-xs text-arc-muted" title={approval}>
+          {pending ? approval : statusLabel(proposal.status)}
+        </span>
       </header>
       <div className="flex min-w-0 items-center gap-1 px-3 py-2">
         <code className="min-w-0 flex-1 truncate text-xs text-arc-muted" title={command}>
@@ -77,7 +80,7 @@ export function TaskProposalPanel({
               type="button"
             >
               <Check aria-hidden="true" size={13} strokeWidth={1.8} />
-              Run
+              {proposal.approval.kind === "standard" ? "Run" : "Confirm"}
             </button>
           </>
         ) : running ? (
@@ -109,4 +112,8 @@ function statusLabel(status: TaskProposal["status"]): string {
   return status === "pending"
     ? "Approval required"
     : `${status.charAt(0).toUpperCase()}${status.slice(1).replace("_", " ")}`;
+}
+
+function approvalLabel(kind: TaskProposal["approval"]["kind"]): string {
+  return kind.replace(/_/gu, " ");
 }

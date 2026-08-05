@@ -1515,7 +1515,7 @@ Implementation:
 
 ## Milestone 15: Autonomous Task Execution
 
-Status: In progress. Gates 15.1 through 15.3 are complete.
+Status: In progress. Gates 15.1 through 15.4 are complete.
 
 Goal: execute bounded software tasks as visible plans with checkpoints, approvals, and stop
 conditions.
@@ -1542,7 +1542,9 @@ Implementation:
 - `POST /agent-runs` creates a run from a saved plan. `GET /agent-runs/:runId` returns its latest snapshot, and start, resume, pause, and cancel transitions are available below that resource. Tool usage is visible and capped at three calls per plan step, up to 60.
 - `Arc: Start Task Run`, `Arc: Resume Task Run`, `Arc: Pause Task Run`, and `Arc: Cancel Task Run` operate on the open task-plan JSON document. Checkpoints and status changes appear in the `Arc Agent Tasks` output channel. Runs are intentionally in-memory until Gate 15.5.
 - 15.3 records staged edit and task proposal artifacts on the matching task step. A run pauses in `waiting` until the user applies or rejects an edit, or runs or rejects a task. Existing proposal services remain the only paths that can write files or start a local process.
-- The task-run controller opens existing diff review for staged edits and prompts before a non-mutating test runs. Task output continues to stream into `Arc Tasks`; any workspace-mutating command is left for Gate 15.4.
+- 15.4 gives every staged task an explicit approval class: `standard`, `workspace_write`, `git_mutation`, or `destructive`. The approval endpoint accepts only `{ "confirmed": true }`, and the extension uses warning prompts for every elevated class before it sends that confirmation.
+- Workspace writes remain staged diffs with selected-operation Apply or Reject. Direct package scripts and `build` or `format` presets are workspace writes; Git add, commit, and branch actions are Git mutations; merge, restore, and stash are destructive actions.
+- Docker, Podman, nerdctl, kubectl, recursive removal, destructive Git, and SQL drop or truncate package scripts are refused before a task proposal exists. The agent still only stages proposals; it cannot directly write files, start a process, or mutate Git.
 - A failed or timed-out test resets the preceding edit step with compact test output as repair context, then reruns the test after review. Repair attempts are capped at two per run, with the expanded tool budget reported in each run snapshot. A third failed test ends the run.
 
 ## Milestone 16: Production Hardening and Distribution

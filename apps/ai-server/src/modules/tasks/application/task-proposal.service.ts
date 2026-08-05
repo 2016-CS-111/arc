@@ -2,7 +2,16 @@ import { randomUUID } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { GitTaskOperation, Project, TaskCommand, TaskProposal, TaskProposalRequest } from "@arc/contracts";
+import {
+  TaskProposalApprovalRequestSchema,
+  type GitTaskOperation,
+  type Project,
+  type TaskCommand,
+  type TaskProposal,
+  type TaskProposalApprovalKind,
+  type TaskProposalApprovalRequest,
+  type TaskProposalRequest,
+} from "@arc/contracts";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { APP_CONFIG } from "../../../config/config.constants.js";
@@ -24,6 +33,13 @@ interface StoredTaskProposal {
   readonly proposal: TaskProposal;
   abortController: AbortController | undefined;
   cancelled: boolean;
+}
+
+interface ResolvedTaskCommand {
+  readonly approvalKind: TaskProposalApprovalKind;
+  readonly command: TaskCommand;
+  readonly mutates: boolean;
+  readonly title: string;
 }
 
 export interface TaskProposalEvent {
@@ -64,6 +80,7 @@ export class TaskProposalService {
     const resolved = await this.resolveCommand(project, input.request);
     const now = new Date().toISOString();
     const proposal: TaskProposal = {
+      approval: { kind: resolved.approvalKind, required: true },
       command: resolved.command,
       createdAt: now,
       durationMs: null,
@@ -93,7 +110,8 @@ export class TaskProposalService {
     return structuredClone(this.requireProposal(proposalId).proposal);
   }
 
-  public start(proposalId: string): TaskProposal {
+  public start(proposalId: string, approval: TaskProposalApprovalRequest): TaskProposal {
+    TaskProposalApprovalRequestSchema.parse(approval);
     const stored = this.requireProposal(proposalId);
     if (stored.proposal.status !== "pending") {
       throw new TaskProposalStateError("This task proposal is no longer awaiting approval.");
@@ -187,15 +205,12 @@ export class TaskProposalService {
     this.publish(stored);
   }
 
-  private async resolveCommand(
-    project: Project,
-    request: TaskProposalRequest,
-  ): Promise<{ readonly command: TaskCommand; readonly mutates: boolean; readonly title: string }> {
+  private async resolveCommand(project: Project, request: TaskProposalRequest): Promise<ResolvedTaskCommand> {
     switch (request.type) {
       case "preset":
         return this.resolvePreset(project, request.preset);
       case "package_script":
-        return this.resolvePackageScript(project, request.script, request.script === "format");
+        return this.resolvePackageScript(project, request.script, true);
       case "git":
         return this.resolveGitOperation(project, request.git);
     }
@@ -204,13 +219,13 @@ export class TaskProposalService {
   private async resolvePreset(
     project: Project,
     preset: "test" | "lint" | "typecheck" | "build" | "format",
-  ): Promise<{ readonly command: TaskCommand; readonly mutates: boolean; readonly title: string }> {
+  ): Promise<ResolvedTaskCommand> {
     const script =
       preset === "typecheck" ? await this.findAvailableScript(project.rootPath, ["typecheck", "build"]) : preset;
     return this.resolvePackageScript(
       project,
       script,
-      preset === "format",
+      script === "build" || script === "format",
       script === "typecheck" ? "Type-check" : titleCase(script),
     );
   }
@@ -220,62 +235,64 @@ export class TaskProposalService {
     script: string,
     mutates: boolean,
     title = `Run ${script}`,
-  ): Promise<{ readonly command: TaskCommand; readonly mutates: boolean; readonly title: string }> {
+  ): Promise<ResolvedTaskCommand> {
     if (!/^[A-Za-z0-9:_-]{1,120}$/u.test(script)) {
       throw new TaskProposalConflictError("Arc package scripts must use a simple script name.");
     }
     const manifest = await this.readPackageManifest(project.rootPath);
-    if (manifest.scripts[script] === undefined) {
+    const scriptCommand = manifest.scripts[script];
+    if (scriptCommand === undefined) {
       throw new TaskProposalConflictError(`The project does not define a ${script} package script.`);
     }
+    this.assertSafeScript(scriptCommand);
     const packageManager = await this.detectPackageManager(project.rootPath);
     return {
+      approvalKind: mutates ? "workspace_write" : "standard",
       command: { args: ["run", script], cwd: project.rootPath, executable: packageManager },
       mutates,
       title,
     };
   }
 
-  private async resolveGitOperation(
-    project: Project,
-    operation: GitTaskOperation,
-  ): Promise<{ readonly command: TaskCommand; readonly mutates: true; readonly title: string }> {
+  private async resolveGitOperation(project: Project, operation: GitTaskOperation): Promise<ResolvedTaskCommand> {
     const command = (args: readonly string[]): TaskCommand => ({
       args: [...args],
       cwd: project.rootPath,
       executable: "git",
     });
+    const result = (
+      args: readonly string[],
+      title: string,
+      approvalKind: TaskProposalApprovalKind,
+    ): ResolvedTaskCommand => ({
+      approvalKind,
+      command: command(args),
+      mutates: true,
+      title,
+    });
     switch (operation.operation) {
       case "add": {
         const paths = await this.resolveGitPaths(project, operation.paths);
-        return { command: command(["add", "--", ...paths]), mutates: true, title: "Git add" };
+        return result(["add", "--", ...paths], "Git add", "git_mutation");
       }
       case "commit":
-        return { command: command(["commit", "-m", operation.message]), mutates: true, title: "Git commit" };
+        return result(["commit", "-m", operation.message], "Git commit", "git_mutation");
       case "branch":
         this.assertSafeBranch(operation.name);
-        return {
-          command: command(["branch", operation.name]),
-          mutates: true,
-          title: `Create branch ${operation.name}`,
-        };
+        return result(["branch", operation.name], `Create branch ${operation.name}`, "git_mutation");
       case "merge":
         this.assertSafeBranch(operation.branch);
-        return {
-          command: command(["merge", "--no-edit", operation.branch]),
-          mutates: true,
-          title: `Merge ${operation.branch}`,
-        };
+        return result(["merge", "--no-edit", operation.branch], `Merge ${operation.branch}`, "destructive");
       case "restore": {
         const paths = await this.resolveGitPaths(project, operation.paths);
-        return { command: command(["restore", "--source=HEAD", "--", ...paths]), mutates: true, title: "Git restore" };
+        return result(["restore", "--source=HEAD", "--", ...paths], "Git restore", "destructive");
       }
       case "stash":
-        return {
-          command: command(["stash", "push", ...(operation.message === undefined ? [] : ["-m", operation.message])]),
-          mutates: true,
-          title: "Git stash",
-        };
+        return result(
+          ["stash", "push", ...(operation.message === undefined ? [] : ["-m", operation.message])],
+          "Git stash",
+          "destructive",
+        );
     }
   }
 
@@ -301,6 +318,17 @@ export class TaskProposalService {
       branch.endsWith(".")
     ) {
       throw new TaskProposalConflictError("Arc Git branch names must be safe refs.");
+    }
+  }
+
+  private assertSafeScript(script: string): void {
+    if (
+      /\b(?:docker|podman|nerdctl|kubectl)\b/iu.test(script) ||
+      /\brm\s+(?:-[A-Za-z]*r[A-Za-z]*f[A-Za-z]*|-r\s+-f|-f\s+-r)\b/iu.test(script) ||
+      /\bgit\s+(?:clean|reset\s+--hard|restore)\b/iu.test(script) ||
+      /\b(?:drop|truncate)\s+(?:database|table)\b/iu.test(script)
+    ) {
+      throw new TaskProposalConflictError("Arc does not stage Docker or destructive package scripts.");
     }
   }
 

@@ -25,7 +25,11 @@ export class TaskProposalClient implements TaskProposalClientPort {
   }
 
   public approve(proposalId: string): Promise<TaskProposal> {
-    return this.requestProposal(`task-proposals/${proposalId}/approve`, { method: "POST" });
+    return this.requestProposal(`task-proposals/${proposalId}/approve`, {
+      body: JSON.stringify({ confirmed: true }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
   }
 
   public reject(proposalId: string): Promise<TaskProposal> {

@@ -33,6 +33,14 @@ export const TaskExecutionStatusSchema = z.enum([
   "rejected",
 ]);
 
+export const TaskProposalApprovalKindSchema = z.enum(["standard", "workspace_write", "git_mutation", "destructive"]);
+
+export const TaskProposalApprovalSchema = z
+  .object({ kind: TaskProposalApprovalKindSchema, required: z.literal(true) })
+  .strict();
+
+export const TaskProposalApprovalRequestSchema = z.object({ confirmed: z.literal(true) }).strict();
+
 export const TaskCommandSchema = z.object({
   args: z.array(z.string().max(4_096)).max(100),
   cwd: z.string().min(1),
@@ -40,6 +48,7 @@ export const TaskCommandSchema = z.object({
 });
 
 export const TaskProposalSchema = z.object({
+  approval: TaskProposalApprovalSchema,
   command: TaskCommandSchema,
   createdAt: z.string().datetime(),
   durationMs: z.number().int().nonnegative().nullable(),
@@ -62,4 +71,7 @@ export type TaskCommand = z.infer<typeof TaskCommandSchema>;
 export type TaskExecutionStatus = z.infer<typeof TaskExecutionStatusSchema>;
 export type TaskPreset = z.infer<typeof TaskPresetSchema>;
 export type TaskProposal = z.infer<typeof TaskProposalSchema>;
+export type TaskProposalApproval = z.infer<typeof TaskProposalApprovalSchema>;
+export type TaskProposalApprovalKind = z.infer<typeof TaskProposalApprovalKindSchema>;
+export type TaskProposalApprovalRequest = z.infer<typeof TaskProposalApprovalRequestSchema>;
 export type TaskProposalRequest = z.infer<typeof TaskProposalRequestSchema>;
