@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 
 import { ConfigModule } from "./config/config.module.js";
+import { AgentPlansModule } from "./modules/agent-plans/agent-plans.module.js";
+import { AgentRunsModule } from "./modules/agent-runs/agent-runs.module.js";
 import { CompletionsModule } from "./modules/completions/completions.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { ChatModule } from "./modules/chat/chat.module.js";
@@ -19,6 +21,8 @@ import { TasksModule } from "./modules/tasks/tasks.module.js";
 @Module({
   imports: [
     ConfigModule,
+    AgentPlansModule,
+    AgentRunsModule,
     DatabaseModule,
     LoggerModule,
     HealthModule,

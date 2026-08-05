@@ -61,6 +61,36 @@
         "title": "Arc: Index Workspace Intelligence",
         "category": "Arc",
         "icon": "$(symbol-structure)"
+      },
+      {
+        "command": "arc.planTask",
+        "title": "Arc: Plan Task",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.saveTaskPlan",
+        "title": "Arc: Save Task Plan",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.startTaskRun",
+        "title": "Arc: Start Task Run",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.resumeTaskRun",
+        "title": "Arc: Resume Task Run",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.pauseTaskRun",
+        "title": "Arc: Pause Task Run",
+        "category": "Arc"
+      },
+      {
+        "command": "arc.cancelTaskRun",
+        "title": "Arc: Cancel Task Run",
+        "category": "Arc"
       }
     ],
     "menus": {

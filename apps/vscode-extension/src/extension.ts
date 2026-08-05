@@ -10,6 +10,8 @@ import {
   type GuidedCodeActionCommand,
 } from "./features/actions/ArcGuidedCodeActionController.js";
 import { EditDiffPreviewService } from "./features/edits/EditDiffPreviewService.js";
+import { TaskPlanDocumentController } from "./features/tasks/TaskPlanDocumentController.js";
+import { TaskRunController } from "./features/tasks/TaskRunController.js";
 import { TaskOutputService } from "./features/tasks/TaskOutputService.js";
 import { registerOpenChatCommand } from "./features/commands/registerOpenChatCommand.js";
 import { ProjectInventoryController } from "./features/projects/ProjectInventoryController.js";
@@ -18,6 +20,8 @@ import { SourceIntelligenceController } from "./features/projects/SourceIntellig
 import { WorkspaceFolderSelector } from "./features/projects/WorkspaceFolderSelector.js";
 import { WorkspaceProjectStore } from "./features/projects/WorkspaceProjectStore.js";
 import { ConversationClient } from "./infrastructure/backend/ConversationClient.js";
+import { AgentPlanClient } from "./infrastructure/backend/AgentPlanClient.js";
+import { AgentRunClient } from "./infrastructure/backend/AgentRunClient.js";
 import { EditProposalClient } from "./infrastructure/backend/EditProposalClient.js";
 import { GuidedCodeActionClient } from "./infrastructure/backend/GuidedCodeActionClient.js";
 import { ProjectClient } from "./infrastructure/backend/ProjectClient.js";
@@ -57,6 +61,8 @@ export function activate(context: vscode.ExtensionContext): void {
     taskOutput,
     projectIdProvider,
   );
+  const taskPlans = new TaskPlanDocumentController(new AgentPlanClient(backendConfig.url), projectIdProvider);
+  const taskRuns = new TaskRunController(new AgentRunClient(backendConfig.url));
   const projectInventoryController = new ProjectInventoryController(projectClient, projectStore, folderSelector);
   const sourceIntelligenceController = new SourceIntelligenceController(projectClient, projectStore, folderSelector);
   const registerWorkspaceCommand = new RegisterWorkspaceCommand(projectClient, projectStore, folderSelector, (folder) =>
@@ -87,6 +93,8 @@ export function activate(context: vscode.ExtensionContext): void {
     sourceIntelligenceController,
     inlineCompletionProvider,
     guidedCodeActions,
+    taskPlans,
+    taskRuns,
     vscode.languages.registerInlineCompletionItemProvider({ scheme: "file" }, inlineCompletionProvider),
     vscode.languages.registerCodeActionsProvider({ scheme: "file" }, new ArcCodeActionProvider(), {
       providedCodeActionKinds: [
@@ -99,6 +107,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(ArcGuidedCodeActionController.command, (command: GuidedCodeActionCommand) =>
       guidedCodeActions.execute(command),
     ),
+    vscode.commands.registerCommand(TaskPlanDocumentController.planCommand, () => taskPlans.plan()),
+    vscode.commands.registerCommand(TaskPlanDocumentController.saveCommand, () => taskPlans.saveActivePlan()),
+    vscode.commands.registerCommand(TaskRunController.startCommand, () => taskRuns.start()),
+    vscode.commands.registerCommand(TaskRunController.resumeCommand, () => taskRuns.resume()),
+    vscode.commands.registerCommand(TaskRunController.pauseCommand, () => taskRuns.pause()),
+    vscode.commands.registerCommand(TaskRunController.cancelCommand, () => taskRuns.cancel()),
     vscode.window.registerWebviewViewProvider(ArcChatViewProvider.viewType, chatViewProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

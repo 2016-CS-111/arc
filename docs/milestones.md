@@ -1515,7 +1515,7 @@ Implementation:
 
 ## Milestone 15: Autonomous Task Execution
 
-Status: Planned.
+Status: In progress. Gates 15.1 and 15.2 are complete.
 
 Goal: execute bounded software tasks as visible plans with checkpoints, approvals, and stop
 conditions.
@@ -1530,6 +1530,17 @@ Fixed gates:
 - 15.6 Loop, repetition, prompt-injection, partial-failure, and end-to-end acceptance.
 
 Exit: Arc can finish bounded development tasks without hiding work or running indefinitely.
+
+Implementation:
+
+- 15.1 adds `POST /agent-plans`, `GET /agent-plans/:planId`, and `PATCH /agent-plans/:planId` for typed draft plans. Plans contain bounded inspect, edit, and test steps with estimates and explicit dependencies.
+- The local chat model produces the plan through a dedicated tool definition. `package.json` is read locally as compact project context, and native plus fallback tool calls are supported for Ollama models.
+- Dependencies are topologically sorted before a plan is returned or saved. Unknown references and cycles are rejected; total estimates are recomputed from the saved steps.
+- `Arc: Plan Task` opens the draft as editable JSON. `Arc: Save Task Plan` validates and saves the edited goal and steps. Plans are in-memory until Gate 15.5; no plan can execute anything in 15.1.
+- 15.2 adds an in-memory `AgentRun` state machine with `pending`, `running`, `paused`, `completed`, `cancelled`, and `failed` states. Each start or resume processes only the next ordered plan step, stores its checkpoint, and pauses again until the user resumes it.
+- Task runs use the existing chat and tool runtime for read-only inspection and reviewable proposals only. The run prompt explicitly excludes file writes, shell commands, and Git actions; those approval-linked paths remain Gates 15.3 and 15.4.
+- `POST /agent-runs` creates a run from a saved plan. `GET /agent-runs/:runId` returns its latest snapshot, and start, resume, pause, and cancel transitions are available below that resource. Tool usage is visible and capped at three calls per plan step, up to 60.
+- `Arc: Start Task Run`, `Arc: Resume Task Run`, `Arc: Pause Task Run`, and `Arc: Cancel Task Run` operate on the open task-plan JSON document. Checkpoints and status changes appear in the `Arc Agent Tasks` output channel. Runs are intentionally in-memory until Gate 15.5.
 
 ## Milestone 16: Production Hardening and Distribution
 
