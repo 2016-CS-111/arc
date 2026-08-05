@@ -1515,7 +1515,7 @@ Implementation:
 
 ## Milestone 15: Autonomous Task Execution
 
-Status: In progress. Gates 15.1 through 15.5 are complete.
+Status: Complete.
 
 Goal: execute bounded software tasks as visible plans with checkpoints, approvals, and stop
 conditions.
@@ -1549,6 +1549,9 @@ Implementation:
 - Backend startup reloads the journal. An interrupted running step or a lost pending approval becomes a paused run with a pending step and a recovery checkpoint; no edit, command, or Git action is replayed automatically.
 - `GET /agent-runs/:runId/report` returns the terminal outcome, compact change and test artifacts, and rollback guidance. The VS Code `Arc Agent Tasks` channel appends that report for completed, failed, and cancelled runs.
 - A failed or timed-out test resets the preceding edit step with compact test output as repair context, then reruns the test after review. Repair attempts are capped at two per run, with the expanded tool budget reported in each run snapshot. A third failed test ends the run.
+- Task-plan fields, project files, and tool results are explicitly treated as untrusted data. The agent can inspect or stage proposals only; existing approval paths remain the sole way to write files, execute commands, or mutate Git.
+- A step fails after three identical Arc tool results, before its global tool budget is exhausted. Stream errors preserve the completed partial work, checkpoint the failure, and persist the terminal snapshot for the final report.
+- `milestone-15.6-acceptance.md` covers repeated tool calls, untrusted prompt and tool input, partial stream failure, and the reviewable edit/test repair path.
 
 ## Milestone 16: Production Hardening and Distribution
 
