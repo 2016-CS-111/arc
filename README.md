@@ -86,6 +86,12 @@ code --uninstall-extension local.arc-vscode-extension
 This does not remove local PostgreSQL data or backups. Remove those separately only when you intend
 to discard Arc data.
 
+## Platform Support
+
+Arc's current verified development platform is Intel macOS. Apple Silicon macOS, Linux, and Windows
+use the same Node, PostgreSQL, Ollama, and VS Code paths, but each release should run the platform
+acceptance commands before being called verified. See [the Milestone 16.6 compatibility matrix](docs/milestone-16.6-architecture.md).
+
 ## Security
 
 Milestone 16.1 adds a local permission profile and a durable, metadata-only security audit. The

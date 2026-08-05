@@ -1555,7 +1555,7 @@ Implementation:
 
 ## Milestone 16: Production Hardening and Distribution
 
-Status: In progress. Gates 16.1 through 16.5 are complete.
+Status: In progress. Gates 16.1 through 16.6 are complete.
 
 Goal: make the single-user local product reliable to install, upgrade, diagnose, benchmark, and
 recover.

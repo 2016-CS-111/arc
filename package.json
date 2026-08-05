@@ -9,7 +9,7 @@
     "backend:dev": "pnpm --filter @arc/ai-server dev",
     "backend:start": "pnpm --filter @arc/ai-server start",
     "build": "tsc -b",
-    "clean": "pnpm -r exec rm -rf dist",
+    "clean": "node scripts/clean-dist.mjs",
     "db:create": "pnpm --filter @arc/ai-server db:create",
     "db:backup": "pnpm --filter @arc/ai-server db:backup",
     "db:migrate": "pnpm --filter @arc/ai-server db:migrate",
