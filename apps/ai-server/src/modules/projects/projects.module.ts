@@ -198,6 +198,7 @@ const projectModuleResolverProvider: Provider<ProjectModuleResolver> = {
   ],
   exports: [
     PROJECT_REPOSITORY,
+    ProjectPathNormalizer,
     ProjectRegistrationService,
     ProjectIgnorePolicyService,
     ProjectInventoryService,

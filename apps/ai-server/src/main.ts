@@ -19,6 +19,7 @@ function toLogContext(error: unknown): LogContext {
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
+    // logger: ["error", "warn", "log"],
     logger: false,
   });
   const config = app.get<AppConfig>(APP_CONFIG);

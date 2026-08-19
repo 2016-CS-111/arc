@@ -21,6 +21,6 @@ const codeCompletionModelProvider: Provider = {
   imports: [ConfigModule, LoggerModule],
   controllers: [ProviderStatusController],
   providers: [chatModelProvider, codeCompletionModelProvider, CheckModelReadinessService],
-  exports: [CHAT_MODEL, CODE_COMPLETION_MODEL],
+  exports: [CHAT_MODEL, CODE_COMPLETION_MODEL, CheckModelReadinessService],
 })
 export class InferenceModule {}
